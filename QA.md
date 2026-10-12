@@ -1,4 +1,4 @@
-# Hotkey Wheel 1.0.4+26.3 verification
+# Hotkey Wheel 1.0.5+26.3 verification
 
 Verified on 2026-10-12 with Minecraft Java **26.3**, Java **25**, Fabric Loader **0.19.5**, and Fabric API **0.162.0+26.3**. Compilation targets Fabric API **0.161.0+26.3**. Graphical client gametests create isolated singleplayer worlds and run the real client and integrated server. Existing profile configuration, mod JARs, and worlds were preserved.
 
@@ -6,20 +6,20 @@ Verified on 2026-10-12 with Minecraft Java **26.3**, Java **25**, Fabric Loader 
 
 | Profile | Wheel / UI | Key management | Buildprint | Tool Pouch | Total |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Minimal | 150 | 77 | — | — | **227** |
-| Integrated | 154 | 77 | 119 | — | **350** |
-| Suite | 154 | 77 | 119 | 183 | **533** |
-| Suite-polymer | 154 | 77 | 119 | 183 | **533** |
+| Minimal | 150 | 82 | — | — | **232** |
+| Integrated | 154 | 82 | 134 | — | **370** |
+| Suite | 154 | 82 | 134 | 183 | **553** |
+| Suite-polymer | 154 | 82 | 134 | 183 | **553** |
 
-**1643 assertions pass across four installation profiles.** All profiles test the exact final installable JAR, including the existing simplified wheel icon. Build, archive integrity, mod metadata, and icon integrity pass. The public Maven dependency build also succeeds without local dependency overrides. Development QA classes and optional mod APIs are excluded from the installable JAR.
+**1708 assertions pass across four installation profiles.** All profiles test the exact final installable JAR, including the existing simplified wheel icon. Build, archive integrity, mod metadata, and icon integrity pass. The public Maven dependency build also succeeds without local dependency overrides. Development QA classes and optional mod APIs are excluded from the installable JAR.
 
-Final JAR SHA-256: `c0f549f7c2a26fa4ac543fe36899b62830b807dfe186f9634dde54d65ad9a73b`.
+Final JAR SHA-256: `4e8007cf8f8adfede0b24b67f0c99f0598f82219c7c5cb2a320812d75ee9ce0c`.
 
 ## Profiles and provenance
 
 The minimal profile runs without optional integrations. The integrated profile adds **Controlling 26.3.4**, **Searchables 1.0.3**, **Mod Menu 21.0.0**, **Sorted 0.1.25**, **Buildprint 0.1.16+26.x**, **Blocktone for Buildprint 0.1.20**, and **YACL 3.9.7+26.3**.
 
-The suite profile adds the exact active **Vanilla++ 1.2.1+26.3** and its dependencies. It uses original developer **Tool Pouch 1.1.10**, bundled as `toolpouch-fabric-1.1.10+26.3.jar`. Its SHA-256 is `a5bb4f084e7d929f3a89cc43317af63bd45abe3e3f4fed8b45f99b2da846e903`. The current suite JAR SHA-256 is `f4a73c3a93c57f9d09e414da21dc79cd2e8eaa927aff73e58121705aa2a04e6a`. The fourth profile runs the same combined installation with **Polymer 0.18.4+26.3**. Native component settings and client behavior are retained; the paused SSO port track is excluded.
+The suite profile adds the exact active **Vanilla++ 1.3.0+26.3** and its dependencies. It uses original developer **Tool Pouch 1.1.10**, bundled as `toolpouch-fabric-1.1.10+26.3.jar`. Its SHA-256 is `a5bb4f084e7d929f3a89cc43317af63bd45abe3e3f4fed8b45f99b2da846e903`. The current suite JAR SHA-256 is `e57862d94d4b4331ddd5245e916793a16fa9258d3cceca0d2b3ac891b77aea72`. The fourth profile runs the same combined installation with **Polymer 0.18.4+26.3**. Native component settings and client behavior are retained; the paused SSO port track is excluded.
 
 The public verification ZIP retains JSON reports, dependency hashes, and screenshots. The local release's `qa/minimal/`, `qa/integrated/`, `qa/suite/`, and `qa/suite-polymer/` directories retain JSON reports, exact dependency hashes, console logs, and rendered screenshots. `qa/*Test.java` and `qa/run.py` provide the source tests and isolated launcher. Public source contains no launcher assets, dependency JARs, private suite binaries, configuration, or world files.
 
@@ -58,6 +58,12 @@ The candidate tracks the specific freecam session created by the wheel and calls
 Actual wheel-selected Buildprint and Blocktone settings screens close through their native `onClose` handlers. Tests verify pending schematic name commits, preview visibility cleanup, descendants through Migration and YACL screens, original opener after cycling, unrelated replacement screens, disabled integration, and menus opened through the native shortcut remaining independent.
 
 Invalid Blocktone settings refuse closure and retain their validation error; correcting them allows native save and closure. Non-menu Buildprint actions cannot claim incidental screens. Tests also hold the closing key while another gameplay control shares it, then release it, verifying that neither held state nor clicks leak. Escape cancellation while holding the wheel opener receives the same check. This catches Minecraft's restoration of physical key state when the mouse is grabbed after GUI closure.
+
+## Review regressions fixed in 1.0.5
+
+The key-management regression removes F5, assigns Q manually through the native mapping, saves an unrelated wheel change with unbinding still enabled, reloads configuration, then uses the editor Restore action. Both live and persisted bindings must return to Q.
+
+The Buildprint regression opens selection editing through G, selects Screenshot from a second wheel on an unused key, and requires the exact original freecam session to remain active. Opening its native Save dialog and pressing G must close the dialog and editor together and restore the camera and player input. Repeating the screenshot action in a native-opened editor must not give the wheel ownership. The test uses an unused key because Buildprint reserves H for its editor controls card before ordinary key handlers.
 
 ## Verification boundaries
 

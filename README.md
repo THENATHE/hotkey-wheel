@@ -1,14 +1,14 @@
-# Hotkey Wheel 1.0.4+26.3
+# Hotkey Wheel 1.0.5+26.3
 
 <img src="src/main/resources/assets/hotkey_wheel/icon.png" alt="Hotkey Wheel radial icon" width="128">
 
 A client-side Fabric mod for Minecraft Java 26.3. Create up to three radial menus with separate opening keys, assign Minecraft or registered mod controls, and choose floating block/item icons. Hold or toggle a wheel, select by dragging from the center, and cycle wheels without releasing the original opener.
 
-Version 1.0.4 fixes returning from Buildprint’s Selection Editor with the original wheel key, including its Save dialog. Native camera and movement are restored; editor exit and Cancel preserve selected regions, while successful Save keeps Buildprint’s normal selection-clearing behavior. Safe unbinding, Tool Pouch wheels, and other Buildprint menu integration remain available. It retains the main-menu settings crash fix and optional outside-edge selection from earlier versions. Existing configurations remain compatible.
+Version 1.0.5 preserves the original Buildprint editor closing key when another wheel performs an unrelated action, such as taking a screenshot. Restoring wheel-managed controls now recovers the latest manual binding removed by a subsequent Save. Existing configurations remain compatible.
 
 ## Install and configure
 
-Requires **Minecraft 26.3**, **Fabric Loader 0.19.5+**, **Java 25+**, and **Fabric API 0.161.0+26.3 or newer for 26.3**. Replace older Hotkey Wheel JARs with `hotkey-wheel-1.0.4+26.3.jar` in your client's `mods` folder, then restart. Install only one Hotkey Wheel version. Servers do not need Hotkey Wheel.
+Requires **Minecraft 26.3**, **Fabric Loader 0.19.5+**, **Java 25+**, and **Fabric API 0.161.0+26.3 or newer for 26.3**. Replace older Hotkey Wheel JARs with `hotkey-wheel-1.0.5+26.3.jar` in your client's `mods` folder, then restart. Install only one Hotkey Wheel version. Servers do not need Hotkey Wheel.
 
 Open **Options → Controls → Key Binds → Wheels…**, or use Hotkey Wheel's settings in Mod Menu. Controlling can search **hotkey wheel** to find the three opening keys, cycle key, and configuration shortcut. Sorted, Buildprint, Blocktone, Tool Pouch, Vanilla++, Controlling, Searchables, and Mod Menu are optional; Hotkey Wheel runs without them.
 
@@ -35,11 +35,11 @@ Enable **Unbind normal key** on a slot to remove that control's ordinary keyboar
 
 **Safe mode** starts **ON**. It protects Inventory, Attack, Use, movement, Jump, Sneak, Sprint, Pick Block, chat/commands, and hotbar controls from automatic unbinding, including when those controls have custom keys. It also reserves Escape and the primary mouse buttons when assigning wheel, cycle, or configuration keys. Protected controls remain available as wheel entries.
 
-Turn a slot's unbinding option off, remove its last active use with unbinding enabled, or choose **Restore keys unbound by Hotkey Wheel**, then **Save** to restore remembered assignments. Turning Safe mode back on restores essential controls previously unbound by Hotkey Wheel when you Save. Later manual rebindings are preserved. Controls that were already unbound have no earlier assignment to restore; keys belonging to an absent optional mod remain remembered until that mod returns.
+Turn a slot's unbinding option off, remove its last active use with unbinding enabled, or choose **Restore keys unbound by Hotkey Wheel**, then **Save** to restore remembered assignments. Turning Safe mode back on restores essential controls previously unbound by Hotkey Wheel when you Save. Later manual rebindings are preserved. If you Save again with unbinding still enabled, the newly removed binding becomes the recovery key. Controls that were already unbound have no earlier assignment to restore; keys belonging to an absent optional mod remain remembered until that mod returns.
 
 ## Tool Pouch and Vanilla++
 
-With **Tool Pouch contextual wheel: ON**, selecting Tool Pouch's **Contextual Open** control in a wheel automatically opens an item radial. This works with Tool Pouch 1.1.10, including the copy bundled in Vanilla++ 1.2.1.
+With **Tool Pouch contextual wheel: ON**, selecting Tool Pouch's **Contextual Open** control in a wheel automatically opens an item radial. This works with Tool Pouch 1.1.10, including the copy bundled in Vanilla++ 1.3.0.
 
 The item radial follows Tool Pouch's actual contextual menu: it shows **shulker boxes** normally, or **compatible ammunition** while holding a supported projectile weapon. Other stored tools/items are filtered exactly as the native contextual menu filters them. Selection uses Tool Pouch's normal networking and inventory behavior, with the original stack names, counts, and item data.
 
@@ -79,7 +79,7 @@ python3 qa/run.py --suite
 python3 qa/run.py --polymer
 ```
 
-The metadata directory must contain Minecraft 26.3, Fabric Loader 0.19.5 launcher metadata, libraries, natives, and assets. The Gradle cache supplies the Fabric client gametest API. A graphical X11 session is required. The integrated profile adds Controlling, Searchables, Sorted, Buildprint, Blocktone, Mod Menu, and YACL. The suite profile adds Vanilla++ 1.2.1 and its installed dependencies for actual Tool Pouch interactions and suite configuration navigation. The Polymer profile includes the same combined suite, Buildprint, and Blocktone with Polymer 0.18.4+26.3.
+The metadata directory must contain Minecraft 26.3, Fabric Loader 0.19.5 launcher metadata, libraries, natives, and assets. The Gradle cache supplies the Fabric client gametest API. A graphical X11 session is required. The integrated profile adds Controlling, Searchables, Sorted, Buildprint, Blocktone, Mod Menu, and YACL. The suite profile adds Vanilla++ 1.3.0 and its installed dependencies for actual Tool Pouch interactions and suite configuration navigation. The Polymer profile includes the same combined suite, Buildprint, and Blocktone with Polymer 0.18.4+26.3.
 
 See [QA.md](QA.md) for current results, exact versions, and verification boundaries. The verification ZIP contains test reports, dependency hashes, and rendered screenshots. Local release folders additionally retain console logs and the earlier crash regression evidence. `python3 qa/package_release.py` packages only after every expected report passes against the final JAR; it validates archive/metadata/icon integrity and calculates assertion totals from the reports. QA code is excluded from the installable mod.
 

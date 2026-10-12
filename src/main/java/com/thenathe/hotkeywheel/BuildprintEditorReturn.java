@@ -22,10 +22,18 @@ final class BuildprintEditorReturn {
     private BuildprintEditorReturn() {}
 
     static void begin(KeyMapping control, InputConstants.Key wheelOpener) {
-        clearOwnership();
-        if (WheelConfig.get().closeBuildprintWithWheelKey && control.getName().equals(CONTROL)) {
-            pending = new PendingEditor(wheelOpener, NativeEditor.session(), ticks + 4);
+        if (!WheelConfig.get().closeBuildprintWithWheelKey) {
+            clearOwnership();
+            return;
         }
+        if (!control.getName().equals(CONTROL)) {
+            pending = null;
+            // A second wheel action can leave the same editor session running.
+            if (session != null && NativeEditor.session() != session) clearOwnership();
+            return;
+        }
+        clearOwnership();
+        pending = new PendingEditor(wheelOpener, NativeEditor.session(), ticks + 4);
     }
 
     static void tick(Minecraft client) {

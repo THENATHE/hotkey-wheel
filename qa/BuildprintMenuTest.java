@@ -189,6 +189,18 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
         context.runOnClient(client -> check(!editorActive() && client.gui.screen() == null, "Original opener exits selection editor after cycling wheels"));
 
         openSelectionEditor(context, false, false);
+        screenshotFromOtherWheel(context);
+        openSelectionSave(context);
+        context.getInput().pressKey(InputConstants.KEY_G);
+        context.waitTicks(3);
+        context.runOnClient(client -> {
+            check(!editorActive() && client.gui.screen() == null,
+                    "Original opener exits the whole editor and Save dialog after another wheel takes a screenshot");
+            check(client.getCameraEntity() == client.player && client.player.input == originalInput[0],
+                    "Exit after another wheel action restores the native camera and player input");
+        });
+
+        openSelectionEditor(context, false, false);
         openSelectionSave(context);
         context.clickScreenButton("Cancel");
         context.waitTicks(2);
@@ -237,6 +249,7 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
         context.getInput().pressKey(editorKey);
         context.waitTicks(3);
         context.runOnClient(client -> check(editorActive(), "The editor still opens through its ordinary native binding"));
+        screenshotFromOtherWheel(context);
         context.getInput().pressKey(InputConstants.KEY_G);
         context.waitTicks(3);
         context.runOnClient(client -> {
@@ -313,6 +326,38 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
         context.runOnClient(client -> check(client.gui.screen() != null
                 && client.gui.screen().getClass().getName().equals("com.buildprint.client.gui.EditorSaveScreen"),
                 "Native selection toolbar opens its actual Save dialog"));
+    }
+
+    private void screenshotFromOtherWheel(ClientGameTestContext context) throws Exception {
+        Object session = context.computeOnClient(client -> callStatic("com.buildprint.client.edit.EditorMode", "freecam"));
+        InputConstants.Key previousKey = context.computeOnClient(client -> InputConstants.getKey(HotkeyWheelClient.WHEEL_KEYS[1].saveString()));
+        int secondWheelKey = context.computeOnClient(BuildprintMenuTest::unusedKey);
+        context.runOnClient(client -> {
+            // Buildprint reserves H for its controls card before wheel input reaches our handler.
+            HotkeyWheelClient.WHEEL_KEYS[1].setKey(InputConstants.Type.KEYBOARD.getOrCreate(secondWheelKey));
+            KeyMapping.resetMapping();
+            WheelConfig config = WheelConfig.get().copy();
+            config.wheels.get(1).toggleOpen = false;
+            config.wheels.get(1).entries.get(0).control = client.options.keyScreenshot.getName();
+            check(WheelConfig.save(config), "Second wheel can run a screenshot during selection editing");
+        });
+        context.getInput().holdKey(secondWheelKey);
+        context.waitTicks(2);
+        context.runOnClient(client -> check(client.gui.screen() instanceof WheelScreen wheel && wheel.wheelIndex() == 1,
+                "The second wheel's physical key opens its radial menu inside the active selection editor"));
+        pointTop(context);
+        context.getInput().releaseKey(secondWheelKey);
+        context.waitTicks(4);
+        context.runOnClient(client -> {
+            check(editorActive() && client.gui.screen() == null
+                            && callStatic("com.buildprint.client.edit.EditorMode", "freecam") == session,
+                    "Selecting Screenshot through another wheel keeps the exact native editor session active");
+            WheelConfig config = WheelConfig.get().copy();
+            config.wheels.get(1).entries.get(0).control = "key.buildprint.editor";
+            check(WheelConfig.save(config), "Restore second wheel's selection editor action after screenshot");
+            HotkeyWheelClient.WHEEL_KEYS[1].setKey(previousKey);
+            KeyMapping.resetMapping();
+        });
     }
 
     private static boolean editorActive() throws Exception {

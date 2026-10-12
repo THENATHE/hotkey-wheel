@@ -27,7 +27,7 @@ if INTEGRATED:
                  'sorted-fabric-*.jar', 'buildprint-fabric-*.jar', 'buildprint-toning-*.jar',
                  'yet_another_config_lib*.jar']
 if SUITE:
-    patterns += ['vanilla-plusplus-quality-of-life-suite-1.2.1+26.3.jar', 'fzzy_config-0.7.7+fix3+26.3.jar',
+    patterns += ['vanilla-plusplus-quality-of-life-suite-1.3.0+26.3.jar', 'fzzy_config-0.7.7+fix3+26.3.jar',
                  'cloth-config-*.jar', 'fabric-language-kotlin-*.jar', 'codecui-*.jar', 'mixson-*.jar']
 if POLYMER:
     patterns += ['polymer-bundled-0.18.4+26.3.jar']

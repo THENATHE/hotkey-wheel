@@ -68,7 +68,8 @@ public final class WheelBindings {
         }
         for (KeyMapping control : wanted) {
             if (control.isUnbound()) continue;
-            configuration.managedBindings.putIfAbsent(control.getName(), control.saveString());
+            // A later manual rebind becomes the recovery key if this save removes it again.
+            configuration.managedBindings.put(control.getName(), control.saveString());
             changes.put(control, InputConstants.UNKNOWN);
         }
         return new Plan(configuration, changes);

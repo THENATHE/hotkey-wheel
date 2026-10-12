@@ -100,7 +100,7 @@ for mode, names in REPORTS.items():
         require(path.stat().st_mtime_ns >= (root / 'provenance.json').stat().st_mtime_ns,
                 f'{mode}/{name}: result predates this profile run')
         if name == 'toolpouch-results.json':
-            require(result.get('suite') == '1.2.1+26.3' and result.get('toolpouch') == '1.1.10',
+            require(result.get('suite') == '1.3.0+26.3' and result.get('toolpouch') == '1.1.10',
                     f'{mode}: unexpected native suite/Tool Pouch version')
             require(result.get('polymer_client') is (mode == 'suite-polymer'), f'{mode}: Polymer runtime mismatch')
             if mode == 'suite-polymer':

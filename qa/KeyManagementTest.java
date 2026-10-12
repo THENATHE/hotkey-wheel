@@ -186,6 +186,29 @@ public final class KeyManagementTest implements FabricClientGameTest {
 
         perspective.setKey(original);
         KeyMapping.resetMapping();
+        configuration = WheelConfig.get().copy();
+        configuration.wheels.get(0).entries.get(0).unbindKey = true;
+        save(configuration, "Enable unbinding before testing a manual rebind followed by another wheel save");
+        perspective.setKey(key(InputConstants.KEY_Q));
+        KeyMapping.resetMapping();
+        client.options.save();
+        configuration = WheelConfig.get().copy();
+        configuration.wheels.get(0).name = "Renamed wheel";
+        save(configuration, "An unrelated wheel save reapplies the retained unbinding preference");
+        check(perspective.isUnbound(), "The retained unbinding preference removes the newer manual key");
+        WheelConfig.load();
+        client.gui.setScreen(new WheelEditorScreen(null));
+        press(button(client.gui.screen(), "Restore keys unbound"));
+        press(button(client.gui.screen(), "Save"));
+        check(perspective.matches(key(InputConstants.KEY_Q))
+                        && WheelConfig.get().managedBindings.isEmpty(),
+                "Bulk restore recovers the latest manual key after an intervening save and config reload");
+        check(Files.readAllLines(client.options.getFile().toPath())
+                        .contains("key_" + perspective.getName() + ":" + key(InputConstants.KEY_Q).getName()),
+                "Restoring the latest manual key persists that key in Minecraft options.txt");
+
+        perspective.setKey(original);
+        KeyMapping.resetMapping();
         configuration = empty();
         for (KeyMapping control : essentials(client)) configuration.wheels.get(0).entries.add(entry(control, true));
         // The editor allows twelve slots per wheel, so spread all protected controls across two enabled wheels.
