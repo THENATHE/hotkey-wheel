@@ -1,0 +1,18 @@
+{
+  "minecraft": "26.3",
+  "loader": "0.19.5",
+  "integrated": true,
+  "mods": {
+    "Controlling-fabric-26.3-26.3.4.jar": "5035cb0b29ad3b2e8513b3de061d90c00cd1e5d3a816f9ef22efd6cff74e0611",
+    "Searchables-fabric-26.3-1.0.3.jar": "63747116b8903a6ea877c89fc5930c8e366a2abeabc376dc8c00e1b64b05c6b0",
+    "buildprint-fabric-0.1.16+26.x.jar": "a56a960e3bb65abb982a2629f2ec08a38fa093c2f4c64382295011736806682b",
+    "buildprint-toning-0.1.20.jar": "bd487359566d3e258daa491e65a340df72f9baec024ca20a2ca2bed15c2ac8f7",
+    "fabric-api-0.162.0+26.3.jar": "8626c189b702f466800b1c8ddac6203cf8a1e0bdaee75a5f9a33b18c2baa81b1",
+    "fabric-client-gametest-api-v1-6.0.7+4be74c3f5d.jar": "09d7d48475eef47a347c12c51bd32c6cffc065a6785f3023f5aa6be4b815cd38",
+    "hotkey-wheel-1.0.0+26.3.jar": "6851e05cd4c80fd1beb1058b844c770e2ad14fa002197b3395b6afbcac88debf",
+    "hotkey-wheel-qa.jar": "e055f519d34a24d6f6d5121a58bee2da879cd41016f6b65715806bd46e108c53",
+    "modmenu-21.0.0.jar": "837812c6c98d66141db7b5dcae668f27fb78d557e8f4c0c89912985fc26a5e6f",
+    "sorted-fabric-0.1.25-mc26.x.jar": "44cc1f50724264a37319dcb4358d071cb8e20a6a324ac595e68ba887750e7a71",
+    "yet_another_config_lib_v3-3.9.7+26.3-fabric.jar": "c52d41d444522d9abba994cd4c4ee2e71a065d7c31010f92a9959b80ccb4b0f5"
+  }
+}

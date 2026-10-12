@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "hotkey_wheel",
+  "version": "${version}",
+  "name": "Hotkey Wheel",
+  "description": "Three customizable radial menus for Minecraft controls, with block icons and hold or toggle opening.",
+  "authors": [
+    "Thenathe"
+  ],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.thenathe.hotkeywheel.HotkeyWheelClient"
+    ],
+    "modmenu": [
+      "com.thenathe.hotkeywheel.ModMenuIntegration"
+    ]
+  },
+  "mixins": [
+    "hotkey-wheel.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "~26.3",
+    "java": ">=25",
+    "fabric-api": ">=0.161.0"
+  },
+  "suggests": {
+    "controlling": "*",
+    "modmenu": "*",
+    "toolpouch": "1.1.10",
+    "buildprint": "*"
+  },
+  "icon": "assets/hotkey_wheel/icon.png",
+  "contact": {
+    "sources": "https://github.com/THENATHE/hotkey-wheel",
+    "issues": "https://github.com/THENATHE/hotkey-wheel/issues"
+  }
+}

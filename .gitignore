@@ -1,0 +1,9 @@
+.gradle/
+build/
+*.log
+__pycache__/
+qa/minimal/
+qa/integrated/
+qa/suite/
+qa/regressions/**/crash.txt
+qa/*-run.log
