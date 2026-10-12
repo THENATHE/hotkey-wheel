@@ -11,9 +11,10 @@ ROOT = Path(__file__).resolve().parent
 PROFILE = Path(os.environ.get('HOTKEY_WHEEL_PROFILE', str(Path.home() / '.local/share/ModrinthApp/profiles/Vanilla Fast')))
 META = Path(os.environ.get('HOTKEY_WHEEL_META', str(PROFILE.parents[1] / 'meta')))
 CACHE = Path.home() / '.gradle/caches/modules-2/files-2.1'
-SUITE = '--suite' in sys.argv
+POLYMER = '--polymer' in sys.argv
+SUITE = '--suite' in sys.argv or POLYMER
 INTEGRATED = '--integrated' in sys.argv or SUITE
-RUN = ROOT / ('suite' if SUITE else 'integrated' if INTEGRATED else 'minimal')
+RUN = ROOT / ('suite-polymer' if POLYMER else 'suite' if SUITE else 'integrated' if INTEGRATED else 'minimal')
 RUN.mkdir(exist_ok=True)
 GAME = RUN / 'game'
 MODS = GAME / 'mods'
@@ -26,11 +27,15 @@ if INTEGRATED:
                  'sorted-fabric-*.jar', 'buildprint-fabric-*.jar', 'buildprint-toning-*.jar',
                  'yet_another_config_lib*.jar']
 if SUITE:
-    patterns += ['vanilla-plusplus-quality-of-life-suite-1.1.6+26.3.jar', 'fzzy_config-0.7.7+fix3+26.3.jar',
+    patterns += ['vanilla-plusplus-quality-of-life-suite-1.2.1+26.3.jar', 'fzzy_config-0.7.7+fix3+26.3.jar',
                  'cloth-config-*.jar', 'fabric-language-kotlin-*.jar', 'codecui-*.jar', 'mixson-*.jar']
+if POLYMER:
+    patterns += ['polymer-bundled-0.18.4+26.3.jar']
 for pattern in patterns:
-    for source in (PROFILE / 'mods').glob(pattern):
-        shutil.copy2(source, MODS / source.name)
+    matches = list((PROFILE / 'mods').glob(pattern))
+    if len(matches) != 1:
+        raise SystemExit(f'Expected one profile dependency for {pattern}; found {len(matches)}')
+    shutil.copy2(matches[0], MODS / matches[0].name)
 version = next(line.split('=', 1)[1].strip() for line in (ROOT.parent / 'gradle.properties').read_text().splitlines()
                if line.startswith('mod_version='))
 addon = ROOT.parent / 'build/libs' / f'hotkey-wheel-{version}.jar'
@@ -49,16 +54,23 @@ for library in info['libraries']:
     if artifact.is_file() and '-natives-' not in artifact.name:
         classpath.append(artifact)
 dependencies = RUN / 'dependencies'
-dependencies.mkdir(exist_ok=True)
-with zipfile.ZipFile(next(MODS.glob('fabric-api-*.jar'))) as archive:
-    for name in archive.namelist():
-        if name.startswith('META-INF/jars/') and name.endswith('.jar'):
-            (dependencies / Path(name).name).write_bytes(archive.read(name))
-if SUITE:
-    with zipfile.ZipFile(next(MODS.glob('vanilla-plusplus-quality-of-life-suite-*.jar'))) as archive:
+if dependencies.exists():
+    shutil.rmtree(dependencies)
+dependencies.mkdir()
+archives = list(MODS.glob('*.jar'))
+while archives:
+    source = archives.pop()
+    with zipfile.ZipFile(source) as archive:
         for name in archive.namelist():
             if name.startswith('META-INF/jars/') and name.endswith('.jar'):
-                (dependencies / Path(name).name).write_bytes(archive.read(name))
+                data = archive.read(name)
+                destination = dependencies / (hashlib.sha256(data).hexdigest()[:16] + '-' + Path(name).name)
+                if destination.exists():
+                    if destination.read_bytes() != data:
+                        raise SystemExit(f'Conflicting bundled dependency: {destination.name}')
+                    continue
+                destination.write_bytes(data)
+                archives.append(destination)
 classes = RUN / 'classes'
 if classes.exists():
     shutil.rmtree(classes)
@@ -97,7 +109,7 @@ command = [str(compiler.parent / 'java'), '-Xmx2G', '-XX:ActiveProcessorCount=4'
            '--gameDir', str(GAME), '--version', '26.3', '--username', 'WheelQA', '--accessToken', '0',
            '--assetsDir', str(META / 'assets'), '--assetIndex', '34', '--width', '1280', '--height', '800']
 (RUN / 'provenance.json').write_text(json.dumps({
-    'minecraft': '26.3', 'loader': '0.19.5', 'integrated': INTEGRATED, 'suite': SUITE,
+    'minecraft': '26.3', 'loader': '0.19.5', 'integrated': INTEGRATED, 'suite': SUITE, 'polymer': POLYMER,
     'mods': {source.name: hashlib.sha256(source.read_bytes()).hexdigest() for source in sorted(MODS.glob('*.jar'))}}, indent=2))
 environment = os.environ.copy()
 environment['SDL_VIDEODRIVER'] = 'x11'

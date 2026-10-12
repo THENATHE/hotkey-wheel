@@ -1,0 +1,18 @@
+{
+  "checks": [
+    "Buildprint integration fixture saves",
+    "Native Buildprint fixture key has no conflicts, including vanilla Friends",
+    "Actual Buildprint schematic fixture registers",
+    "Hold wheel opens before Escape cancellation",
+    "Escape cancels while the wheel opener remains physically held",
+    "Escape cancellation cannot restore held opener or shared forward state through mouse capture",
+    "Releasing the canceled wheel opener leaves its ordinary shared control released",
+    "Selection editor can be assigned to an actual wheel slot",
+    "Selection editor opening mode fixture saves",
+    "Selection editor activation starts from ordinary gameplay",
+    "Wheel selection opens actual Buildprint freecam without a Screen",
+    "Selection editor activation switches to the native freecam camera"
+  ],
+  "passed": false,
+  "failure": "java.lang.AssertionError: Original wheel opener exits the Buildprint selection editor instead of reopening a wheel"
+}

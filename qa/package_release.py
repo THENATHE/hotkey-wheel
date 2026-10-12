@@ -19,6 +19,7 @@ REPORTS = {
     'minimal': ['results.json', 'key-management-results.json'],
     'integrated': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json'],
     'suite': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'toolpouch-results.json'],
+    'suite-polymer': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'toolpouch-results.json'],
 }
 
 
@@ -81,7 +82,8 @@ for mode, names in REPORTS.items():
     root = SOURCE / 'qa' / mode
     provenance = json.loads((root / 'provenance.json').read_text())
     require(provenance['minecraft'] == '26.3' and provenance['loader'] == '0.19.5', f'{mode}: unexpected game target')
-    require(provenance.get('integrated') is (mode != 'minimal') and provenance.get('suite') is (mode == 'suite'),
+    require(provenance.get('integrated') is (mode != 'minimal') and provenance.get('suite') is mode.startswith('suite')
+            and provenance.get('polymer') is (mode == 'suite-polymer'),
             f'{mode}: profile provenance mismatch')
     require(provenance['mods'].get(JAR_NAME) == release_hash, f'{mode}: tests did not use the final release JAR')
     require(sha256(root / 'game/mods' / JAR_NAME) == release_hash, f'{mode}: retained test JAR differs from release')
@@ -97,6 +99,12 @@ for mode, names in REPORTS.items():
                 f'{mode}/{name}: missing assertion evidence')
         require(path.stat().st_mtime_ns >= (root / 'provenance.json').stat().st_mtime_ns,
                 f'{mode}/{name}: result predates this profile run')
+        if name == 'toolpouch-results.json':
+            require(result.get('suite') == '1.2.1+26.3' and result.get('toolpouch') == '1.1.10',
+                    f'{mode}: unexpected native suite/Tool Pouch version')
+            require(result.get('polymer_client') is (mode == 'suite-polymer'), f'{mode}: Polymer runtime mismatch')
+            if mode == 'suite-polymer':
+                require(result.get('polymer') == '0.18.4+26.3', f'{mode}: unexpected Polymer version')
         counts[name] = len(checks)
     counts['total'] = sum(counts.values())
     results[mode] = counts
@@ -179,7 +187,7 @@ if index_path.is_file() and RELEASE.is_relative_to(WORKSPACE):
         'family': 'Hotkey Wheel', 'component': 'Main Plugin', 'source': 'Minecraft/hotkey-wheel',
         'new': str((RELEASE / JAR_NAME).relative_to(WORKSPACE)),
         'status': (f'Local original client release; {total_assertions} passing assertions across minimal, integrated, '
-                   'and Vanilla++ suite profiles; safe automatic key unbinding and recovery, contextual Tool Pouch radial, '
+                   'Vanilla++ native and Polymer profiles; selection-editor camera/input return, contextual Tool Pouch radial, '
                    'Buildprint menu return, main-menu settings, and Controlling verified.'),
         'verification': str((RELEASE / 'BUILD-REPORT.json').relative_to(WORKSPACE)),
     })

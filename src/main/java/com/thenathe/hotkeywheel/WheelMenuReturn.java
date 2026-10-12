@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.minecraft.client.KeyMapping;
@@ -51,12 +52,14 @@ public final class WheelMenuReturn {
     }
 
     public static void begin(KeyMapping control, InputConstants.Key wheelOpener) {
+        BuildprintEditorReturn.begin(control, wheelOpener);
         clearOwnership();
         if (!WheelConfig.get().closeBuildprintWithWheelKey || !isBuildprintControl(control.getName())) return;
         pending = new PendingMenu(control.getName(), wheelOpener, Minecraft.getInstance().gui.screen(), ticks + OPEN_TIMEOUT_TICKS);
     }
 
     public static void tick(Minecraft client) {
+        BuildprintEditorReturn.tick(client);
         ticks++;
         if (!WheelConfig.get().closeBuildprintWithWheelKey || !client.isWindowActive() || client.player == null) {
             clear();
@@ -67,6 +70,7 @@ public final class WheelMenuReturn {
     }
 
     public static boolean handleInput(InputConstants.Key key, int action) {
+        if (BuildprintEditorReturn.handleInput(key, action)) return true;
         if (key.equals(consumedKey)) {
             if (action == InputConstants.RELEASE) consumedKey = null;
             return true;
@@ -87,6 +91,7 @@ public final class WheelMenuReturn {
     }
 
     public static void clear() {
+        BuildprintEditorReturn.clear();
         clearOwnership();
         consumedKey = null;
     }
@@ -124,10 +129,7 @@ public final class WheelMenuReturn {
             if (screen == null || screen == returnTo || !hasAncestor(screen, ownedRoot)) break;
             boolean closingRoot = screen == ownedRoot;
             // Native closure commits Buildprint edits and preserves each screen's save/cancel rules.
-            screen.onClose();
-            if (client.gui.screen() == screen && screen.getClass().getName().equals(MATERIAL_LIST_SCREEN)) {
-                screen.onClose();
-            }
+            closeNativeScreen(client, screen);
             if (client.gui.screen() == screen) return;
             if (closingRoot) break;
         }
@@ -139,13 +141,31 @@ public final class WheelMenuReturn {
     }
 
     private static boolean hasAncestor(Screen screen, Screen ancestor) {
-        if (screen == null || ancestor == null) return false;
+        return ancestor != null && anyParent(screen, candidate -> candidate == ancestor);
+    }
+
+    static boolean isEditorMenu(Screen screen) {
+        return anyParent(screen, candidate -> {
+            String name = candidate.getClass().getName();
+            return name.startsWith("com.buildprint.client.gui.")
+                    || name.equals("com.thenathe.buildprinttoning.ToneScreen")
+                    || name.equals("com.thenathe.buildprinttoning.client.ToolbarOverlayScreen");
+        });
+    }
+
+    static void closeNativeScreen(Minecraft client, Screen screen) {
+        screen.onClose();
+        if (client.gui.screen() == screen && screen.getClass().getName().equals(MATERIAL_LIST_SCREEN)) screen.onClose();
+    }
+
+    private static boolean anyParent(Screen screen, Predicate<Screen> matches) {
+        if (screen == null) return false;
         ArrayDeque<Screen> remaining = new ArrayDeque<>();
         Set<Screen> visited = Collections.newSetFromMap(new IdentityHashMap<>());
         remaining.add(screen);
         while (!remaining.isEmpty() && visited.size() < MAX_PARENT_DEPTH) {
             Screen candidate = remaining.removeFirst();
-            if (candidate == ancestor) return true;
+            if (matches.test(candidate)) return true;
             if (!visited.add(candidate)) continue;
             for (Field field : PARENT_FIELDS.get(candidate.getClass())) {
                 try {

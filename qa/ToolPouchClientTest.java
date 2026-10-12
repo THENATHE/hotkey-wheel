@@ -10,6 +10,7 @@ import com.thenathe.hotkeywheel.WheelConfig;
 import com.thenathe.hotkeywheel.WheelScreen;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,11 +23,15 @@ import me.pajic.toolpouch.item.ModItems;
 import me.pajic.toolpouch.keybind.ModKeybinds;
 import me.pajic.toolpouch.keybind.ScrollHandler;
 import me.pajic.toolpouch.util.PlayerExtension;
+import me.fzzyhmstrs.fzzy_config.screen.internal.ConfigScreen;
+import me.fzzyhmstrs.fzzy_config.screen.widget.custom.CustomButtonWidget;
+import me.fzzyhmstrs.fzzy_config.screen.widget.DynamicListWidget;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.ShulkerBoxScreen;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
@@ -54,14 +59,19 @@ public final class ToolPouchClientTest implements FabricClientGameTest {
         report.put("diagnostics", diagnostics);
         try {
             context.getInput().resizeWindow(1280, 800);
-            report.put("suite", FabricLoader.getInstance().getModContainer("thenathe_mod_suite").orElseThrow().getMetadata().getVersion().getFriendlyString());
+            report.put("suite_mod_id", "vpp_mod_suite");
+            report.put("suite", FabricLoader.getInstance().getModContainer("vpp_mod_suite").orElseThrow().getMetadata().getVersion().getFriendlyString());
             report.put("toolpouch", FabricLoader.getInstance().getModContainer("toolpouch").orElseThrow().getMetadata().getVersion().getFriendlyString());
-            check(report.get("suite").equals("1.1.6+26.3"), "Tests use the exact active Vanilla++ Suite 1.1.6 developer track");
+            report.put("polymer_client", FabricLoader.getInstance().isModLoaded("polymer-core"));
+            FabricLoader.getInstance().getModContainer("polymer-core").ifPresent(mod ->
+                    report.put("polymer", mod.getMetadata().getVersion().getFriendlyString()));
+            check(report.get("suite").equals("1.2.1+26.3"), "Tests use the exact active Vanilla++ Suite 1.2.1 developer track");
             check(report.get("toolpouch").equals("1.1.10"), "Tests use official Tool Pouch 1.1.10 nested in the suite");
             try (var world = context.worldBuilder().create()) {
                 world.getConnection().waitForChunksDownload();
                 context.waitTicks(20);
                 initialize(context);
+                registeredBindings(context);
                 nestedWheels(context);
                 nativeReplacement(context);
                 nativeUnchanged(context);
@@ -69,6 +79,7 @@ public final class ToolPouchClientTest implements FabricClientGameTest {
                 staleAndEmpty(context);
                 paging(context);
                 pouchLookup(context);
+                suiteConfiguration(context);
             }
             report.put("passed", true);
         } catch (Throwable failure) {
@@ -109,6 +120,161 @@ public final class ToolPouchClientTest implements FabricClientGameTest {
         stack.set(DataComponents.CUSTOM_NAME, Component.literal(name));
         stack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(List.of(new ItemStack(marker, count))));
         return stack;
+    }
+
+    private void registeredBindings(ClientGameTestContext context) throws Exception {
+        context.runOnClient(client -> {
+            for (KeyMapping mapping : List.of(ModKeybinds.OPEN_WIDGET, ModKeybinds.OPEN_TOOL_POUCH,
+                    ModKeybinds.OPEN_ENDER_CHEST, ModKeybinds.USE_SPYGLASS, ModKeybinds.TOGGLE_MINIMAP)) {
+                check(HotkeyWheelClient.findControl(mapping.getName()) == mapping,
+                        "Wheel discovers the suite's original registered control " + mapping.getName());
+            }
+            check(HotkeyWheelClient.findControl("key.vpp_mod_suite.open_settings") != null,
+                    "Current authored suite settings control remains discoverable under vpp_mod_suite");
+        });
+        InputConstants.Key original = context.computeOnClient(client -> InputConstants.getKey(ModKeybinds.OPEN_WIDGET.saveString()));
+        try {
+            fixture(context, sparseShulkers(), false, true, ItemStack.EMPTY);
+            settings(context, true, false, false, true);
+            context.runOnClient(client -> {
+                ModKeybinds.OPEN_WIDGET.setKey(InputConstants.UNKNOWN);
+                KeyMapping.resetMapping();
+                check(HotkeyWheelClient.findControl(ToolPouchIntegration.CONTROL_NAME) == ModKeybinds.OPEN_WIDGET,
+                        "Unbound contextual control retains its registered identity");
+            });
+            launchParent(context, false, false);
+            context.runOnClient(client -> check(client.gui.screen() instanceof ToolPouchRadialScreen,
+                    "Actual parent wheel selection activates an unbound contextual control"));
+            point(context, false, 0);
+            context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
+            verifyShulker(context, "First duplicate", Items.DIAMOND, 3);
+
+            fixture(context, sparseShulkers(), false, true, ItemStack.EMPTY);
+            settings(context, true, true, false, true);
+            context.runOnClient(client -> {
+                ModKeybinds.OPEN_WIDGET.setKey(InputConstants.Type.KEYBOARD.getOrCreate(InputConstants.KEY_G));
+                KeyMapping.resetMapping();
+            });
+            context.getInput().holdKey(InputConstants.KEY_G);
+            context.waitTicks(3);
+            context.runOnClient(client -> {
+                check(client.gui.screen() instanceof WheelScreen,
+                        "Conflicting G binding opens only the parent wheel before any contextual action is selected");
+                check(!ContextualSelectionWidget.widgetOpen && !ModKeybinds.OPEN_WIDGET.isDown(),
+                        "Conflicting parent opener does not activate the original contextual widget");
+            });
+            point(context, true, 0);
+            context.getInput().releaseKey(InputConstants.KEY_G);
+            context.waitTicks(4);
+            context.runOnClient(client -> {
+                check(client.gui.screen() instanceof ToolPouchRadialScreen,
+                        "Conflicting key release still selects the requested contextual wheel action");
+                checkNaturalCenter(client, "Conflicting G contextual opening");
+            });
+            check(onServer(context, player -> player.containerMenu == player.inventoryMenu),
+                    "Conflicting physical key dispatches no item action before the explicit item click");
+            point(context, false, 1);
+            context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
+            verifyShulker(context, "Second duplicate", Items.EMERALD, 7);
+        } finally {
+            context.runOnClient(client -> {
+                ModKeybinds.OPEN_WIDGET.setKey(original);
+                KeyMapping.resetMapping();
+                check(ModKeybinds.OPEN_WIDGET.matches(InputConstants.Type.KEYBOARD.getOrCreate(InputConstants.KEY_X)),
+                        "Contextual binding is restored to X after unbound and conflicting-key checks");
+            });
+        }
+    }
+
+    private static DynamicListWidget settingsList(ConfigScreen screen) throws ReflectiveOperationException {
+        Field field = ConfigScreen.class.getDeclaredField("configList");
+        field.setAccessible(true);
+        return (DynamicListWidget) field.get(screen);
+    }
+
+    private static void configureTopControl(String control) {
+        WheelConfig config = WheelConfig.get().copy();
+        config.wheels.get(0).entries.get(0).control = control;
+        config.wheels.get(0).toggleOpen = false;
+        if (!WheelConfig.save(config)) throw new AssertionError("Cannot save the suite control fixture");
+    }
+
+    private void suiteConfiguration(ClientGameTestContext context) throws Exception {
+        fixture(context, sparseShulkers(), false, true, ItemStack.EMPTY);
+        settings(context, true, false, false, true);
+        KeyMapping settingsControl = context.computeOnClient(client -> HotkeyWheelClient.findControl("key.vpp_mod_suite.open_settings"));
+        InputConstants.Key original = InputConstants.getKey(settingsControl.saveString());
+        try {
+            context.runOnClient(client -> {
+                settingsControl.setKey(InputConstants.UNKNOWN);
+                KeyMapping.resetMapping();
+                configureTopControl(settingsControl.getName());
+            });
+            launchParent(context, false, false);
+            context.runOnClient(client -> check(client.gui.screen() instanceof ConfigScreen
+                    && ((ConfigScreen) client.gui.screen()).getScope().equals("vpp_mod_suite"),
+                    "Actual wheel selection activates the unbound current-suite settings binding and opens its shared configuration"));
+            context.getInput().pressKey(InputConstants.KEY_ESCAPE);
+            context.waitTicks(3);
+            context.runOnClient(client -> check(client.gui.screen() == null,
+                    "Wheel-opened suite configuration retains its native Escape closure"));
+        } finally {
+            context.runOnClient(client -> {
+                settingsControl.setKey(original);
+                KeyMapping.resetMapping();
+                configureTopControl(ToolPouchIntegration.CONTROL_NAME);
+            });
+        }
+
+        String wheelSettings = Files.readString(WheelConfig.path());
+        boolean quickSelect = context.computeOnClient(client -> ToolPouchClient.CONFIG.quickSelect.get());
+        boolean hints = context.computeOnClient(client -> ToolPouchClient.CONFIG.showUIHints.get());
+        Screen parent = context.computeOnClient(client -> new Screen(Component.literal("Suite configuration QA parent")) {});
+        ConfigScreen hub = context.computeOnClient(client -> {
+            Class<?> modMenu = Class.forName("com.terraformersmc.modmenu.ModMenu");
+            Screen screen = (Screen) modMenu.getMethod("getConfigScreen", String.class, Screen.class)
+                    .invoke(null, "vpp_mod_suite", parent);
+            check(screen instanceof ConfigScreen && ((ConfigScreen) screen).getScope().equals("vpp_mod_suite"),
+                    "Registered SuiteModMenu factory opens the shared current-namespace configuration hub");
+            client.gui.setScreen(screen);
+            return (ConfigScreen) screen;
+        });
+        context.waitTicks(3);
+        context.runOnClient(client -> {
+            CustomButtonWidget configure = null;
+            for (var entry : settingsList(hub).selectableEntries()) {
+                if (!entry.getScope().getScope().equals("toolpouch.client_config")) continue;
+                for (var widget : entry.children()) {
+                    if (widget instanceof CustomButtonWidget button) configure = button;
+                }
+            }
+            check(configure != null && configure.active,
+                    "Suite shared navigation retains an enabled native Tool Pouch Client Settings action");
+            check(configure.getMessage().getString().equals("Configure..."),
+                    "Suite configuration navigation retains its established Configure label");
+            configure.onPress();
+            check(client.gui.screen() instanceof ConfigScreen
+                    && ((ConfigScreen) client.gui.screen()).getScope().equals("toolpouch.client_config"),
+                    "Actual suite navigation button opens the original Tool Pouch client configuration");
+        });
+        context.waitTicks(3);
+        context.takeScreenshot("suite-toolpouch-configuration-navigation");
+        context.runOnClient(client -> {
+            ConfigScreen child = (ConfigScreen) client.gui.screen();
+            check(!settingsList(child).selectableEntries().isEmpty(),
+                    "Native Tool Pouch client configuration renders its real fields");
+            child.onClose();
+            check(client.gui.screen() == hub,
+                    "Native Tool Pouch settings closure returns to the shared suite hub");
+            hub.onClose();
+            check(client.gui.screen() == parent,
+                    "Suite factory preserves the caller's parent screen when configuration closes");
+            check(ToolPouchClient.CONFIG.quickSelect.get() == quickSelect && ToolPouchClient.CONFIG.showUIHints.get() == hints,
+                    "Suite navigation leaves original Tool Pouch settings unchanged");
+            client.gui.setScreen(null);
+        });
+        check(Files.readString(WheelConfig.path()).equals(wheelSettings),
+                "Suite configuration navigation leaves saved Hotkey Wheel settings unchanged");
     }
 
     private static ItemStack pouch(List<ItemStack> contents) {

@@ -1,4 +1,4 @@
-# Hotkey Wheel 1.0.3+26.3 verification
+# Hotkey Wheel 1.0.4+26.3 verification
 
 Verified on 2026-10-12 with Minecraft Java **26.3**, Java **25**, Fabric Loader **0.19.5**, and Fabric API **0.162.0+26.3**. Compilation targets Fabric API **0.161.0+26.3**. Graphical client gametests create isolated singleplayer worlds and run the real client and integrated server. Existing profile configuration, mod JARs, and worlds were preserved.
 
@@ -7,20 +7,21 @@ Verified on 2026-10-12 with Minecraft Java **26.3**, Java **25**, Fabric Loader 
 | Profile | Wheel / UI | Key management | Buildprint | Tool Pouch | Total |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Minimal | 150 | 77 | — | — | **227** |
-| Integrated | 154 | 77 | 58 | — | **289** |
-| Suite | 154 | 77 | 58 | 142 | **431** |
+| Integrated | 154 | 77 | 119 | — | **350** |
+| Suite | 154 | 77 | 119 | 183 | **533** |
+| Suite-polymer | 154 | 77 | 119 | 183 | **533** |
 
-**947 assertions pass across three installation profiles.** All profiles test the exact final installable JAR, including the new icon. Build, archive integrity, mod metadata, and icon integrity pass. The public Maven dependency build also succeeds without local dependency overrides. Development QA classes and optional mod APIs are excluded from the installable JAR.
+**1643 assertions pass across four installation profiles.** All profiles test the exact final installable JAR, including the existing simplified wheel icon. Build, archive integrity, mod metadata, and icon integrity pass. The public Maven dependency build also succeeds without local dependency overrides. Development QA classes and optional mod APIs are excluded from the installable JAR.
 
-Final JAR SHA-256: `5057ded646ea3c9d97b444c572f515c3914bcfd12d0bb1dec1edfb1523e2527b`.
+Final JAR SHA-256: `c0f549f7c2a26fa4ac543fe36899b62830b807dfe186f9634dde54d65ad9a73b`.
 
 ## Profiles and provenance
 
 The minimal profile runs without optional integrations. The integrated profile adds **Controlling 26.3.4**, **Searchables 1.0.3**, **Mod Menu 21.0.0**, **Sorted 0.1.25**, **Buildprint 0.1.16+26.x**, **Blocktone for Buildprint 0.1.20**, and **YACL 3.9.7+26.3**.
 
-The suite profile adds the exact active **Vanilla++ 1.1.6+26.3** and its dependencies. It uses original developer **Tool Pouch 1.1.10**, bundled as `toolpouch-fabric-1.1.10+26.3.jar`. Its SHA-256 is `a5bb4f084e7d929f3a89cc43317af63bd45abe3e3f4fed8b45f99b2da846e903`. No suite component or original dependency is modified. The paused SSO port track is excluded; this uses the active developer suite.
+The suite profile adds the exact active **Vanilla++ 1.2.1+26.3** and its dependencies. It uses original developer **Tool Pouch 1.1.10**, bundled as `toolpouch-fabric-1.1.10+26.3.jar`. Its SHA-256 is `a5bb4f084e7d929f3a89cc43317af63bd45abe3e3f4fed8b45f99b2da846e903`. The current suite JAR SHA-256 is `f4a73c3a93c57f9d09e414da21dc79cd2e8eaa927aff73e58121705aa2a04e6a`. The fourth profile runs the same combined installation with **Polymer 0.18.4+26.3**. Native component settings and client behavior are retained; the paused SSO port track is excluded.
 
-The public verification ZIP retains JSON reports, dependency hashes, and screenshots. The local release's `qa/minimal/`, `qa/integrated/`, and `qa/suite/` directories retain JSON reports, exact dependency hashes, console logs, and rendered screenshots. `qa/*Test.java` and `qa/run.py` provide the source tests and isolated launcher. Public source contains no launcher assets, dependency JARs, private suite binaries, configuration, or world files.
+The public verification ZIP retains JSON reports, dependency hashes, and screenshots. The local release's `qa/minimal/`, `qa/integrated/`, `qa/suite/`, and `qa/suite-polymer/` directories retain JSON reports, exact dependency hashes, console logs, and rendered screenshots. `qa/*Test.java` and `qa/run.py` provide the source tests and isolated launcher. Public source contains no launcher assets, dependency JARs, private suite binaries, configuration, or world files.
 
 ## Wheel controls and settings
 
@@ -42,7 +43,15 @@ Tests follow native contextual filters: normal context lists shulker boxes; a pr
 
 The integrated server confirms the selected shulker's name and contents and the native ammunition selection index. Single-item Cancel, empty lists, changed contents or held weapon, inventory-use restrictions, and leggings-pouch priority are covered. A 15-item list remains fully accessible across pages; cycle, arrow, and mouse-scroll navigation reset the cursor to Cancel, and second-page selection sends the correct global index.
 
+The current suite's registered controls are checked, including unbound contextual/settings actions, a contextual control sharing the physical wheel key, and actual suite settings/Tool Pouch configuration navigation. Opening and closing these configuration screens preserves committed wheel and Tool Pouch preferences.
+
 Native contextual-key replacement is checked ON/OFF with both native quick-select settings and the master integration disabled. OFF retains the original widget and its normal opening behavior. ON suppresses the original renderer to avoid duplicate/single-item auto-open and uses the same click-only radial.
+
+## Reported selection-editor issue
+
+The unchanged 1.0.3 release reproduced the user's failure: assigning `key.buildprint.editor` opens Buildprint freecam with no GUI Screen, and pressing the original wheel opener reopened a wheel instead of leaving editing mode. Old-JAR report and exact dependency hashes are preserved locally under `qa/regressions/1.0.3-selection-editor-close/`.
+
+The candidate tracks the specific freecam session created by the wheel and calls Buildprint's native editor exit routine. Tests verify Hold/Toggle and cycled original-opener closure, restored player camera and input, preserved regions on exit/Cancel, actual blueprint output from native Save and its normal selection clearing, and closure through the Save dialog. Native-key openings remain independent, including a new editor session opened after a wheel-owned session closes.
 
 ## Buildprint menu closing
 
@@ -52,6 +61,6 @@ Invalid Blocktone settings refuse closure and retain their validation error; cor
 
 ## Verification boundaries
 
-These are graphical client and integrated-server tests in generated singleplayer worlds. Dedicated multiplayer and Realms/Friends service behavior were not independently tested. Fullscreen uses the native handler but was not toggled during acceptance. The intentional debug-crash chord is not synthesized or tested. Every arbitrary third-party raw-input control is outside this tested integration scope. Tool Pouch still requires its normal server support for its actions.
+These are graphical client and integrated-server tests in generated singleplayer worlds, both without Polymer and with Polymer plus all native suite components. An unmodified vanilla client cannot run Hotkey Wheel and is outside this client-mod test scope. Dedicated multiplayer and Realms/Friends service behavior were not independently tested. Fullscreen uses the native handler but was not toggled during acceptance. The intentional debug-crash chord is not synthesized or tested. Every arbitrary third-party raw-input control is outside this tested integration scope. Tool Pouch still requires its normal server support for its actions.
 
 This is an original client mod with no port counterpart. Source is published at [THENATHE/hotkey-wheel](https://github.com/THENATHE/hotkey-wheel), with the release built from the same committed source. The user's live Vanilla Fast instance was not modified by the test launcher.

@@ -21,6 +21,7 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.BlockPos;
 
 public final class BuildprintMenuTest implements FabricClientGameTest {
     private static final String BUILDPRINT_SCREEN = "com.buildprint.client.gui.BuildprintScreen";
@@ -50,6 +51,7 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
                 context.waitTicks(20);
                 setup(context);
                 cancelHeldWheel(context);
+                selectionEditor(context);
                 rootClose(context);
                 childClose(context);
                 originalCycleOpener(context);
@@ -139,6 +141,191 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
         context.waitTicks(2);
         context.runOnClient(client -> check(!HotkeyWheelClient.WHEEL_KEYS[0].isDown() && !client.options.keyUp.isDown(),
                 "Releasing the canceled wheel opener leaves its ordinary shared control released"));
+    }
+
+    private void selectionEditor(ClientGameTestContext context) throws Exception {
+        InputConstants.Key originalEditorKey = context.computeOnClient(client -> InputConstants.getKey(control("key.buildprint.editor").saveString()));
+        Object[] originalInput = new Object[1];
+        Object[] region = new Object[1];
+        int editorKey = context.computeOnClient(BuildprintMenuTest::unusedKey);
+        context.runOnClient(client -> {
+            originalInput[0] = client.player.input;
+            Object selection = callStatic("com.buildprint.client.edit.EditorMode", "selection");
+            call(selection, "clear");
+            Class<?> regionType = Class.forName("com.buildprint.schematic.selection.RegionSelection");
+            region[0] = regionType.getMethod("single", BlockPos.class).invoke(null, client.player.blockPosition());
+            selection.getClass().getMethod("add", regionType).invoke(selection, region[0]);
+            WheelConfig config = WheelConfig.get().copy();
+            config.wheels.get(0).entries.get(0).control = "key.buildprint.editor";
+            config.wheels.get(1).entries.get(0).control = "key.buildprint.editor";
+            check(WheelConfig.save(config), "Selection editor can be assigned to an actual wheel slot");
+            control("key.buildprint.editor").setKey(InputConstants.UNKNOWN);
+            KeyMapping.resetMapping();
+        });
+        openSelectionEditor(context, false, false);
+        context.takeScreenshot("buildprint-wheel-selection-editor-before-close");
+        context.getInput().pressKey(InputConstants.KEY_G);
+        context.waitTicks(3);
+        context.runOnClient(client -> {
+            check(!editorActive() && client.gui.screen() == null, "Original wheel opener exits the Buildprint selection editor instead of reopening a wheel");
+            check(client.getCameraEntity() == client.player && callStatic("com.buildprint.client.edit.EditorMode", "freecam") == null,
+                    "Selection editor closure restores the player camera through native exit");
+            check(client.player.input == originalInput[0], "Selection editor closure restores the original player input");
+            check(call(callStatic("com.buildprint.client.edit.EditorMode", "selection"), "active") == region[0],
+                    "Selection editor closure preserves the existing selected region");
+        });
+
+        openSelectionEditor(context, true, false);
+        context.getInput().pressKey(InputConstants.KEY_G);
+        context.waitTicks(3);
+        context.runOnClient(client -> check(!editorActive() && client.gui.screen() == null, "Toggle wheel's original opener exits the selection editor"));
+
+        openSelectionEditor(context, false, true);
+        context.getInput().pressKey(InputConstants.KEY_H);
+        context.waitTicks(2);
+        context.runOnClient(client -> check(editorActive(), "Another wheel's key does not exit a selection editor opened with G"));
+        context.getInput().pressKey(InputConstants.KEY_G);
+        context.waitTicks(3);
+        context.runOnClient(client -> check(!editorActive() && client.gui.screen() == null, "Original opener exits selection editor after cycling wheels"));
+
+        openSelectionEditor(context, false, false);
+        openSelectionSave(context);
+        context.clickScreenButton("Cancel");
+        context.waitTicks(2);
+        context.runOnClient(client -> {
+            check(editorActive() && client.gui.screen() == null, "Native selection Save dialog Cancel returns to the active editor");
+            check(call(callStatic("com.buildprint.client.edit.EditorMode", "selection"), "active") == region[0],
+                    "Native selection Save dialog Cancel preserves the selected region");
+        });
+        context.getInput().pressKey(InputConstants.KEY_G);
+        context.waitTicks(3);
+        context.runOnClient(client -> check(!editorActive(), "Wheel opener still exits editor after native Save dialog cancellation"));
+
+        openSelectionEditor(context, false, false);
+        openSelectionSave(context);
+        context.takeScreenshot("buildprint-wheel-selection-editor-save-dialog");
+        context.getInput().pressKey(InputConstants.KEY_G);
+        context.waitTicks(3);
+        context.runOnClient(client -> check(!editorActive() && client.gui.screen() == null, "Wheel opener closes an owned Save dialog and exits its selection editor"));
+
+        openSelectionEditor(context, false, false);
+        openSelectionSave(context);
+        Path output = context.computeOnClient(client -> {
+            Screen save = client.gui.screen();
+            ((EditBox) field(save, "nameBox")).setValue("wheel-qa-selection-" + Long.toUnsignedString(System.nanoTime()));
+            Method fileName = save.getClass().getDeclaredMethod("fileName");
+            fileName.setAccessible(true);
+            return ((Path) callStatic("com.buildprint.schematic.SchematicLibrary", "rootDir")).resolve((String) fileName.invoke(save));
+        });
+        String saveButton = context.computeOnClient(client -> net.minecraft.network.chat.Component.translatable("buildprint.save.quick").getString());
+        context.clickScreenButton(saveButton);
+        context.waitFor(client -> Files.isRegularFile(output), 200);
+        context.runOnClient(client -> {
+            check(Files.size(output) > 0, "Native selection Save still writes an actual blueprint file");
+            check(editorActive() && client.gui.screen() == null, "Native selection Save returns to the active editor");
+            check(call(callStatic("com.buildprint.client.edit.EditorMode", "selection"), "isEmpty").equals(true),
+                    "Successful native selection Save clears the selection through Buildprint's normal callback");
+        });
+        context.getInput().pressKey(InputConstants.KEY_G);
+        context.waitTicks(3);
+        context.runOnClient(client -> check(!editorActive(), "Wheel opener still exits editor after native blueprint saving"));
+
+        context.runOnClient(client -> {
+            control("key.buildprint.editor").setKey(InputConstants.Type.KEYBOARD.getOrCreate(editorKey));
+            KeyMapping.resetMapping();
+        });
+        context.getInput().pressKey(editorKey);
+        context.waitTicks(3);
+        context.runOnClient(client -> check(editorActive(), "The editor still opens through its ordinary native binding"));
+        context.getInput().pressKey(InputConstants.KEY_G);
+        context.waitTicks(3);
+        context.runOnClient(client -> {
+            check(editorActive(), "Wheel opener does not exit an independently opened native selection editor");
+            Object selection = callStatic("com.buildprint.client.edit.EditorMode", "selection");
+            selection.getClass().getMethod("add", region[0].getClass()).invoke(selection, region[0]);
+        });
+        openSelectionSave(context);
+        Screen nativeSave = context.computeOnClient(client -> client.gui.screen());
+        context.getInput().pressKey(InputConstants.KEY_G);
+        context.waitTicks(3);
+        context.runOnClient(client -> check(client.gui.screen() == nativeSave && editorActive(),
+                "Wheel opener leaves a native Save dialog open after an earlier wheel-owned editor session closed"));
+        context.takeScreenshot("buildprint-native-editor-save-not-owned-by-wheel");
+        context.clickScreenButton("Cancel");
+        context.waitTicks(2);
+        context.runOnClient(client -> {
+            check(client.gui.screen() == null && editorActive(), "Native Save dialog Cancel still returns to its independently opened editor");
+            check(call(callStatic("com.buildprint.client.edit.EditorMode", "selection"), "active") == region[0],
+                    "Canceling an independently opened Save dialog keeps its selection intact");
+        });
+        context.getInput().pressKey(editorKey);
+        context.waitTicks(3);
+        context.runOnClient(client -> {
+            check(!editorActive(), "Native editor binding still exits an independently opened selection editor");
+            WheelConfig config = WheelConfig.get().copy();
+            config.closeBuildprintWithWheelKey = false;
+            check(WheelConfig.save(config), "Selection editor return integration can be disabled");
+        });
+        openSelectionEditor(context, false, false);
+        context.getInput().pressKey(InputConstants.KEY_G);
+        context.waitTicks(3);
+        context.runOnClient(client -> check(editorActive(), "Disabled integration does not take over selection editor closure"));
+        context.getInput().pressKey(editorKey);
+        context.waitTicks(3);
+        context.runOnClient(client -> {
+            check(!editorActive(), "Native editor exit works when wheel return integration is disabled");
+            control("key.buildprint.editor").setKey(originalEditorKey);
+            KeyMapping.resetMapping();
+            WheelConfig config = WheelConfig.get().copy();
+            config.closeBuildprintWithWheelKey = true;
+            config.wheels.get(0).toggleOpen = false;
+            config.wheels.get(0).entries.get(0).control = "key.buildprint.open";
+            config.wheels.get(1).entries.get(0).control = "key.buildprint.open";
+            check(WheelConfig.save(config), "Restore ordinary Buildprint menu fixture after selection editor regression");
+        });
+    }
+
+    private void openSelectionEditor(ClientGameTestContext context, boolean toggle, boolean cycle) throws Exception {
+        context.runOnClient(client -> {
+            WheelConfig config = WheelConfig.get().copy();
+            config.wheels.get(0).toggleOpen = toggle;
+            check(WheelConfig.save(config), "Selection editor opening mode fixture saves");
+            check(!editorActive() && client.gui.screen() == null, "Selection editor activation starts from ordinary gameplay");
+        });
+        if (toggle) context.getInput().pressKey(InputConstants.KEY_G);
+        else context.getInput().holdKey(InputConstants.KEY_G);
+        context.waitTicks(2);
+        if (cycle) context.getInput().pressKey(InputConstants.KEY_TAB);
+        pointTop(context);
+        if (toggle) context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
+        else context.getInput().releaseKey(InputConstants.KEY_G);
+        context.waitTicks(4);
+        context.runOnClient(client -> {
+            check(editorActive() && client.gui.screen() == null, "Wheel selection opens actual Buildprint freecam without a Screen");
+            check(client.getCameraEntity() != client.player, "Selection editor activation switches to the native freecam camera");
+        });
+    }
+
+    private void openSelectionSave(ClientGameTestContext context) {
+        context.getInput().pressKey(InputConstants.KEY_3);
+        context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
+        context.waitTicks(3);
+        context.runOnClient(client -> check(client.gui.screen() != null
+                && client.gui.screen().getClass().getName().equals("com.buildprint.client.gui.EditorSaveScreen"),
+                "Native selection toolbar opens its actual Save dialog"));
+    }
+
+    private static boolean editorActive() throws Exception {
+        return (boolean) callStatic("com.buildprint.client.edit.EditorMode", "isActive");
+    }
+
+    private static int unusedKey(Minecraft client) {
+        int[] candidates = {InputConstants.KEY_F6, InputConstants.KEY_F7, InputConstants.KEY_F8,
+                InputConstants.KEY_F9, InputConstants.KEY_F10, InputConstants.KEY_Y, InputConstants.KEY_U,
+                InputConstants.KEY_B, InputConstants.KEY_V, InputConstants.KEY_N, InputConstants.KEY_M};
+        return java.util.Arrays.stream(candidates).filter(key -> java.util.Arrays.stream(client.options.keyMappings)
+                .noneMatch(mapping -> mapping.matches(InputConstants.Type.KEYBOARD.getOrCreate(key))))
+                .findFirst().orElseThrow(() -> new AssertionError("No unused editor fixture key"));
     }
 
     private void rootClose(ClientGameTestContext context) throws Exception {
@@ -291,6 +478,26 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
             WheelConfig config = WheelConfig.get().copy();
             config.wheels.get(0).entries.get(0).control = "key.buildprint.open";
             check(WheelConfig.save(config), "Restore Buildprint menu action after addon validation");
+        });
+        InputConstants.Key originalKey = context.computeOnClient(client -> InputConstants.getKey(control("key.buildprint_toning.instamine_settings").saveString()));
+        int nativeKey = context.computeOnClient(BuildprintMenuTest::unusedKey);
+        context.runOnClient(client -> {
+            control("key.buildprint_toning.instamine_settings").setKey(InputConstants.Type.KEYBOARD.getOrCreate(nativeKey));
+            KeyMapping.resetMapping();
+        });
+        context.getInput().pressKey(nativeKey);
+        context.waitTicks(3);
+        Screen nativeSettings = context.computeOnClient(client -> client.gui.screen());
+        context.runOnClient(client -> check(nativeSettings != null && nativeSettings.getClass().getName().equals(INSTAMINE_SCREEN),
+                "Blocktone settings still open through their registered native hotkey"));
+        context.getInput().pressKey(InputConstants.KEY_G);
+        context.waitTicks(2);
+        context.runOnClient(client -> {
+            check(client.gui.screen() == nativeSettings, "Wheel opener leaves independently opened native Blocktone settings open");
+            nativeSettings.onClose();
+            check(client.gui.screen() == null, "Independently opened Blocktone settings retain their normal validated closure");
+            control("key.buildprint_toning.instamine_settings").setKey(originalKey);
+            KeyMapping.resetMapping();
         });
     }
 
