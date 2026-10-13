@@ -149,6 +149,7 @@ public final class WheelMenuReturn {
             String name = candidate.getClass().getName();
             return name.startsWith("com.buildprint.client.gui.")
                     || name.equals("com.thenathe.buildprinttoning.ToneScreen")
+                    || name.equals("com.thenathe.buildprinttoning.client.SplineSettingsScreen")
                     || name.equals("com.thenathe.buildprinttoning.client.ToolbarOverlayScreen");
         });
     }

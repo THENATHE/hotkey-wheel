@@ -4,12 +4,15 @@ import com.google.gson.GsonBuilder;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.thenathe.hotkeywheel.HotkeyWheelClient;
 import com.thenathe.hotkeywheel.RadialGeometry;
+import com.thenathe.hotkeywheel.ToolPouchIntegration;
+import com.thenathe.hotkeywheel.ToolPouchRadialScreen;
 import com.thenathe.hotkeywheel.WheelConfig;
 import com.thenathe.hotkeywheel.WheelEditorScreen;
 import com.thenathe.hotkeywheel.WheelMenuReturn;
 import com.thenathe.hotkeywheel.WheelScreen;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -22,6 +25,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 public final class BuildprintMenuTest implements FabricClientGameTest {
     private static final String BUILDPRINT_SCREEN = "com.buildprint.client.gui.BuildprintScreen";
@@ -31,6 +36,9 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
     private Object loaded;
     private InputConstants.Key forwardKey;
     private int nativeOpenKey;
+    private boolean editorApi;
+    private int editorEnters;
+    private int editorExits;
 
     private void check(boolean condition, String description) {
         if (!condition) throw new AssertionError(description);
@@ -50,6 +58,8 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
                 world.getConnection().waitForChunksDownload();
                 context.waitTicks(20);
                 setup(context);
+                setupEditorApi(context);
+                report.put("public_editor_api", editorApi);
                 cancelHeldWheel(context);
                 selectionEditor(context);
                 rootClose(context);
@@ -61,6 +71,24 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
                 unrelatedReplacement(context);
                 nonMenuActionDoesNotClaimScreen(context);
                 context.runOnClient(client -> {
+                    if (editorApi) {
+                        check(editorEnters > 0 && editorEnters == editorExits,
+                                "Public editor lifecycle delivers balanced enter and exit events across wheel and native sessions");
+                        Method usingApi = Class.forName("com.thenathe.hotkeywheel.BuildprintApiIntegration")
+                                .getDeclaredMethod("hasEditorApi");
+                        usingApi.setAccessible(true);
+                        check((boolean) usingApi.invoke(null),
+                                "Hotkey Wheel uses the public editor bridge throughout modern Buildprint scenarios");
+                        Class<?> legacy = Class.forName("com.thenathe.hotkeywheel.BuildprintEditorReturn$NativeEditor");
+                        Field active = legacy.getDeclaredField("active");
+                        Field freecam = legacy.getDeclaredField("freecam");
+                        active.setAccessible(true);
+                        freecam.setAccessible(true);
+                        check(active.get(null) == null && freecam.get(null) == null,
+                                "Modern editor lifecycle tracking never resolves legacy active or freecam reflection");
+                        report.put("editor_enter_events", editorEnters);
+                        report.put("editor_exit_events", editorExits);
+                    }
                     WheelMenuReturn.clear();
                     client.gui.setScreen(null);
                     client.options.keyUp.setKey(forwardKey);
@@ -143,6 +171,117 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
                 "Releasing the canceled wheel opener leaves its ordinary shared control released"));
     }
 
+    private void setupEditorApi(ClientGameTestContext context) throws Exception {
+        context.runOnClient(client -> {
+            Class<?> api;
+            try {
+                api = Class.forName("com.buildprint.api.editor.BuildprintEditor");
+            } catch (ClassNotFoundException legacy) {
+                return;
+            }
+            editorApi = true;
+            Class<?> listenerType = Class.forName("com.buildprint.api.editor.EditorListener");
+            Object listener = Proxy.newProxyInstance(listenerType.getClassLoader(), new Class<?>[] {listenerType},
+                    (proxy, method, args) -> {
+                        switch (method.getName()) {
+                            case "onEnter" -> editorEnters++;
+                            case "onExit" -> editorExits++;
+                            case "equals" -> { return proxy == args[0]; }
+                            case "hashCode" -> { return System.identityHashCode(proxy); }
+                            case "toString" -> { return "Hotkey Wheel QA lifecycle observer"; }
+                            default -> { }
+                        }
+                        return null;
+                    });
+            api.getMethod("addListener", listenerType).invoke(null, listener);
+            check(!callStatic("com.buildprint.api.editor.BuildprintEditor", "isActive").equals(true),
+                    "Public editor API starts inactive before any wheel action");
+            check(!hudHidden(), "Public HUD starts visible outside radial menus");
+            // This is a HUD predicate fixture only; native Tool Pouch behavior has its own suite tests.
+            var snapshot = new ToolPouchIntegration.Snapshot(ToolPouchIntegration.Context.SHULKERS,
+                    List.of(new ToolPouchIntegration.ItemChoice(0, new ItemStack(Items.SHULKER_BOX))));
+            client.gui.setScreen(new ToolPouchRadialScreen(snapshot));
+            check(hudHidden(), "Public HUD predicate also recognizes the Tool Pouch item radial");
+            client.gui.screen().onClose();
+            check(!hudHidden(), "Closing the Tool Pouch radial releases its public HUD suppression");
+        });
+    }
+
+    private void apiOwnedDialogs(ClientGameTestContext context, Object originalInput) throws Exception {
+        int entersBefore = editorEnters;
+        int exitsBefore = editorExits;
+        openSelectionEditor(context, false, false);
+        context.getInput().pressKey(InputConstants.KEY_TAB);
+        context.waitTicks(2);
+        context.runOnClient(client -> check(client.gui.screen() != null
+                        && client.gui.screen().getClass().getName().equals("com.buildprint.client.gui.ToolPickerScreen"),
+                "Wheel-owned editor opens Buildprint's native API tool picker"));
+        context.getInput().pressKey(InputConstants.KEY_G);
+        context.waitTicks(3);
+        context.runOnClient(client -> {
+            check(!editorActive() && client.gui.screen() == null,
+                    "Original wheel opener closes the API tool picker and its editor session");
+            check(client.getCameraEntity() == client.player && client.player.input == originalInput,
+                    "Closing the API tool picker restores native camera and player input");
+            check(editorEnters == entersBefore + 1 && editorExits == exitsBefore + 1,
+                    "Wheel-owned native editor open and close each deliver exactly one public lifecycle event");
+        });
+
+        openSelectionEditor(context, false, false);
+        openSplineSettings(context);
+        double previousWidth = context.computeOnClient(client ->
+                Class.forName("com.thenathe.buildprinttoning.AddonSession").getField("halfWidth").getDouble(null));
+        context.runOnClient(client -> ((EditBox) field(client.gui.screen(), "halfWidth")).setValue("-1"));
+        context.clickScreenButton("Done");
+        context.waitTicks(2);
+        context.runOnClient(client -> check(!((String) field(client.gui.screen(), "error")).isEmpty(),
+                "API addon spline settings keep native validation when Done is pressed"));
+        context.getInput().pressKey(InputConstants.KEY_G);
+        context.waitTicks(3);
+        context.runOnClient(client -> {
+            check(!editorActive() && client.gui.screen() == null,
+                    "Original opener exits API addon spline settings and the whole wheel-owned editor");
+            check(Class.forName("com.thenathe.buildprinttoning.AddonSession").getField("halfWidth").getDouble(null) == previousWidth,
+                    "Wheel closure respects spline settings native Cancel semantics and preserves saved geometry");
+        });
+    }
+
+    private void apiSessionReplacement(ClientGameTestContext context) throws Exception {
+        openSelectionEditor(context, false, false);
+        int entersBefore = editorEnters;
+        int exitsBefore = editorExits;
+        context.runOnClient(client -> {
+            // Both transitions happen before another wheel tick, exercising event-based session identity.
+            Method toggle = Class.forName("com.buildprint.client.edit.EditorController")
+                    .getDeclaredMethod("toggle", Minecraft.class);
+            toggle.setAccessible(true);
+            toggle.invoke(null, client);
+            toggle.invoke(null, client);
+            check(editorActive() && editorEnters == entersBefore + 1 && editorExits == exitsBefore + 1,
+                    "Public lifecycle observes native exit and re-entry within the same client callback");
+            check(!WheelMenuReturn.handleInput(InputConstants.Type.KEYBOARD.getOrCreate(InputConstants.KEY_G), InputConstants.PRESS),
+                    "Original wheel opener cannot claim the replacement native session before the next tick");
+            check(editorActive(), "Replacement native session survives the stale wheel opener");
+            toggle.invoke(null, client);
+        });
+        context.waitTicks(2);
+    }
+
+    private void openSplineSettings(ClientGameTestContext context) throws Exception {
+        context.runOnClient(client -> check((boolean) Class.forName("com.buildprint.api.editor.BuildprintEditor")
+                        .getMethod("selectTool", String.class).invoke(null, "buildprint_toning:spline_settings"),
+                "Public editor API selects Blocktone spline settings by its registered tool ID"));
+        context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
+        context.waitTicks(3);
+        context.runOnClient(client -> check(client.gui.screen() != null && client.gui.screen().getClass().getName()
+                        .equals("com.thenathe.buildprinttoning.client.SplineSettingsScreen"),
+                "Clicking the selected API addon tool opens its actual spline settings"));
+    }
+
+    private static boolean hudHidden() throws Exception {
+        return (boolean) callStatic("com.buildprint.api.BuildprintHud", "isHidden");
+    }
+
     private void selectionEditor(ClientGameTestContext context) throws Exception {
         InputConstants.Key originalEditorKey = context.computeOnClient(client -> InputConstants.getKey(control("key.buildprint.editor").saveString()));
         Object[] originalInput = new Object[1];
@@ -174,6 +313,11 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
             check(call(callStatic("com.buildprint.client.edit.EditorMode", "selection"), "active") == region[0],
                     "Selection editor closure preserves the existing selected region");
         });
+
+        if (editorApi) {
+            apiOwnedDialogs(context, originalInput[0]);
+            apiSessionReplacement(context);
+        }
 
         openSelectionEditor(context, true, false);
         context.getInput().pressKey(InputConstants.KEY_G);
@@ -257,6 +401,21 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
             Object selection = callStatic("com.buildprint.client.edit.EditorMode", "selection");
             selection.getClass().getMethod("add", region[0].getClass()).invoke(selection, region[0]);
         });
+        if (editorApi) {
+            String previousTool = context.computeOnClient(client ->
+                    (String) callStatic("com.buildprint.api.editor.BuildprintEditor", "activeTool"));
+            openSplineSettings(context);
+            Screen nativeSpline = context.computeOnClient(client -> client.gui.screen());
+            context.getInput().pressKey(InputConstants.KEY_G);
+            context.waitTicks(2);
+            context.runOnClient(client -> check(client.gui.screen() == nativeSpline && editorActive(),
+                    "Wheel opener leaves API addon settings in an independently opened editor alone"));
+            context.clickScreenButton("Cancel");
+            context.waitTicks(2);
+            context.runOnClient(client -> check((boolean) Class.forName("com.buildprint.api.editor.BuildprintEditor")
+                            .getMethod("selectTool", String.class).invoke(null, previousTool),
+                    "Native editor tool selection is restored after independent addon settings cancellation"));
+        }
         openSelectionSave(context);
         Screen nativeSave = context.computeOnClient(client -> client.gui.screen());
         context.getInput().pressKey(InputConstants.KEY_G);
@@ -315,6 +474,8 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
         context.waitTicks(4);
         context.runOnClient(client -> {
             check(editorActive() && client.gui.screen() == null, "Wheel selection opens actual Buildprint freecam without a Screen");
+            if (editorApi) check((boolean) callStatic("com.buildprint.api.editor.BuildprintEditor", "isActive"),
+                    "Public editor API confirms the wheel-opened editor is active");
             check(client.getCameraEntity() != client.player, "Selection editor activation switches to the native freecam camera");
         });
     }
@@ -343,8 +504,11 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
         });
         context.getInput().holdKey(secondWheelKey);
         context.waitTicks(2);
-        context.runOnClient(client -> check(client.gui.screen() instanceof WheelScreen wheel && wheel.wheelIndex() == 1,
-                "The second wheel's physical key opens its radial menu inside the active selection editor"));
+        context.runOnClient(client -> {
+            check(client.gui.screen() instanceof WheelScreen wheel && wheel.wheelIndex() == 1,
+                    "The second wheel's physical key opens its radial menu inside the active selection editor");
+            if (editorApi) check(hudHidden(), "Public HUD suppression hides editor panels while a physical wheel is open");
+        });
         pointTop(context);
         context.getInput().releaseKey(secondWheelKey);
         context.waitTicks(4);
@@ -352,6 +516,7 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
             check(editorActive() && client.gui.screen() == null
                             && callStatic("com.buildprint.client.edit.EditorMode", "freecam") == session,
                     "Selecting Screenshot through another wheel keeps the exact native editor session active");
+            if (editorApi) check(!hudHidden(), "Public HUD suppression releases editor panels after wheel selection");
             WheelConfig config = WheelConfig.get().copy();
             config.wheels.get(1).entries.get(0).control = "key.buildprint.editor";
             check(WheelConfig.save(config), "Restore second wheel's selection editor action after screenshot");

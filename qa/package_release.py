@@ -17,6 +17,8 @@ JAR_NAME = f'hotkey-wheel-{VERSION}.jar'
 JAR = SOURCE / 'build/libs' / JAR_NAME
 REPORTS = {
     'minimal': ['results.json', 'key-management-results.json'],
+    'legacy': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json'],
+    'api-baseline': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json'],
     'integrated': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json'],
     'suite': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'toolpouch-results.json'],
     'suite-polymer': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'toolpouch-results.json'],
@@ -85,6 +87,14 @@ for mode, names in REPORTS.items():
     require(provenance.get('integrated') is (mode != 'minimal') and provenance.get('suite') is mode.startswith('suite')
             and provenance.get('polymer') is (mode == 'suite-polymer'),
             f'{mode}: profile provenance mismatch')
+    if mode != 'minimal':
+        buildprint_version = '0.1.16+26.x' if mode == 'legacy' else '0.1.17+26.x' if mode == 'api-baseline' else '0.1.18+26.x'
+        blocktone_version = '0.1.20' if mode == 'legacy' else '0.1.21'
+        require(provenance.get('buildprint') == buildprint_version and provenance.get('blocktone') == blocktone_version,
+                f'{mode}: unexpected Buildprint/Blocktone versions')
+        for filename in [f'buildprint-fabric-{buildprint_version}.jar', f'buildprint-toning-{blocktone_version}.jar']:
+            require(provenance['mods'].get(filename) == sha256(root / 'game/mods' / filename),
+                    f'{mode}: retained integration artifact differs from tested dependency')
     require(provenance['mods'].get(JAR_NAME) == release_hash, f'{mode}: tests did not use the final release JAR')
     require(sha256(root / 'game/mods' / JAR_NAME) == release_hash, f'{mode}: retained test JAR differs from release')
     addon_names = {name for name in provenance['mods'] if name.startswith('hotkey-wheel-') and name != 'hotkey-wheel-qa.jar'}
@@ -100,7 +110,7 @@ for mode, names in REPORTS.items():
         require(path.stat().st_mtime_ns >= (root / 'provenance.json').stat().st_mtime_ns,
                 f'{mode}/{name}: result predates this profile run')
         if name == 'toolpouch-results.json':
-            require(result.get('suite') == '1.3.0+26.3' and result.get('toolpouch') == '1.1.10',
+            require(result.get('suite') == '1.3.1+26.3' and result.get('toolpouch') == '1.1.10',
                     f'{mode}: unexpected native suite/Tool Pouch version')
             require(result.get('polymer_client') is (mode == 'suite-polymer'), f'{mode}: Polymer runtime mismatch')
             if mode == 'suite-polymer':
@@ -114,7 +124,7 @@ total_assertions = sum(profile_totals.values())
 RELEASE.mkdir(parents=True, exist_ok=True)
 for name in [JAR_NAME, f'hotkey-wheel-{VERSION}-sources.jar']:
     shutil.copy2(SOURCE / 'build/libs' / name, RELEASE / name)
-for name in ['README.md', 'QA.md', 'ICON.md', 'LICENSE']:
+for name in ['README.md', 'QA.md', 'API-MIGRATION.md', 'ICON.md', 'LICENSE']:
     shutil.copy2(SOURCE / name, RELEASE / name)
 shutil.copy2(SOURCE / 'build.log', RELEASE / 'build.log')
 if (SOURCE / 'qa/regressions').is_dir():
@@ -134,7 +144,7 @@ for mode, names in REPORTS.items():
             shutil.copy2(screenshot, screenshots / screenshot.name)
 
 source_files = [SOURCE / name for name in [
-    '.gitignore', 'LICENSE', 'README.md', 'QA.md', 'ICON.md', 'build.gradle', 'gradle.properties',
+    '.gitignore', 'LICENSE', 'README.md', 'QA.md', 'API-MIGRATION.md', 'ICON.md', 'build.gradle', 'gradle.properties',
     'settings.gradle', 'gradlew', 'qa/run.py', 'qa/package_release.py']]
 source_files += list((SOURCE / 'qa').glob('*Test.java'))
 source_files += [path for directory in ['src', 'gradle']
@@ -151,7 +161,7 @@ with zipfile.ZipFile(verification_zip, 'w', zipfile.ZIP_DEFLATED) as archive:
         for path in [*(evidence / name for name in [*names, 'provenance.json']),
                      *sorted((evidence / 'screenshots').glob('*.png'))]:
             archive.write(path, Path('hotkey-wheel-qa') / path.relative_to(RELEASE / 'qa'))
-    for name in ['QA.md', 'README.md', 'ICON.md']:
+    for name in ['QA.md', 'README.md', 'API-MIGRATION.md', 'ICON.md']:
         archive.write(RELEASE / name, Path('hotkey-wheel-qa') / name)
 
 for archive_path in [RELEASE / JAR_NAME, RELEASE / f'hotkey-wheel-{VERSION}-sources.jar', source_zip, verification_zip]:
@@ -186,7 +196,7 @@ if index_path.is_file() and RELEASE.is_relative_to(WORKSPACE):
         'loader': 'Fabric', 'id': 'hotkey_wheel', 'version': VERSION,
         'family': 'Hotkey Wheel', 'component': 'Main Plugin', 'source': 'Minecraft/hotkey-wheel',
         'new': str((RELEASE / JAR_NAME).relative_to(WORKSPACE)),
-        'status': (f'Local original client release; {total_assertions} passing assertions across minimal, integrated, '
+        'status': (f'Local original client release; {total_assertions} passing assertions across minimal, legacy, API baseline, integrated, '
                    'Vanilla++ native and Polymer profiles; selection-editor camera/input return, contextual Tool Pouch radial, '
                    'Buildprint menu return, main-menu settings, and Controlling verified.'),
         'verification': str((RELEASE / 'BUILD-REPORT.json').relative_to(WORKSPACE)),

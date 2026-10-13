@@ -11,10 +11,18 @@ ROOT = Path(__file__).resolve().parent
 PROFILE = Path(os.environ.get('HOTKEY_WHEEL_PROFILE', str(Path.home() / '.local/share/ModrinthApp/profiles/Vanilla Fast')))
 META = Path(os.environ.get('HOTKEY_WHEEL_META', str(PROFILE.parents[1] / 'meta')))
 CACHE = Path.home() / '.gradle/caches/modules-2/files-2.1'
+BASELINE = '--api-baseline' in sys.argv
+LEGACY = '--legacy' in sys.argv
 POLYMER = '--polymer' in sys.argv
 SUITE = '--suite' in sys.argv or POLYMER
-INTEGRATED = '--integrated' in sys.argv or SUITE
-RUN = ROOT / ('suite-polymer' if POLYMER else 'suite' if SUITE else 'integrated' if INTEGRATED else 'minimal')
+INTEGRATED = '--integrated' in sys.argv or SUITE or BASELINE or LEGACY
+BUILDPRINT_VERSION = '0.1.16+26.x' if LEGACY else '0.1.17+26.x' if BASELINE else '0.1.18+26.x'
+BLOCKTONE_VERSION = '0.1.20' if LEGACY else '0.1.21'
+SUITE_VERSION = '1.3.1+26.3'
+WORKSPACE = ROOT.parents[2]
+if sum([BASELINE, LEGACY, SUITE]) > 1:
+    raise SystemExit('Baseline and legacy modes are separate integrated profiles.')
+RUN = ROOT / ('legacy' if LEGACY else 'api-baseline' if BASELINE else 'suite-polymer' if POLYMER else 'suite' if SUITE else 'integrated' if INTEGRATED else 'minimal')
 RUN.mkdir(exist_ok=True)
 GAME = RUN / 'game'
 MODS = GAME / 'mods'
@@ -24,10 +32,10 @@ for old in MODS.glob('*.jar'):
 patterns = ['fabric-api-*.jar']
 if INTEGRATED:
     patterns += ['Controlling-*.jar', 'Searchables-*.jar', 'modmenu-*.jar',
-                 'sorted-fabric-*.jar', 'buildprint-fabric-*.jar', 'buildprint-toning-*.jar',
+                 'sorted-fabric-*.jar',
                  'yet_another_config_lib*.jar']
 if SUITE:
-    patterns += ['vanilla-plusplus-quality-of-life-suite-1.3.0+26.3.jar', 'fzzy_config-0.7.7+fix3+26.3.jar',
+    patterns += [f'vanilla-plusplus-quality-of-life-suite-{SUITE_VERSION}.jar', 'fzzy_config-0.7.7+fix3+26.3.jar',
                  'cloth-config-*.jar', 'fabric-language-kotlin-*.jar', 'codecui-*.jar', 'mixson-*.jar']
 if POLYMER:
     patterns += ['polymer-bundled-0.18.4+26.3.jar']
@@ -36,6 +44,14 @@ for pattern in patterns:
     if len(matches) != 1:
         raise SystemExit(f'Expected one profile dependency for {pattern}; found {len(matches)}')
     shutil.copy2(matches[0], MODS / matches[0].name)
+if INTEGRATED:
+    for source in [
+        WORKSPACE / 'Builds/Minecraft/Buildprint/Main Plugin' / BUILDPRINT_VERSION / f'buildprint-fabric-{BUILDPRINT_VERSION}.jar',
+        WORKSPACE / 'Builds/Minecraft/Buildprint/Feature Addon - Blocktone Toning' / BLOCKTONE_VERSION / f'buildprint-toning-{BLOCKTONE_VERSION}.jar',
+    ]:
+        if not source.is_file():
+            raise SystemExit(f'Missing pinned integration artifact: {source}')
+        shutil.copy2(source, MODS / source.name)
 version = next(line.split('=', 1)[1].strip() for line in (ROOT.parent / 'gradle.properties').read_text().splitlines()
                if line.startswith('mod_version='))
 addon = ROOT.parent / 'build/libs' / f'hotkey-wheel-{version}.jar'
@@ -110,6 +126,7 @@ command = [str(compiler.parent / 'java'), '-Xmx2G', '-XX:ActiveProcessorCount=4'
            '--assetsDir', str(META / 'assets'), '--assetIndex', '34', '--width', '1280', '--height', '800']
 (RUN / 'provenance.json').write_text(json.dumps({
     'minecraft': '26.3', 'loader': '0.19.5', 'integrated': INTEGRATED, 'suite': SUITE, 'polymer': POLYMER,
+    'buildprint': BUILDPRINT_VERSION if INTEGRATED else None, 'blocktone': BLOCKTONE_VERSION if INTEGRATED else None,
     'mods': {source.name: hashlib.sha256(source.read_bytes()).hexdigest() for source in sorted(MODS.glob('*.jar'))}}, indent=2))
 environment = os.environ.copy()
 environment['SDL_VIDEODRIVER'] = 'x11'

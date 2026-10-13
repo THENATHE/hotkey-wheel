@@ -21,6 +21,11 @@ dependencies {
     } else {
         compileOnly 'com.terraformersmc:modmenu:21.0.0'
     }
+    if (project.hasProperty('buildprintJar')) {
+        compileOnly files(project.property('buildprintJar'))
+    } else {
+        compileOnly 'maven.modrinth:buildprint:0.1.17+26.x'
+    }
     if (project.hasProperty('toolPouchJar')) {
         compileOnly files(project.property('toolPouchJar'))
     } else {

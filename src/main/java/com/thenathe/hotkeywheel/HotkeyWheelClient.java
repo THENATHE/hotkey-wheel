@@ -42,6 +42,7 @@ public final class HotkeyWheelClient implements ClientModInitializer {
         CYCLE_KEY = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.hotkey_wheel.cycle", InputConstants.KEY_TAB, category));
         CONFIGURE_KEY = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.hotkey_wheel.configure", InputConstants.UNKNOWN.getValue(), category));
         ClientTickEvents.START_CLIENT_TICK.register(HotkeyWheelClient::tick);
+        BuildprintApiIntegration.initialize();
         WheelMenuReturn.initialize();
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             clearInput();

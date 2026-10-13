@@ -29,11 +29,11 @@ final class BuildprintEditorReturn {
         if (!control.getName().equals(CONTROL)) {
             pending = null;
             // A second wheel action can leave the same editor session running.
-            if (session != null && NativeEditor.session() != session) clearOwnership();
+            if (session != null && editorSession() != session) clearOwnership();
             return;
         }
         clearOwnership();
-        pending = new PendingEditor(wheelOpener, NativeEditor.session(), ticks + 4);
+        pending = new PendingEditor(wheelOpener, editorSession(), ticks + 4);
     }
 
     static void tick(Minecraft client) {
@@ -44,7 +44,7 @@ final class BuildprintEditorReturn {
             return;
         }
         if (pending == null && session == null) return;
-        Object current = NativeEditor.session();
+        Object current = editorSession();
         if (pending != null) {
             if (ticks > pending.expires() || pending.previousSession() != null && current == null) {
                 pending = null;
@@ -71,7 +71,7 @@ final class BuildprintEditorReturn {
         }
         if (action != InputConstants.PRESS || session == null || !key.equals(opener)
                 || client.gui.screen() instanceof WheelScreen) return false;
-        if (NativeEditor.session() != session || client.gui.screen() != null
+        if (editorSession() != session || client.gui.screen() != null
                 && !WheelMenuReturn.isEditorMenu(client.gui.screen())) {
             clearOwnership();
             return false;
@@ -89,8 +89,13 @@ final class BuildprintEditorReturn {
             WheelMenuReturn.closeNativeScreen(client, screen);
             if (client.gui.screen() == screen) return;
         }
-        if (client.gui.screen() == null && NativeEditor.session() == ownedSession
+        if (client.gui.screen() == null && editorSession() == ownedSession
                 && NativeEditor.exit(client)) clearOwnership();
+    }
+
+    private static Object editorSession() {
+        if (BuildprintApiIntegration.hasEditorApi()) return BuildprintApiIntegration.editorSession();
+        return NativeEditor.session();
     }
 
     static void clear() {
@@ -110,19 +115,14 @@ final class BuildprintEditorReturn {
         private static Method exit;
         private static boolean unavailable;
 
-        private static boolean resolve() {
+        private static boolean resolveSession() {
             if (unavailable || !FabricLoader.getInstance().isModLoaded("buildprint")) return false;
             if (active != null) return true;
             try {
+                // Legacy Buildprint 0.1.16 has no public editor lifecycle API.
                 Class<?> mode = Class.forName("com.buildprint.client.edit.EditorMode");
-                Class<?> controller = Class.forName("com.buildprint.client.edit.EditorController");
-                Method activeMethod = mode.getMethod("isActive");
-                Method freecamMethod = mode.getMethod("freecam");
-                Method exitMethod = controller.getDeclaredMethod("exit", Minecraft.class);
-                if (!exitMethod.trySetAccessible()) throw new IllegalAccessException("Editor exit is inaccessible");
-                active = activeMethod;
-                freecam = freecamMethod;
-                exit = exitMethod;
+                active = mode.getMethod("isActive");
+                freecam = mode.getMethod("freecam");
                 return true;
             } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
                 unavailable(failure);
@@ -131,22 +131,29 @@ final class BuildprintEditorReturn {
         }
 
         private static Object session() {
-            if (!resolve()) return null;
+            if (!resolveSession()) return null;
             try {
                 return Boolean.TRUE.equals(active.invoke(null)) ? freecam.invoke(null) : null;
-            } catch (ReflectiveOperationException | RuntimeException failure) {
+            } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
                 unavailable(failure);
                 return null;
             }
         }
 
         private static boolean exit(Minecraft client) {
-            if (!resolve()) return false;
+            if (unavailable || !FabricLoader.getInstance().isModLoaded("buildprint")) return false;
             try {
+                if (exit == null) {
+                    // Replace this bridge when the API provides native editor/session closure.
+                    Class<?> controller = Class.forName("com.buildprint.client.edit.EditorController");
+                    Method exitMethod = controller.getDeclaredMethod("exit", Minecraft.class);
+                    if (!exitMethod.trySetAccessible()) throw new IllegalAccessException("Editor exit is inaccessible");
+                    exit = exitMethod;
+                }
                 // Use the same exit routine as the native toggle: restore camera/input and keep regions.
                 exit.invoke(null, client);
                 return true;
-            } catch (ReflectiveOperationException | RuntimeException failure) {
+            } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
                 unavailable(failure);
                 return false;
             }

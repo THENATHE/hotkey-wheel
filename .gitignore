@@ -8,3 +8,5 @@ qa/suite/
 qa/regressions/**/crash.txt
 qa/*-run.log
 qa/suite-polymer/
+qa/api-baseline/
+qa/legacy/
