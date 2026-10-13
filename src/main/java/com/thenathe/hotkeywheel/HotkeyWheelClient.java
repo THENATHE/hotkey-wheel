@@ -177,6 +177,7 @@ public final class HotkeyWheelClient implements ClientModInitializer {
         releaseActive();
         if (control.getName().equals(ToolPouchIntegration.CONTROL_NAME) && ToolPouchIntegration.open(client)) return;
         WheelMenuReturn.begin(control, action.opener());
+        if (BuildprintApiIntegration.activateEditor(control)) return;
         if (VanillaControlActions.activate(client, control)) return;
         KeyMappingAccess access = (KeyMappingAccess) control;
         boolean restoreToggleDown = control instanceof ToggleKeyMapping

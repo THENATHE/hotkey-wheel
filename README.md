@@ -1,14 +1,14 @@
-# Hotkey Wheel 1.0.6+26.3
+# Hotkey Wheel 1.0.7+26.3
 
 <img src="src/main/resources/assets/hotkey_wheel/icon.png" alt="Hotkey Wheel radial icon" width="128">
 
 A client-side Fabric mod for Minecraft Java 26.3. Create up to three radial menus with separate opening keys, assign Minecraft or registered mod controls, and choose floating block/item icons. Hold or toggle a wheel, select by dragging from the center, and cycle wheels without releasing the original opener.
 
-Version 1.0.6 uses Buildprint's public editor lifecycle and HUD APIs on 0.1.17/0.1.18, while retaining the 0.1.16 fallback. Buildprint panels step aside while a radial is open. The new Blocktone 0.1.21 standalone Spline settings screen also closes with its wheel-owned editor. Existing settings and key recovery remain compatible. [API-MIGRATION.md](API-MIGRATION.md) maps remaining private bridges to the suggested future API additions.
+Version 1.0.7 uses Buildprint 0.1.19's public editor open/close and screen-ownership APIs. Dialogs still close through their normal save/cancel/validation handlers before editor exit. Public registration supports Blocktone's new settings screens without hard-coded modern screen names. Older supported Buildprint paths and existing settings remain available. [API-MIGRATION.md](API-MIGRATION.md) records adopted hooks and the remaining API gaps.
 
 ## Install and configure
 
-Requires **Minecraft 26.3**, **Fabric Loader 0.19.5+**, **Java 25+**, and **Fabric API 0.161.0+26.3 or newer for 26.3**. Replace older Hotkey Wheel JARs with `hotkey-wheel-1.0.6+26.3.jar` in your client's `mods` folder, then restart. Install only one Hotkey Wheel version. Servers do not need Hotkey Wheel.
+Requires **Minecraft 26.3**, **Fabric Loader 0.19.5+**, **Java 25+**, and **Fabric API 0.161.0+26.3 or newer for 26.3**. Replace older Hotkey Wheel JARs with `hotkey-wheel-1.0.7+26.3.jar` in your client's `mods` folder, then restart. Install only one Hotkey Wheel version. Servers do not need Hotkey Wheel.
 
 Open **Options → Controls → Key Binds → Wheels…**, or use Hotkey Wheel's settings in Mod Menu. Controlling can search **hotkey wheel** to find the three opening keys, cycle key, and configuration shortcut. Sorted, Buildprint, Blocktone, Tool Pouch, Vanilla++, Controlling, Searchables, and Mod Menu are optional; Hotkey Wheel runs without them.
 
@@ -39,7 +39,7 @@ Turn a slot's unbinding option off, remove its last active use with unbinding en
 
 ## Tool Pouch and Vanilla++
 
-With **Tool Pouch contextual wheel: ON**, selecting Tool Pouch's **Contextual Open** control in a wheel automatically opens an item radial. This works with Tool Pouch 1.1.10, including the copy bundled in Vanilla++ 1.3.1.
+With **Tool Pouch contextual wheel: ON**, selecting Tool Pouch's **Contextual Open** control in a wheel automatically opens an item radial. This works with Tool Pouch 1.1.10, including the copy bundled in Vanilla++ 1.4.0.
 
 The item radial follows Tool Pouch's actual contextual menu: it shows **shulker boxes** normally, or **compatible ammunition** while holding a supported projectile weapon. Other stored tools/items are filtered exactly as the native contextual menu filters them. Selection uses Tool Pouch's normal networking and inventory behavior, with the original stack names, counts, and item data.
 
@@ -77,11 +77,12 @@ python3 qa/run.py
 python3 qa/run.py --integrated
 python3 qa/run.py --suite
 python3 qa/run.py --polymer
+python3 qa/run.py --api-previous
 python3 qa/run.py --api-baseline
 python3 qa/run.py --legacy
 ```
 
-The metadata directory must contain Minecraft 26.3, Fabric Loader 0.19.5 launcher metadata, libraries, natives, and assets. The Gradle cache supplies the Fabric client gametest API. A graphical X11 session is required. The integrated profile adds Controlling, Searchables, Sorted, Buildprint, Blocktone, Mod Menu, and YACL. The suite profile adds Vanilla++ 1.3.1 and its installed dependencies for actual Tool Pouch interactions and suite configuration navigation. The Polymer profile includes the same combined suite, Buildprint, and Blocktone with Polymer 0.18.4+26.3.
+The metadata directory must contain Minecraft 26.3, Fabric Loader 0.19.5 launcher metadata, libraries, natives, and assets. The Gradle cache supplies the Fabric client gametest API. A graphical X11 session is required. The integrated profile adds Controlling, Searchables, Sorted, Buildprint, Blocktone, Mod Menu, and YACL. The suite profile adds Vanilla++ 1.4.0 and its installed dependencies for actual Tool Pouch interactions and suite configuration navigation. The Polymer profile includes the same combined suite, Buildprint, and Blocktone with Polymer 0.18.4+26.3.
 
 See [QA.md](QA.md) for current results, exact versions, and verification boundaries. The verification ZIP contains test reports, dependency hashes, and rendered screenshots. Local release folders additionally retain console logs and the earlier crash regression evidence. `python3 qa/package_release.py` packages only after every expected report passes against the final JAR; it validates archive/metadata/icon integrity and calculates assertion totals from the reports. QA code is excluded from the installable mod.
 

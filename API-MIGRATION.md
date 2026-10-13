@@ -1,32 +1,36 @@
-# Buildprint API integration in Hotkey Wheel 1.0.6
+# Buildprint API integration in Hotkey Wheel 1.0.7
 
-Target: original developer Buildprint 0.1.17+26.x and 0.1.18+26.x on Minecraft 26.3. Buildprint remains optional. The public API is a compile-only dependency and is not bundled. The existing 0.1.16 integration is retained as a legacy fallback; no Buildprint or Blocktone binaries are modified.
+Target: original developer Buildprint 0.1.19+26.x on Minecraft 26.3. Buildprint remains optional and compile-only; none of its classes or libraries are bundled. The 0.1.17/0.1.18 API paths and 0.1.16 legacy fallback remain available. No original Buildprint or Blocktone source/JAR is modified.
 
 ## Public API adopted
 
-- `BuildprintEditor.isActive()` and `EditorListener.onEnter/onExit` track each editor session with a fresh local identity token. The API path no longer reads private `EditorMode.freecam()` state. Only a session started by a pending wheel action can acquire a closing key. Another wheel action retains ownership while the same session survives. Native-opened sessions remain independent.
-- `BuildprintHud.hideWhile("hotkey_wheel:radial", predicate)` suppresses Buildprint panels while a Hotkey Wheel or Tool Pouch radial is displayed. The predicate follows the current screen, so cancel, confirmation, and replacement restore normal HUD behavior without changing saved settings. Other mods' HUD requests remain independent.
-- API classes load only after Buildprint is present and the relevant public class exists. Editor and HUD integration initialize independently. Missing API support keeps the older integration available.
+- `BuildprintEditor.isActive()` and `EditorListener.onEnter/onExit` identify each editor session. Only a session created by a wheel action acquires the original closing key. Native-opened sessions remain independent, including exit/re-entry within one callback.
+- `BuildprintEditor.open()` and `close()` now activate the wheel's editor control on 0.1.19 with its existing toggle behavior. Selecting that control while already editing closes the editor without synthesizing a control click. Refused or failed API calls do not fall through to private exit or a synthetic key press.
+- Original-opener closure first calls each owned dialog's normal `onClose()`. If validation keeps a dialog open, editor exit stops. Only after dialogs have closed normally does the wheel call public `close()`. This avoids 0.1.19's direct dialog dismissal bypassing native save/cancel/validation.
+- `BuildprintEditor.isEditorScreen(Screen)` identifies registered editor screens. Blocktone 0.1.24 registers its Tone, Spline settings and block-picker screens with `registerScreen(Class)`. Hotkey Wheel consumes this registration and follows Screen-valued parents for nested children. It retains its own wheel-origin/session checks, so registration never grants ownership of a native-opened editor.
+- `BuildprintHud.hideWhile("hotkey_wheel:radial", predicate)` suppresses Buildprint panels while either radial screen is displayed. Closing, cancelling, or replacing a radial restores ordinary HUD behavior without changing saved preferences.
 
-Implementation: `BuildprintApiIntegration.java`, with ownership in `BuildprintEditorReturn.java`.
+Implementation: `BuildprintApiIntegration.java`, `BuildprintEditorReturn.java`, `WheelMenuReturn.java`, and the registered-control dispatch in `HotkeyWheelClient.java`.
 
-## Remaining bridges and suggested API additions
+API methods are detected individually and direct calls stay in isolated classes. Missing methods use the older supported path. A failure from a present lifecycle/screen method fails conservatively and never bypasses the API by calling private methods.
 
-| Proposed API | Current code and reason | Future improvement |
+## Requested additions and what remains useful
+
+| Suggested API | Status in 0.1.19 | Remaining work or benefit |
 | --- | --- | --- |
-| `openEditor()` / `closeEditor()` | Wheel opening activates the registered editor control. `BuildprintEditorReturn.NativeEditor.exit` still invokes private `EditorController.exit(Minecraft)` so native camera/input restoration and addon exit notifications run. | Replace private exit reflection with a supported lifecycle operation. An explicit open operation would also avoid toggle ambiguity for future direct tool actions. |
-| `requestCloseEditorSession()` returning success/refusal | `BuildprintEditorReturn.closeEditor` and `WheelMenuReturn.closeOwnedMenus` walk known dialogs and invoke native `onClose`, stopping if validation refuses closure. A Material List special case handles its embedded picker. | Let Buildprint close the whole session while preserving native save/cancel/validation rules; remove manual dialog unwinding and special cases. |
-| `isEditorScreen(Screen)` plus addon registration | `WheelMenuReturn.isEditorMenu` recognizes specific Buildprint/Blocktone screen classes and traverses reflected Screen-valued parent fields. The new standalone Blocktone `SplineSettingsScreen` is explicitly included. | Replace hard-coded names and private parent inspection with supported ownership information, including independently opened addon settings. Wheel-origin tracking must still remain local. |
-| `tools()` / `actions()` with IDs, names, icons, availability | Hotkey Wheel lists registered Minecraft controls. The API provides `selectTool(id)`, but no public registry enumeration. | Offer discoverable direct tool/action entries without maintaining a hand-written list or depending on toolbar slot order. This is a future feature, not added by this migration. |
+| `openEditor()` / `closeEditor()` | Available as `open()` / `close()`; adopted. | Private `EditorController.exit` remains only for older Buildprint. |
+| `isEditorScreen(Screen)` and addon registration | Available as `isEditorScreen` / `registerScreen`; adopted. | Parent introspection remains for unregistered nested screens and separately wheel-opened main menus, which the editor API does not classify. |
+| Validation-aware `requestCloseEditorSession()` | `close()` exits the session and dismisses recognized screens, but does not call their normal `onClose()`. | A supported operation that invokes normal handlers and reports validation refusal could replace our explicit dialog unwinding and Material List embedded-picker special case. |
+| `tools()` / `actions()` with IDs, labels, icons and availability | Not exposed publicly. | Would allow automatic discovery of direct editor tool/action entries rather than a manually maintained list. No direct-tool picker feature is added here. |
 
-`selectTool(id)` requires an active editor. Selecting one of Blocktone's registered tools generally selects the tool; it does not perform the later click or open its settings. A future direct-settings integration would need an explicit addon action/hook with ordinary validation and lifecycle behavior.
+`selectTool(id)` still requires an active editor. Selecting a tool generally does not execute its later click or open settings. Future direct-settings entries need an explicit addon action/hook that preserves ordinary validation and lifecycle behavior.
 
-For legacy Buildprint 0.1.16 only, the old `EditorMode.isActive/freecam` bridge remains necessary because public lifecycle events do not exist. Remove it only when legacy support is deliberately retired.
+## Compatibility fallbacks
 
-## Compatibility boundaries
+Buildprint 0.1.17/0.1.18 retain public lifecycle/HUD tracking but use private native exit and narrow screen classification because the newer methods do not exist. Buildprint 0.1.16 retains private activity/freecam identity as well. All private fallback sites are marked in code for removal only when those older versions are deliberately retired.
 
-This migration does not take ownership of dialogs merely because an editor is active. Wheel origin, session identity, focus/world state, and known screen ancestry still gate closing. Unrelated screens relinquish ownership. Buildprint's reserved raw editor shortcuts, including H for its controls card, remain native behavior.
+The editor API recognizes registered classes and subclasses, not arbitrary screen ancestry. Buildprint's main menu, Migration/YACL screens and directly wheel-opened Blocktone instant-break settings therefore retain their separate screen-parent ownership path. Unrelated replacement screens relinquish wheel ownership. Buildprint's raw reserved editor shortcuts remain native behavior.
 
-See `QA.md` for exact tested artifacts, modes, and results. The modern addon target is Blocktone for Buildprint 0.1.21; legacy checks use 0.1.20. No port counterpart exists for this original Hotkey Wheel release.
+See `QA.md` for exact artifacts and results. This build tests Buildprint 0.1.19 with the installable Blocktone 0.1.24 JAR built from its source targeting 0.1.19. Per the user’s instruction, older compatibility paths are retained but not re-tested for 1.0.7; their historical results are not evidence for this build.
 
 Official references: [API overview](https://voxelsprout.com/buildprint/wiki/api), [Editor API](https://voxelsprout.com/buildprint/wiki/editor-api).

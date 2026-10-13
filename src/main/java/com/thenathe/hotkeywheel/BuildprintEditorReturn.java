@@ -89,8 +89,12 @@ final class BuildprintEditorReturn {
             WheelMenuReturn.closeNativeScreen(client, screen);
             if (client.gui.screen() == screen) return;
         }
-        if (client.gui.screen() == null && editorSession() == ownedSession
-                && NativeEditor.exit(client)) clearOwnership();
+        if (client.gui.screen() == null && editorSession() == ownedSession) {
+            // Public close bypasses onClose, so only call it after native validation-aware unwinding.
+            boolean closed = BuildprintApiIntegration.hasCloseApi()
+                    ? BuildprintApiIntegration.closeEditor() : NativeEditor.exit(client);
+            if (closed) clearOwnership();
+        }
     }
 
     private static Object editorSession() {
@@ -144,7 +148,7 @@ final class BuildprintEditorReturn {
             if (unavailable || !FabricLoader.getInstance().isModLoaded("buildprint")) return false;
             try {
                 if (exit == null) {
-                    // Replace this bridge when the API provides native editor/session closure.
+                    // Buildprint before 0.1.19 has no public editor close operation.
                     Class<?> controller = Class.forName("com.buildprint.client.edit.EditorController");
                     Method exitMethod = controller.getDeclaredMethod("exit", Minecraft.class);
                     if (!exitMethod.trySetAccessible()) throw new IllegalAccessException("Editor exit is inaccessible");

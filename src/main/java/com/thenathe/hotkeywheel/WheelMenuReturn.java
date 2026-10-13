@@ -145,6 +145,11 @@ public final class WheelMenuReturn {
     }
 
     static boolean isEditorMenu(Screen screen) {
+        if (BuildprintApiIntegration.hasScreenApi()) {
+            boolean owned = anyParent(screen, BuildprintApiIntegration::isEditorScreen);
+            return owned && !BuildprintApiIntegration.screenApiFailed();
+        }
+        // Older versions have neither the public screen registry nor addon registration.
         return anyParent(screen, candidate -> {
             String name = candidate.getClass().getName();
             return name.startsWith("com.buildprint.client.gui.")

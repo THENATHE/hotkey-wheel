@@ -17,8 +17,6 @@ JAR_NAME = f'hotkey-wheel-{VERSION}.jar'
 JAR = SOURCE / 'build/libs' / JAR_NAME
 REPORTS = {
     'minimal': ['results.json', 'key-management-results.json'],
-    'legacy': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json'],
-    'api-baseline': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json'],
     'integrated': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json'],
     'suite': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'toolpouch-results.json'],
     'suite-polymer': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'toolpouch-results.json'],
@@ -80,6 +78,7 @@ with zipfile.ZipFile(JAR) as archive:
 
 results = {}
 profile_totals = {}
+shared_inputs = {}
 for mode, names in REPORTS.items():
     root = SOURCE / 'qa' / mode
     provenance = json.loads((root / 'provenance.json').read_text())
@@ -88,8 +87,8 @@ for mode, names in REPORTS.items():
             and provenance.get('polymer') is (mode == 'suite-polymer'),
             f'{mode}: profile provenance mismatch')
     if mode != 'minimal':
-        buildprint_version = '0.1.16+26.x' if mode == 'legacy' else '0.1.17+26.x' if mode == 'api-baseline' else '0.1.18+26.x'
-        blocktone_version = '0.1.20' if mode == 'legacy' else '0.1.21'
+        buildprint_version = '0.1.19+26.x'
+        blocktone_version = '0.1.24'
         require(provenance.get('buildprint') == buildprint_version and provenance.get('blocktone') == blocktone_version,
                 f'{mode}: unexpected Buildprint/Blocktone versions')
         for filename in [f'buildprint-fabric-{buildprint_version}.jar', f'buildprint-toning-{blocktone_version}.jar']:
@@ -99,6 +98,10 @@ for mode, names in REPORTS.items():
     require(sha256(root / 'game/mods' / JAR_NAME) == release_hash, f'{mode}: retained test JAR differs from release')
     addon_names = {name for name in provenance['mods'] if name.startswith('hotkey-wheel-') and name != 'hotkey-wheel-qa.jar'}
     require(addon_names == {JAR_NAME}, f'{mode}: conflicting Hotkey Wheel artifacts in test profile')
+    for filename, checksum in provenance['mods'].items():
+        if filename.startswith(('buildprint-fabric-', 'buildprint-toning-', 'vanilla-plusplus-quality-of-life-suite-')):
+            require(shared_inputs.setdefault(filename, checksum) == checksum,
+                    f'{mode}: integration input changed between profiles: {filename}')
     counts = {}
     for name in names:
         path = root / name
@@ -109,8 +112,11 @@ for mode, names in REPORTS.items():
                 f'{mode}/{name}: missing assertion evidence')
         require(path.stat().st_mtime_ns >= (root / 'provenance.json').stat().st_mtime_ns,
                 f'{mode}/{name}: result predates this profile run')
+        if name == 'buildprint-menu-results.json':
+            require(result.get('public_editor_api') is True and result.get('public_editor_close_api') is True,
+                    f'{mode}: public 0.1.19 editor integration was not exercised')
         if name == 'toolpouch-results.json':
-            require(result.get('suite') == '1.3.1+26.3' and result.get('toolpouch') == '1.1.10',
+            require(result.get('suite') == '1.4.0+26.3' and result.get('toolpouch') == '1.1.10',
                     f'{mode}: unexpected native suite/Tool Pouch version')
             require(result.get('polymer_client') is (mode == 'suite-polymer'), f'{mode}: Polymer runtime mismatch')
             if mode == 'suite-polymer':
@@ -177,6 +183,7 @@ report = {
     'track': 'original release', 'portCounterpart': None,
     'minecraft': '26.3', 'loader': '0.19.5', 'compileFabricApi': '0.161.0+26.3',
     'testedFabricApi': '0.162.0+26.3', 'java': '25',
+    'integrationInputs': shared_inputs, 'legacyRetest': 'not run for 1.0.7 at user request; fallback source retained',
     'source': 'Minecraft/hotkey-wheel', 'repository': 'https://github.com/THENATHE/hotkey-wheel',
     'sourceSnapshot': source_zip.name, 'publicVerification': verification_zip.name, 'sourceSnapshotSha256': sha256(source_zip), 'jarSha256': release_hash,
     'assertions': results, 'profileTotals': profile_totals, 'totalAssertions': total_assertions,
@@ -196,7 +203,7 @@ if index_path.is_file() and RELEASE.is_relative_to(WORKSPACE):
         'loader': 'Fabric', 'id': 'hotkey_wheel', 'version': VERSION,
         'family': 'Hotkey Wheel', 'component': 'Main Plugin', 'source': 'Minecraft/hotkey-wheel',
         'new': str((RELEASE / JAR_NAME).relative_to(WORKSPACE)),
-        'status': (f'Local original client release; {total_assertions} passing assertions across minimal, legacy, API baseline, integrated, '
+        'status': (f'Local original client release; {total_assertions} passing assertions across minimal, integrated, '
                    'Vanilla++ native and Polymer profiles; selection-editor camera/input return, contextual Tool Pouch radial, '
                    'Buildprint menu return, main-menu settings, and Controlling verified.'),
         'verification': str((RELEASE / 'BUILD-REPORT.json').relative_to(WORKSPACE)),

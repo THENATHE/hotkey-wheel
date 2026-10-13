@@ -12,17 +12,18 @@ PROFILE = Path(os.environ.get('HOTKEY_WHEEL_PROFILE', str(Path.home() / '.local/
 META = Path(os.environ.get('HOTKEY_WHEEL_META', str(PROFILE.parents[1] / 'meta')))
 CACHE = Path.home() / '.gradle/caches/modules-2/files-2.1'
 BASELINE = '--api-baseline' in sys.argv
+PREVIOUS = '--api-previous' in sys.argv
 LEGACY = '--legacy' in sys.argv
 POLYMER = '--polymer' in sys.argv
 SUITE = '--suite' in sys.argv or POLYMER
-INTEGRATED = '--integrated' in sys.argv or SUITE or BASELINE or LEGACY
-BUILDPRINT_VERSION = '0.1.16+26.x' if LEGACY else '0.1.17+26.x' if BASELINE else '0.1.18+26.x'
-BLOCKTONE_VERSION = '0.1.20' if LEGACY else '0.1.21'
-SUITE_VERSION = '1.3.1+26.3'
+INTEGRATED = '--integrated' in sys.argv or SUITE or BASELINE or PREVIOUS or LEGACY
+BUILDPRINT_VERSION = '0.1.16+26.x' if LEGACY else '0.1.17+26.x' if BASELINE else '0.1.18+26.x' if PREVIOUS else '0.1.19+26.x'
+BLOCKTONE_VERSION = '0.1.20' if LEGACY else '0.1.23' if BASELINE or PREVIOUS else '0.1.24'
+SUITE_VERSION = '1.4.0+26.3'
 WORKSPACE = ROOT.parents[2]
-if sum([BASELINE, LEGACY, SUITE]) > 1:
+if sum([BASELINE, PREVIOUS, LEGACY, SUITE]) > 1:
     raise SystemExit('Baseline and legacy modes are separate integrated profiles.')
-RUN = ROOT / ('legacy' if LEGACY else 'api-baseline' if BASELINE else 'suite-polymer' if POLYMER else 'suite' if SUITE else 'integrated' if INTEGRATED else 'minimal')
+RUN = ROOT / ('legacy' if LEGACY else 'api-baseline' if BASELINE else 'api-previous' if PREVIOUS else 'suite-polymer' if POLYMER else 'suite' if SUITE else 'integrated' if INTEGRATED else 'minimal')
 RUN.mkdir(exist_ok=True)
 GAME = RUN / 'game'
 MODS = GAME / 'mods'
@@ -47,7 +48,7 @@ for pattern in patterns:
 if INTEGRATED:
     for source in [
         WORKSPACE / 'Builds/Minecraft/Buildprint/Main Plugin' / BUILDPRINT_VERSION / f'buildprint-fabric-{BUILDPRINT_VERSION}.jar',
-        WORKSPACE / 'Builds/Minecraft/Buildprint/Feature Addon - Blocktone Toning' / BLOCKTONE_VERSION / f'buildprint-toning-{BLOCKTONE_VERSION}.jar',
+        Path(os.environ.get('HOTKEY_WHEEL_BLOCKTONE_JAR', str(WORKSPACE / 'Builds/Minecraft/Buildprint/Feature Addon - Blocktone Toning' / BLOCKTONE_VERSION / f'buildprint-toning-{BLOCKTONE_VERSION}.jar'))) if BUILDPRINT_VERSION == '0.1.19+26.x' else WORKSPACE / 'Builds/Minecraft/Buildprint/Feature Addon - Blocktone Toning' / BLOCKTONE_VERSION / f'buildprint-toning-{BLOCKTONE_VERSION}.jar',
     ]:
         if not source.is_file():
             raise SystemExit(f'Missing pinned integration artifact: {source}')

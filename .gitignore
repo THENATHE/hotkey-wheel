@@ -10,3 +10,5 @@ qa/*-run.log
 qa/suite-polymer/
 qa/api-baseline/
 qa/legacy/
+qa/api-previous/
+qa/addon-candidate/

@@ -37,6 +37,7 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
     private InputConstants.Key forwardKey;
     private int nativeOpenKey;
     private boolean editorApi;
+    private boolean closeApi;
     private int editorEnters;
     private int editorExits;
 
@@ -51,7 +52,9 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
         report.put("checks", checks);
         try {
             context.runOnClient(client -> {
-                callStatic("com.buildprint.client.onboarding.OnboardingManager", "markComplete");
+                Object onboarding = Class.forName("com.buildprint.client.onboarding.BuildprintOnboarding")
+                        .getConstructor().newInstance();
+                call(onboarding, "markDone");
                 client.gui.setScreen(null);
             });
             try (var world = context.worldBuilder().create()) {
@@ -60,6 +63,7 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
                 setup(context);
                 setupEditorApi(context);
                 report.put("public_editor_api", editorApi);
+                report.put("public_editor_close_api", closeApi);
                 cancelHeldWheel(context);
                 selectionEditor(context);
                 rootClose(context);
@@ -86,6 +90,12 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
                         freecam.setAccessible(true);
                         check(active.get(null) == null && freecam.get(null) == null,
                                 "Modern editor lifecycle tracking never resolves legacy active or freecam reflection");
+                        if (closeApi) {
+                            Field exit = legacy.getDeclaredField("exit");
+                            exit.setAccessible(true);
+                            check(exit.get(null) == null,
+                                    "Buildprint 0.1.19 editor closure never resolves private native exit reflection");
+                        }
                         report.put("editor_enter_events", editorEnters);
                         report.put("editor_exit_events", editorExits);
                     }
@@ -180,6 +190,14 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
                 return;
             }
             editorApi = true;
+            try {
+                api.getMethod("close");
+                api.getMethod("open");
+                api.getMethod("registerScreen", Class.class);
+                closeApi = true;
+            } catch (NoSuchMethodException olderApi) {
+                closeApi = false;
+            }
             Class<?> listenerType = Class.forName("com.buildprint.api.editor.EditorListener");
             Object listener = Proxy.newProxyInstance(listenerType.getClassLoader(), new Class<?>[] {listenerType},
                     (proxy, method, args) -> {
@@ -252,19 +270,128 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
         int exitsBefore = editorExits;
         context.runOnClient(client -> {
             // Both transitions happen before another wheel tick, exercising event-based session identity.
-            Method toggle = Class.forName("com.buildprint.client.edit.EditorController")
-                    .getDeclaredMethod("toggle", Minecraft.class);
-            toggle.setAccessible(true);
-            toggle.invoke(null, client);
-            toggle.invoke(null, client);
+            nativeEditorToggle(client);
+            nativeEditorToggle(client);
             check(editorActive() && editorEnters == entersBefore + 1 && editorExits == exitsBefore + 1,
                     "Public lifecycle observes native exit and re-entry within the same client callback");
             check(!WheelMenuReturn.handleInput(InputConstants.Type.KEYBOARD.getOrCreate(InputConstants.KEY_G), InputConstants.PRESS),
                     "Original wheel opener cannot claim the replacement native session before the next tick");
             check(editorActive(), "Replacement native session survives the stale wheel opener");
-            toggle.invoke(null, client);
+            nativeEditorToggle(client);
         });
         context.waitTicks(2);
+    }
+
+    private void nativeEditorToggle(Minecraft client) throws Exception {
+        if (closeApi) {
+            check((boolean) callStatic("com.buildprint.api.editor.BuildprintEditor", editorActive() ? "close" : "open"),
+                    "Public editor lifecycle operation succeeds for native QA session transition");
+        } else {
+            Method toggle = Class.forName("com.buildprint.client.edit.EditorController")
+                    .getDeclaredMethod("toggle", Minecraft.class);
+            toggle.setAccessible(true);
+            toggle.invoke(null, client);
+        }
+    }
+
+    private void registeredScreenClosure(ClientGameTestContext context) throws Exception {
+        context.runOnClient(client -> Class.forName("com.buildprint.api.editor.BuildprintEditor")
+                .getMethod("registerScreen", Class.class).invoke(null, RegisteredEditorScreen.class));
+        openSelectionEditor(context, false, false);
+        RegisteredEditorScreen screen = context.computeOnClient(client -> new RegisteredEditorScreen());
+        context.runOnClient(client -> {
+            client.gui.setScreen(screen);
+            check((boolean) Class.forName("com.buildprint.api.editor.BuildprintEditor")
+                            .getMethod("isEditorScreen", Screen.class).invoke(null, screen),
+                    "Public API recognizes a registered editor screen outside Buildprint and Blocktone packages");
+        });
+        context.waitTicks(2);
+        context.getInput().pressKey(InputConstants.KEY_G);
+        context.waitTicks(2);
+        context.runOnClient(client -> {
+            check(client.gui.screen() == screen && editorActive() && screen.closeCalls == 1,
+                    "Registered editor screen validation can refuse wheel closure without exiting the editor");
+            screen.allowClose = true;
+        });
+        context.getInput().pressKey(InputConstants.KEY_G);
+        context.waitTicks(2);
+        context.runOnClient(client -> {
+            check(client.gui.screen() == null && !editorActive() && screen.closeCalls == 2,
+                    "Original opener closes the registered screen and editor once validation allows closure");
+            check(screen.editorActiveDuringClose,
+                    "Registered screen native onClose runs before public editor close restores gameplay");
+            check((boolean) callStatic("com.buildprint.api.editor.BuildprintEditor", "open"),
+                    "Public open starts an independent native editor session");
+            screen.closeCalls = 0;
+            client.gui.setScreen(screen);
+        });
+        context.waitTicks(2);
+        context.getInput().pressKey(InputConstants.KEY_G);
+        context.waitTicks(2);
+        context.runOnClient(client -> {
+            check(client.gui.screen() == screen && editorActive() && screen.closeCalls == 0,
+                    "Registering a screen never gives wheel ownership to a native API-opened editor");
+            screen.onClose();
+            check((boolean) callStatic("com.buildprint.api.editor.BuildprintEditor", "close"),
+                    "Independent registered editor retains ordinary public closure");
+        });
+        context.waitTicks(2);
+    }
+
+    private void activeEditorWheelToggle(ClientGameTestContext context) throws Exception {
+        openSelectionEditor(context, false, false);
+        InputConstants.Key previousKey = context.computeOnClient(client ->
+                InputConstants.getKey(HotkeyWheelClient.WHEEL_KEYS[1].saveString()));
+        int key = context.computeOnClient(BuildprintMenuTest::unusedKey);
+        context.runOnClient(client -> {
+            HotkeyWheelClient.WHEEL_KEYS[1].setKey(InputConstants.Type.KEYBOARD.getOrCreate(key));
+            KeyMapping.resetMapping();
+        });
+        context.getInput().holdKey(key);
+        context.waitTicks(2);
+        pointTop(context);
+        context.getInput().releaseKey(key);
+        context.waitTicks(4);
+        context.runOnClient(client -> {
+            check(!editorActive() && client.gui.screen() == null,
+                    "Selecting the editor action from another wheel closes an already-active editor through the public API");
+            check(!control("key.buildprint.editor").consumeClick() && !control("key.buildprint.editor").isDown(),
+                    "Public editor toggle leaves no native control click or held state that could reopen it");
+            check((boolean) callStatic("com.buildprint.api.editor.BuildprintEditor", "open"),
+                    "Native editor can reopen normally after a wheel action toggles it closed");
+            check(!WheelMenuReturn.handleInput(InputConstants.Type.KEYBOARD.getOrCreate(key), InputConstants.PRESS)
+                            && editorActive(),
+                    "A wheel action that closes an existing editor does not own the next native session");
+            callStatic("com.buildprint.api.editor.BuildprintEditor", "close");
+            HotkeyWheelClient.WHEEL_KEYS[1].setKey(previousKey);
+            KeyMapping.resetMapping();
+        });
+    }
+
+    public static final class RegisteredEditorScreen extends Screen {
+        private boolean allowClose;
+        private int closeCalls;
+        private boolean editorActiveDuringClose;
+
+        public RegisteredEditorScreen() {
+            super(net.minecraft.network.chat.Component.literal("Registered editor QA dialog"));
+        }
+
+        @Override
+        public void onClose() {
+            closeCalls++;
+            try {
+                editorActiveDuringClose = editorActive();
+            } catch (Exception failure) {
+                throw new AssertionError(failure);
+            }
+            if (allowClose) minecraft.gui.setScreen(null);
+        }
+
+        @Override
+        public boolean isPauseScreen() {
+            return false;
+        }
     }
 
     private void openSplineSettings(ClientGameTestContext context) throws Exception {
@@ -317,6 +444,10 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
         if (editorApi) {
             apiOwnedDialogs(context, originalInput[0]);
             apiSessionReplacement(context);
+            if (closeApi) {
+                registeredScreenClosure(context);
+                activeEditorWheelToggle(context);
+            }
         }
 
         openSelectionEditor(context, true, false);
