@@ -1,14 +1,14 @@
-# Hotkey Wheel 1.0.7+26.3
+# Hotkey Wheel 1.0.8+26.3
 
 <img src="src/main/resources/assets/hotkey_wheel/icon.png" alt="Hotkey Wheel radial icon" width="128">
 
 A client-side Fabric mod for Minecraft Java 26.3. Create up to three radial menus with separate opening keys, assign Minecraft or registered mod controls, and choose floating block/item icons. Hold or toggle a wheel, select by dragging from the center, and cycle wheels without releasing the original opener.
 
-Version 1.0.7 uses Buildprint 0.1.19's public editor open/close and screen-ownership APIs. Dialogs still close through their normal save/cancel/validation handlers before editor exit. Public registration supports Blocktone's new settings screens without hard-coded modern screen names. Older supported Buildprint paths and existing settings remain available. [API-MIGRATION.md](API-MIGRATION.md) records adopted hooks and the remaining API gaps.
+Version 1.0.8 corrects the reported side-mouse editor-closing issue by running the existing ownership check before Buildprint's grabbed editor mouse handler. The native Mouse Button 4 regression and all 2,188 fresh checks pass, including the all-four native and Polymer profiles. The public editor open/close and screen-ownership APIs adopted in 1.0.7 remain in use. Dialogs still close through their normal save/cancel/validation handlers before editor exit, and native-opened editors remain independent. [API-MIGRATION.md](API-MIGRATION.md) records the input-ordering change, adopted hooks, and remaining API gaps.
 
 ## Install and configure
 
-Requires **Minecraft 26.3**, **Fabric Loader 0.19.5+**, **Java 25+**, and **Fabric API 0.161.0+26.3 or newer for 26.3**. Replace older Hotkey Wheel JARs with `hotkey-wheel-1.0.7+26.3.jar` in your client's `mods` folder, then restart. Install only one Hotkey Wheel version. Servers do not need Hotkey Wheel.
+Requires **Minecraft 26.3**, **Fabric Loader 0.19.5+**, **Java 25+**, and **Fabric API 0.161.0+26.3 or newer for 26.3**. Replace older Hotkey Wheel JARs with `hotkey-wheel-1.0.8+26.3.jar` in your client's `mods` folder, then restart. Install only one Hotkey Wheel version. Servers do not need Hotkey Wheel.
 
 Open **Options → Controls → Key Binds → Wheels…**, or use Hotkey Wheel's settings in Mod Menu. Controlling can search **hotkey wheel** to find the three opening keys, cycle key, and configuration shortcut. Sorted, Buildprint, Blocktone, Tool Pouch, Vanilla++, Controlling, Searchables, and Mod Menu are optional; Hotkey Wheel runs without them.
 
@@ -86,10 +86,12 @@ The metadata directory must contain Minecraft 26.3, Fabric Loader 0.19.5 launche
 
 Set `HOTKEY_WHEEL_SUITE_JAR`, `HOTKEY_WHEEL_BRBR_JAR`, `HOTKEY_WHEEL_BLOCKTONE_JAR`, or `HOTKEY_WHEEL_POLYMER_JAR` to test an exact candidate artifact; runtime reports and provenance record its declared version and SHA-256. `--prepare-only` builds the isolated QA profile and test JAR without launching a rendered client. The ten-area Buildprint API audit in [API-MIGRATION.md](API-MIGRATION.md) links the official documentation and records the relevant hooks and unused areas.
 
-See [QA.md](QA.md) for current results, exact versions, and verification boundaries. The verification ZIP contains test reports, dependency hashes, and rendered screenshots. Local release folders additionally retain console logs and the earlier crash regression evidence. `python3 qa/package_release.py` packages only after every expected report passes against the final JAR; it validates archive/metadata/icon integrity and calculates assertion totals from the reports. QA code is excluded from the installable mod.
+See [QA.md](QA.md) for current results, exact versions, and verification boundaries. The verification ZIP contains test reports, dependency hashes, and rendered screenshots. Local release folders additionally retain console logs and the earlier crash regression evidence. `python3 qa/package_release.py` packages only after every expected report passes against the final JAR; it validates archive/metadata/icon integrity and calculates assertion totals from the reports. QA code is excluded from the installable mod. Set `HOTKEY_WHEEL_BUILD_LOG`, `HOTKEY_WHEEL_ARTIFACT_DIFF`, and `HOTKEY_WHEEL_SOURCE_REBUILD` to include an exact build log, artifact comparison and independently reproduced-source proof. Shared build-index updates require `HOTKEY_WHEEL_UPDATE_INDEX=1`.
 
 For a standalone checkout, set `HOTKEY_WHEEL_RELEASE_DIR=/path/to/release-folder` when running the packager. Private local crash evidence is copied only when present and is excluded from the public source archive.
 
-The 2026-10-13 integration review preserves the original 1.0.7 production JAR, tag, source archive, and release verification archive. Updated test source and all-four evidence are separate dated `reviewed-source` and `combined-QA` assets. Set `HOTKEY_WHEEL_REVIEW_DATE=2026-10-13` and `HOTKEY_WHEEL_REVIEW_QUALIFIER=suite-1.4.4` when packaging the final review; files go under the existing version's `reviews/2026-10-13/suite-1.4.4/` folder and do not replace original artifacts or the earlier Suite 1.4.3 baseline review. [QA.md](QA.md) records the current review; each original archive retains its historical dependency versions and results.
+The earlier 1.0.7 release, its original tag/archives, and the 2026-10-13 four-mod review remain available with their own exact inputs and results. Version 1.0.8 has a separate release folder and repeats the complete acceptance matrix against its own JAR. Historical keyboard-opening coverage does not establish the new side-mouse regression; [QA.md](QA.md) records that distinction and the current release's verification.
+
+For future documentation-only reviews of an unchanged release, `HOTKEY_WHEEL_REVIEW_DATE` and optional `HOTKEY_WHEEL_REVIEW_QUALIFIER` create a separate review subfolder and explicitly require the original production binary to remain identical. A production fix such as 1.0.8 uses ordinary release packaging instead.
 
 The simplified wheel icon was generated with the built-in imagegen tool. See [ICON.md](ICON.md) for the saved asset and generation prompt.

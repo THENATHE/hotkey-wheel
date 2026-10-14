@@ -1,0 +1,45 @@
+{
+  "checks": [
+    "Side-mouse fixture saves isolated wheel preferences",
+    "Fixture uses the user\u0027s mouse button index3 mapping",
+    "Editor scenario begins in ordinary gameplay",
+    "Scenario opening mode saves",
+    "Actual side-mouse input opens the radial wheel",
+    "Native side-mouse selection enters Buildprint freecam",
+    "Native semicolon still closes the editor after blocked side-mouse input"
+  ],
+  "scenarios": [
+    {
+      "scenario": "hold-release",
+      "before": {
+        "editor_active": true,
+        "screen": "gameplay",
+        "player_camera": false,
+        "mouse_grabbed": true,
+        "wheel_owned_session": true,
+        "owned_opener": "key.mouse.4"
+      },
+      "after": {
+        "editor_active": true,
+        "screen": "gameplay",
+        "player_camera": false,
+        "mouse_grabbed": true,
+        "wheel_owned_session": true,
+        "owned_opener": "key.mouse.4"
+      },
+      "after_native_semicolon": {
+        "editor_active": false,
+        "screen": "gameplay",
+        "player_camera": true,
+        "mouse_grabbed": true,
+        "wheel_owned_session": false,
+        "owned_opener": "null"
+      }
+    }
+  ],
+  "input_path": "Fabric client gametest native mouse callbacks, index3; no direct wheel handler calls",
+  "opener": "key.mouse.4",
+  "native_editor_key": "key.keyboard.semicolon",
+  "passed": false,
+  "failure": "java.lang.AssertionError: hold-release: original side-mouse opener failed to exit the editor; native semicolon succeeds"
+}

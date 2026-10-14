@@ -25,8 +25,8 @@ POLYMER_VERSION = os.environ.get('HOTKEY_WHEEL_POLYMER_VERSION', '0.18.2+26.3')
 WORKSPACE = ROOT.parents[2]
 if sum([BASELINE, PREVIOUS, LEGACY, SUITE]) > 1:
     raise SystemExit('Baseline and legacy modes are separate integrated profiles.')
-RUN = ROOT / ('legacy' if LEGACY else 'api-baseline' if BASELINE else 'api-previous' if PREVIOUS else 'suite-polymer' if POLYMER else 'suite' if SUITE else 'integrated' if INTEGRATED else 'minimal')
-RUN.mkdir(exist_ok=True)
+RUN = Path(os.environ.get('HOTKEY_WHEEL_QA_RUN_ROOT', str(ROOT / ('legacy' if LEGACY else 'api-baseline' if BASELINE else 'api-previous' if PREVIOUS else 'suite-polymer' if POLYMER else 'suite' if SUITE else 'integrated' if INTEGRATED else 'minimal'))))
+RUN.mkdir(parents=True, exist_ok=True)
 GAME = RUN / 'game'
 MODS = GAME / 'mods'
 MODS.mkdir(parents=True, exist_ok=True)
@@ -88,7 +88,11 @@ if INTEGRATED:
         shutil.copy2(source, MODS / source.name)
 version = next(line.split('=', 1)[1].strip() for line in (ROOT.parent / 'gradle.properties').read_text().splitlines()
                if line.startswith('mod_version='))
-addon = ROOT.parent / 'build/libs' / f'hotkey-wheel-{version}.jar'
+addon = Path(os.environ.get('HOTKEY_WHEEL_JAR', str(ROOT.parent / 'build/libs' / f'hotkey-wheel-{version}.jar')))
+with zipfile.ZipFile(addon) as archive:
+    wheel_metadata = json.loads(archive.read('fabric.mod.json'))
+if wheel_metadata['id'] != 'hotkey_wheel':
+    raise SystemExit('Focused wheel override must be a Hotkey Wheel JAR')
 shutil.copy2(addon, MODS / addon.name)
 gametest = next((CACHE / 'net.fabricmc.fabric-api/fabric-client-gametest-api-v1/6.0.7+4be74c3f5d').glob('*/*5d.jar'))
 shutil.copy2(gametest, MODS / gametest.name)
@@ -134,8 +138,22 @@ if compiler is None or not compiler.is_file():
 test_names = ['WheelClientTest', 'KeyManagementTest']
 if INTEGRATED:
     test_names.append('BuildprintMenuTest')
+    if BUILDPRINT_VERSION == '0.1.19+26.x':
+        test_names.append('SideMouseEditorTest')
 if SUITE:
     test_names += ['ToolPouchClientTest', 'BrbrIntegrationTest']
+if os.environ.get('HOTKEY_WHEEL_QA_TESTS'):
+    test_names = os.environ['HOTKEY_WHEEL_QA_TESTS'].split(',')
+    if any(not name.isidentifier() or not (ROOT / (name + '.java')).is_file() for name in test_names):
+        raise SystemExit('Unknown focused QA fixture')
+executed = RUN / 'executed-source'
+executed.mkdir(exist_ok=True)
+source_audit = []
+for source in [Path(__file__), *(ROOT / (name + '.java') for name in test_names)]:
+    destination = executed / source.name
+    shutil.copy2(source, destination)
+    source_audit.append({'file': source.name, 'sha256': hashlib.sha256(destination.read_bytes()).hexdigest()})
+(RUN / 'executed-source.json').write_text(json.dumps(source_audit, indent=2))
 subprocess.run([str(compiler), '--release', '25',
                 '-proc:none', '-cp', os.pathsep.join(map(str, compilepath)), '-d', str(classes),
                 *(str(ROOT / (name + '.java')) for name in test_names)], check=True)
@@ -149,7 +167,7 @@ with zipfile.ZipFile(MODS / 'hotkey-wheel-qa.jar', 'w', zipfile.ZIP_DEFLATED) as
 (GAME / 'options.txt').write_text('onboardAccessibility:false\nrenderDistance:2\nsimulationDistance:5\n'
                                   'guiScale:2\ntutorialStep:none\nmaxFps:60\npauseOnLostFocus:false\nfullscreen:false\n')
 (RUN / 'results.json').unlink(missing_ok=True)
-for name in ['key-management-results.json', 'buildprint-menu-results.json', 'toolpouch-results.json', 'brbr-integration-results.json']:
+for name in ['key-management-results.json', 'buildprint-menu-results.json', 'toolpouch-results.json', 'brbr-integration-results.json', 'side-mouse-editor-results.json']:
     (RUN / name).unlink(missing_ok=True)
 command = [str(compiler.parent / 'java'), '-Xmx2G', '-XX:ActiveProcessorCount=4',
            '-Djava.library.path=' + str(META / 'natives/26.3-0.19.5/lwjgl/3.4.3-snapshot/x64'),
@@ -159,11 +177,15 @@ command = [str(compiler.parent / 'java'), '-Xmx2G', '-XX:ActiveProcessorCount=4'
            '-cp', os.pathsep.join(map(str, classpath)), 'net.fabricmc.loader.impl.launch.knot.KnotClient',
            '--gameDir', str(GAME), '--version', '26.3', '--username', 'WheelQA', '--accessToken', '0',
            '--assetsDir', str(META / 'assets'), '--assetIndex', '34', '--width', '1280', '--height', '800']
+if os.environ.get('HOTKEY_WHEEL_QA_EXPORT') == 'true':
+    command.insert(1, '-Dmixin.debug.export=true')
 (RUN / 'provenance.json').write_text(json.dumps({
     'minecraft': '26.3', 'loader': '0.19.5', 'integrated': INTEGRATED, 'suite': SUITE, 'polymer': POLYMER,
     'buildprint': BUILDPRINT_VERSION if INTEGRATED else None, 'blocktone': BLOCKTONE_VERSION if INTEGRATED else None,
     'suite_version': SUITE_VERSION if SUITE else None, 'brbr': BRBR_VERSION if SUITE else None,
     'polymer_version': POLYMER_VERSION if POLYMER else None,
+    'wheel_version': wheel_metadata['version'], 'wheel_source': str(addon.resolve()),
+    'tests': test_names, 'command': command,
     'mods': {source.name: hashlib.sha256(source.read_bytes()).hexdigest() for source in sorted(MODS.glob('*.jar'))}}, indent=2))
 if '--prepare-only' in sys.argv:
     print('Prepared isolated QA profile:', RUN)
@@ -180,11 +202,10 @@ with (RUN / 'console.log').open('w') as log:
         raise
 print('EXIT', code)
 print((RUN / 'console.log').read_text()[-5000:])
-reports = ['results.json', 'key-management-results.json']
-if INTEGRATED:
-    reports.append('buildprint-menu-results.json')
-if SUITE:
-    reports += ['toolpouch-results.json', 'brbr-integration-results.json']
+report_names = {'WheelClientTest': 'results.json', 'KeyManagementTest': 'key-management-results.json',
+                'BuildprintMenuTest': 'buildprint-menu-results.json', 'ToolPouchClientTest': 'toolpouch-results.json',
+                'BrbrIntegrationTest': 'brbr-integration-results.json', 'SideMouseEditorTest': 'side-mouse-editor-results.json'}
+reports = [report_names[name] for name in test_names]
 for name in reports:
     path = RUN / name
     if not path.exists():

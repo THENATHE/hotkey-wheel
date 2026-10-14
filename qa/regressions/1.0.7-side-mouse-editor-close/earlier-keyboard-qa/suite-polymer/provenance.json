@@ -1,0 +1,33 @@
+{
+  "minecraft": "26.3",
+  "loader": "0.19.5",
+  "integrated": true,
+  "suite": true,
+  "polymer": true,
+  "buildprint": "0.1.19+26.x",
+  "blocktone": "0.1.24",
+  "suite_version": "1.4.4+26.3",
+  "brbr": "1.11.7+26.3",
+  "polymer_version": "0.18.2+26.3",
+  "mods": {
+    "Controlling-fabric-26.3-26.3.4.jar": "5035cb0b29ad3b2e8513b3de061d90c00cd1e5d3a816f9ef22efd6cff74e0611",
+    "Searchables-fabric-26.3-1.0.3.jar": "63747116b8903a6ea877c89fc5930c8e366a2abeabc376dc8c00e1b64b05c6b0",
+    "better-recipe-book-rebetterered-1.11.7+26.3.jar": "28868f38950057d850d634364881855503093dcd8e70064faf7febcecb81621f",
+    "buildprint-fabric-0.1.19+26.x.jar": "bd60814e7ba944d7a67bfbf9831a8fa156223277345dc87569cd358a326e3f1f",
+    "buildprint-toning-0.1.24.jar": "b9c42fd4679f9c70c584a6f8a888e51911c0dfe90f10dddd92c4e427efec5940",
+    "cloth-config-fabric-26.3.159.jar": "1716b9964f90d2b885f9bd3887f8824b71b55c32a4123a5853486e722f7c2e4b",
+    "codecui-26.3-1.4.3-fabric.jar": "4d07c219bd85b58283a0317d6f43cca838adf9cd16be321316cd32f2fb1be898",
+    "fabric-api-0.162.0+26.3.jar": "8626c189b702f466800b1c8ddac6203cf8a1e0bdaee75a5f9a33b18c2baa81b1",
+    "fabric-client-gametest-api-v1-6.0.7+4be74c3f5d.jar": "09d7d48475eef47a347c12c51bd32c6cffc065a6785f3023f5aa6be4b815cd38",
+    "fabric-language-kotlin-1.14.2+kotlin.2.4.21.jar": "fbdbf5286ab9d65fedb49e6e01c15e338ae303eb7b9d8c7423d0a9bcfe526ef9",
+    "fzzy_config-0.7.7+fix3+26.3.jar": "3d98c61215ae5eb2fe08db5cac6b0da08dc1b6f0a9ac082a3a9ead8eed736b2a",
+    "hotkey-wheel-1.0.7+26.3.jar": "3095b28e981dd995aabc582b7abe785baeccfdc4ac00128eabd6bda0d5a55fd6",
+    "hotkey-wheel-qa.jar": "66f33580886d915f54b715c8d7d764c3fe8b0d98bbf33506f764c886be2f8699",
+    "mixson-2.2.1-multiloader.jar": "e4d38f31be95a1f03f8bef290c079f4bb5573d8f4e15808e8c1fc8ba3e5913a0",
+    "modmenu-21.0.0.jar": "837812c6c98d66141db7b5dcae668f27fb78d557e8f4c0c89912985fc26a5e6f",
+    "polymer-bundled-0.18.2+26.3.jar": "3d79318e8202d0e87af308d7f232220714e5f1409d06c23db774877ec6f3848f",
+    "sorted-fabric-0.1.26-mc26.x.jar": "df080bab56e7f6c6f836533f403fe192a04019d9004e1c8d3acac5b6fe77edd5",
+    "vanilla-plusplus-quality-of-life-suite-1.4.4+26.3.jar": "e4663dddf2e176c3d5d7a669f59822dc76286ed28e195cc1a77b1bb1b3e7d269",
+    "yet_another_config_lib_v3-3.9.7+26.3-fabric.jar": "c52d41d444522d9abba994cd4c4ee2e71a065d7c31010f92a9959b80ccb4b0f5"
+  }
+}

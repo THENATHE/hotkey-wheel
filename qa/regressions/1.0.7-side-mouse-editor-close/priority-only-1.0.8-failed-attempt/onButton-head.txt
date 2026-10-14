@@ -1,0 +1,52 @@
+  public void onButton(long, net.minecraft.client.input.MouseButtonInfo, int);
+    Code:
+         0: new           #106                // class org/spongepowered/asm/mixin/injection/callback/CallbackInfo
+         3: dup
+         4: ldc           #107                // String onButton
+         6: iconst_1
+         7: invokespecial #110                // Method org/spongepowered/asm/mixin/injection/callback/CallbackInfo."<init>":(Ljava/lang/String;Z)V
+        10: astore        16
+        12: aload_0
+        13: lload_1
+        14: aload_3
+        15: iload         4
+        17: aload         16
+        19: invokevirtual #114                // Method handler$zdb000$buildprint$editorClick:(JLnet/minecraft/client/input/MouseButtonInfo;ILorg/spongepowered/asm/mixin/injection/callback/CallbackInfo;)V
+        22: aload         16
+        24: invokevirtual #118                // Method org/spongepowered/asm/mixin/injection/callback/CallbackInfo.isCancelled:()Z
+        27: ifeq          31
+        30: return
+        31: new           #106                // class org/spongepowered/asm/mixin/injection/callback/CallbackInfo
+        34: dup
+        35: ldc           #107                // String onButton
+        37: iconst_1
+        38: invokespecial #110                // Method org/spongepowered/asm/mixin/injection/callback/CallbackInfo."<init>":(Ljava/lang/String;Z)V
+        41: astore        17
+        43: aload_0
+        44: lload_1
+        45: aload_3
+        46: iload         4
+        48: aload         17
+        50: invokevirtual #121                // Method handler$zdb000$buildprint$assistClick:(JLnet/minecraft/client/input/MouseButtonInfo;ILorg/spongepowered/asm/mixin/injection/callback/CallbackInfo;)V
+        53: aload         17
+        55: invokevirtual #118                // Method org/spongepowered/asm/mixin/injection/callback/CallbackInfo.isCancelled:()Z
+        58: ifeq          62
+        61: return
+        62: new           #106                // class org/spongepowered/asm/mixin/injection/callback/CallbackInfo
+        65: dup
+        66: ldc           #107                // String onButton
+        68: iconst_1
+        69: invokespecial #110                // Method org/spongepowered/asm/mixin/injection/callback/CallbackInfo."<init>":(Ljava/lang/String;Z)V
+        72: astore        18
+        74: aload_0
+        75: lload_1
+        76: aload_3
+        77: iload         4
+        79: aload         18
+        81: invokevirtual #124                // Method handler$bjk000$hotkey_wheel$hotkeyWheel$input:(JLnet/minecraft/client/input/MouseButtonInfo;ILorg/spongepowered/asm/mixin/injection/callback/CallbackInfo;)V
+        84: aload         18
+        86: invokevirtual #118                // Method org/spongepowered/asm/mixin/injection/callback/CallbackInfo.isCancelled:()Z
+        89: ifeq          93
+        92: return
+        93: aload_0
+        94: [native method body omitted]

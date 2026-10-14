@@ -1,0 +1,210 @@
+{
+  "checks": [
+    "Side-mouse fixture saves isolated wheel preferences",
+    "Fixture uses the user\u0027s mouse button index3 mapping",
+    "Editor scenario begins in ordinary gameplay",
+    "Scenario opening mode saves",
+    "Actual side-mouse input opens the radial wheel",
+    "Native side-mouse selection enters Buildprint freecam",
+    "hold-release: original side-mouse opener exits the whole editor",
+    "hold-release: native camera and player input are restored",
+    "hold-release: side-mouse closure preserves the exact selected region",
+    "hold-release: closing leaves no side-mouse held state or queued native click",
+    "Editor scenario begins in ordinary gameplay",
+    "Scenario opening mode saves",
+    "Actual side-mouse input opens the radial wheel",
+    "Native side-mouse selection enters Buildprint freecam",
+    "Original opener release after clicking does not prematurely exit freecam",
+    "click-while-held: original side-mouse opener exits the whole editor",
+    "click-while-held: native camera and player input are restored",
+    "click-while-held: side-mouse closure preserves the exact selected region",
+    "click-while-held: closing leaves no side-mouse held state or queued native click",
+    "Editor scenario begins in ordinary gameplay",
+    "Scenario opening mode saves",
+    "Actual side-mouse input opens the radial wheel",
+    "Native side-mouse selection enters Buildprint freecam",
+    "toggle: original side-mouse opener exits the whole editor",
+    "toggle: native camera and player input are restored",
+    "toggle: side-mouse closure preserves the exact selected region",
+    "toggle: closing leaves no side-mouse held state or queued native click",
+    "Editor scenario begins in ordinary gameplay",
+    "Scenario opening mode saves",
+    "Actual side-mouse input opens the radial wheel",
+    "Native side-mouse selection enters Buildprint freecam",
+    "cycled-original-opener: original side-mouse opener exits the whole editor",
+    "cycled-original-opener: native camera and player input are restored",
+    "cycled-original-opener: side-mouse closure preserves the exact selected region",
+    "cycled-original-opener: closing leaves no side-mouse held state or queued native click",
+    "Editor scenario begins in ordinary gameplay",
+    "Scenario opening mode saves",
+    "Actual side-mouse input opens the radial wheel",
+    "Native side-mouse selection enters Buildprint freecam",
+    "Native toolbar mouse click opens Save dialog",
+    "Native Save Cancel returns to the side-mouse-owned freecam",
+    "save-cancel: original side-mouse opener exits the whole editor",
+    "save-cancel: native camera and player input are restored",
+    "save-cancel: side-mouse closure preserves the exact selected region",
+    "save-cancel: closing leaves no side-mouse held state or queued native click",
+    "Editor scenario begins in ordinary gameplay",
+    "Scenario opening mode saves",
+    "Actual side-mouse input opens the radial wheel",
+    "Native side-mouse selection enters Buildprint freecam",
+    "Native toolbar mouse click opens Save dialog",
+    "save-child-close: original side-mouse opener exits the whole editor",
+    "save-child-close: native camera and player input are restored",
+    "save-child-close: side-mouse closure preserves the exact selected region",
+    "save-child-close: closing leaves no side-mouse held state or queued native click",
+    "Editor scenario begins in ordinary gameplay",
+    "Scenario opening mode saves",
+    "Actual side-mouse input opens the radial wheel",
+    "Native side-mouse selection enters Buildprint freecam",
+    "Native toolbar mouse click opens Save dialog",
+    "Native Save writes a real blueprint and retains the editor",
+    "Native successful Save clears the selected region",
+    "native-save: original side-mouse opener exits the whole editor",
+    "native-save: native camera and player input are restored",
+    "native-save: closing leaves no side-mouse held state or queued native click",
+    "An independent native key opens the editor",
+    "Side-mouse opener does not exit an independently opened native session",
+    "Independent editor still exits using its native key"
+  ],
+  "scenarios": [
+    {
+      "scenario": "hold-release",
+      "before": {
+        "editor_active": true,
+        "screen": "gameplay",
+        "player_camera": false,
+        "mouse_grabbed": true,
+        "wheel_owned_session": true,
+        "owned_opener": "key.mouse.4"
+      },
+      "after": {
+        "editor_active": false,
+        "screen": "gameplay",
+        "player_camera": true,
+        "mouse_grabbed": true,
+        "wheel_owned_session": false,
+        "owned_opener": "null"
+      }
+    },
+    {
+      "scenario": "click-while-held",
+      "before": {
+        "editor_active": true,
+        "screen": "gameplay",
+        "player_camera": false,
+        "mouse_grabbed": true,
+        "wheel_owned_session": true,
+        "owned_opener": "key.mouse.4"
+      },
+      "after": {
+        "editor_active": false,
+        "screen": "gameplay",
+        "player_camera": true,
+        "mouse_grabbed": true,
+        "wheel_owned_session": false,
+        "owned_opener": "null"
+      }
+    },
+    {
+      "scenario": "toggle",
+      "before": {
+        "editor_active": true,
+        "screen": "gameplay",
+        "player_camera": false,
+        "mouse_grabbed": true,
+        "wheel_owned_session": true,
+        "owned_opener": "key.mouse.4"
+      },
+      "after": {
+        "editor_active": false,
+        "screen": "gameplay",
+        "player_camera": true,
+        "mouse_grabbed": true,
+        "wheel_owned_session": false,
+        "owned_opener": "null"
+      }
+    },
+    {
+      "scenario": "cycled-original-opener",
+      "before": {
+        "editor_active": true,
+        "screen": "gameplay",
+        "player_camera": false,
+        "mouse_grabbed": true,
+        "wheel_owned_session": true,
+        "owned_opener": "key.mouse.4"
+      },
+      "after": {
+        "editor_active": false,
+        "screen": "gameplay",
+        "player_camera": true,
+        "mouse_grabbed": true,
+        "wheel_owned_session": false,
+        "owned_opener": "null"
+      }
+    },
+    {
+      "scenario": "save-cancel",
+      "before": {
+        "editor_active": true,
+        "screen": "gameplay",
+        "player_camera": false,
+        "mouse_grabbed": true,
+        "wheel_owned_session": true,
+        "owned_opener": "key.mouse.4"
+      },
+      "after": {
+        "editor_active": false,
+        "screen": "gameplay",
+        "player_camera": true,
+        "mouse_grabbed": true,
+        "wheel_owned_session": false,
+        "owned_opener": "null"
+      }
+    },
+    {
+      "scenario": "save-child-close",
+      "before": {
+        "editor_active": true,
+        "screen": "com.buildprint.client.gui.EditorSaveScreen",
+        "player_camera": false,
+        "mouse_grabbed": false,
+        "wheel_owned_session": true,
+        "owned_opener": "key.mouse.4"
+      },
+      "after": {
+        "editor_active": false,
+        "screen": "gameplay",
+        "player_camera": true,
+        "mouse_grabbed": true,
+        "wheel_owned_session": false,
+        "owned_opener": "null"
+      }
+    },
+    {
+      "scenario": "native-save",
+      "before": {
+        "editor_active": true,
+        "screen": "gameplay",
+        "player_camera": false,
+        "mouse_grabbed": true,
+        "wheel_owned_session": true,
+        "owned_opener": "key.mouse.4"
+      },
+      "after": {
+        "editor_active": false,
+        "screen": "gameplay",
+        "player_camera": true,
+        "mouse_grabbed": true,
+        "wheel_owned_session": false,
+        "owned_opener": "null"
+      }
+    }
+  ],
+  "input_path": "Fabric client gametest native mouse callbacks, index3; no direct wheel handler calls",
+  "opener": "key.mouse.4",
+  "native_editor_key": "key.keyboard.semicolon",
+  "passed": true
+}

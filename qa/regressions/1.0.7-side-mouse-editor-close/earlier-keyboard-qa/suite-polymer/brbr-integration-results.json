@@ -1,0 +1,33 @@
+{
+  "checks": [
+    "All-four profile uses the exact candidate BRBR version 1.11.7+26.3",
+    "Wheel discovers BRBR\u0027s actual registered pin binding",
+    "Combined inventory fixture saves without replacing BRBR settings",
+    "Wheel opener takes precedence over a BRBR pin binding sharing G during gameplay",
+    "Inventory selected from the wheel opens with latest BRBR and Vanilla++ installed",
+    "Wheel-opened inventory retains BRBR\u0027s real recipe book and pinned-tab integration",
+    "Wheel opening and selection never leak into BRBR\u0027s native pin handler",
+    "Conflicting pin mapping is released after wheel selection",
+    "Shared G key stays inside the inventory and does not reopen a wheel",
+    "BRBR\u0027s actual pin handler remains functional when its key shares the wheel opener",
+    "BRBR\u0027s normal pin removal still works with all four mods present",
+    "BRBR Mod Menu settings open normally after wheel inventory selection",
+    "BRBR screen accepts native input for §cNo",
+    "Native BRBR value-button input creates a real pending settings edit",
+    "BRBR settings draft leaves committed preferences intact before Save",
+    "BRBR screen accepts native input for Save \u0026 Quit",
+    "BRBR native Save returns to the original wheel-opened inventory",
+    "BRBR native Save commits the selected preference and preserves every unrelated setting",
+    "BRBR Mod Menu settings open normally after wheel inventory selection",
+    "BRBR screen accepts native input for §aYes",
+    "Native BRBR value-button input creates a real pending settings edit",
+    "BRBR\u0027s second draft remains separate from saved settings",
+    "BRBR screen accepts native input for Cancel",
+    "BRBR Cancel retains the native discard confirmation",
+    "BRBR screen accepts native input for Quit \u0026 Discard Changes",
+    "BRBR native Cancel/discard returns to the original inventory parent",
+    "BRBR Cancel/discard preserves committed settings in memory and on disk"
+  ],
+  "brbr": "1.11.7+26.3",
+  "passed": true
+}

@@ -1,6 +1,12 @@
-# Buildprint API integration in Hotkey Wheel 1.0.7
+# Buildprint API integration in Hotkey Wheel 1.0.8
 
 Target: original developer Buildprint 0.1.19+26.x on Minecraft 26.3. Buildprint remains optional and compile-only; none of its classes or libraries are bundled. The 0.1.17/0.1.18 API paths and 0.1.16 legacy fallback remain available. No original Buildprint or Blocktone source/JAR is modified.
+
+## Side-mouse input ordering in 1.0.8
+
+The reported `key.mouse.4` opener failure concerns input ordering, not a missing Buildprint API. Buildprint's mouse mixin can cancel grabbed editor events before the wheel handler observes them. Changing mixin priority alone was insufficient. Version 1.0.8 retains ordinary mixin priority and sets the mouse injector order to 900, before default-order 1000 injectors. Transformed-bytecode inspection confirms the wheel callback runs first, and the focused native Mouse Button 4 regression passes. Ownership checks, public editor closure and unhandled native fallthrough remain unchanged.
+
+Earlier editor-close acceptance used keyboard openers, so those results did not prove a side-mouse opener works. The new regression uses native mouse callbacks with zero-based button index 3 and passes 67 checks across seven owned-editor scenarios, plus independent native-opening checks. The fresh minimal/integrated/all-four native/Polymer matrix passes 2,188 checks against the exact final 1.0.8 JAR. No additional editor session handoff or new API bridge was added.
 
 ## Public API adopted
 
@@ -31,13 +37,15 @@ Buildprint 0.1.17/0.1.18 retain public lifecycle/HUD tracking but use private na
 
 The editor API recognizes registered classes and subclasses, not arbitrary screen ancestry. Buildprint's main menu, Migration/YACL screens and directly wheel-opened Blocktone instant-break settings therefore retain their separate screen-parent ownership path. Unrelated replacement screens relinquish wheel ownership. Buildprint's raw reserved editor shortcuts remain native behavior.
 
-See `QA.md` for exact artifacts and results. The 1.0.7 release and fresh four-mod review target Buildprint 0.1.19 with the installable Blocktone 0.1.24 JAR built from its source targeting 0.1.19. Older compatibility paths remain available but have no new verification claim from this review; their historical results are not counted.
+See `QA.md` for exact artifacts and results. The 1.0.8 release targets Buildprint 0.1.19 with the installable Blocktone 0.1.24 JAR built from its source targeting 0.1.19. The retained 1.0.7 review and older compatibility paths have separately identified historical evidence; their counts are not accepted as current release verification.
 
 Official references: [API overview](https://voxelsprout.com/buildprint/wiki/api), [Editor API](https://voxelsprout.com/buildprint/wiki/editor-api).
 
 ## Fresh review of every documented API area, 2026-10-13
 
 All ten requested documentation pages were read, then their public classes and methods were checked in the exact developer Buildprint `0.1.19+26.x` JAR. The overview lists nine API categories; editor interfaces and the format data record belong to those categories. The documentation capture URLs and hashes, exact JAR hash, and signature evidence are recorded in `qa/buildprint-api-audit.json`.
+
+This section and capture manifest are retained from the completed 1.0.7 review. The target Buildprint 0.1.19 JAR and adopted API calls are unchanged; 1.0.8 changes mouse callback ordering only. It does not claim a new documentation capture or API upgrade.
 
 | Documentation area | Available in 0.1.19 | Hotkey Wheel use and assessment |
 | --- | --- | --- |

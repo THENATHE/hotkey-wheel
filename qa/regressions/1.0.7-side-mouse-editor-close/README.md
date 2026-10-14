@@ -1,0 +1,9 @@
+# Mouse4 editor closure regression
+
+The user opens Buildprint Selection Editor through a wheel bound to `key.mouse.4` (mouse index3), then the same button fails to exit; native semicolon still exits. These native input callback reproductions load the exact suite 1.4.4, Buildprint 0.1.19, Blocktone 0.1.24 and BRBR 1.11.7 with locked copies of the current dependency inputs. No direct wheel input-handler calls are used.
+
+`shipping-1.0.7-baseline/` reproduces the reported failure on released SHA3095b28e981dd995aabc582b7abe785baeccfdc4ac00128eabd6bda0d5a55fd6. `priority-only-1.0.8-failed-attempt/` records an unreleased priority1100-only candidate, SHA2f52eeb9994ca5f974c339857d2d6ad1abbe7d532cc4bf18c55e806f8c008c1a, which also fails. Both preserve correct editor ownership but transformed MouseHandler invokes Buildprint's cancellable editorClick before wheel input, so wheel ownership handling is never reached. Actual exports, callback order, authentic logs, result snapshots and identical executed fixture sources establish the failure. The baseline's native semicolon input then exits and restores the player camera.
+
+The tests stop at the first genuine product failure. Failed attempts are kept separate from successful fixed-candidate results. The earlier keyboard editor regression used G and missed this mouse interception path. Original developer Buildprint JARs are unchanged; no main-menu editor-button transition was fabricated.
+
+`final-order900-1.0.8/` records final SHAed47efefe6f06e7940a5250974b022228a2b61b441ca704571f9a44d3134d4ca. Explicit injector order900 moves wheel input to the first callback at offset19. The identical focused native-input fixture passes 67 checks across seven closure scenarios plus independent-native-session protection; actual Save still writes a blueprint. All three executed-source manifests match. Full standard matrix results are kept in qa/minimal, qa/integrated, qa/suite and qa/suite-polymer.

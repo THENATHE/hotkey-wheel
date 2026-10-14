@@ -1,0 +1,456 @@
+[19:38:13] [main/INFO]: Loading Minecraft 26.3 with Fabric Loader 0.19.5
+[19:38:14] [main/INFO]: Loading 119 mods:
+	- brb 1.11.7+26.3
+	- buildprint 0.1.19+26.x
+	   |-- com_twelvemonkeys_common_common-image 3.12.0
+	   |-- com_twelvemonkeys_common_common-io 3.12.0
+	   |-- com_twelvemonkeys_common_common-lang 3.12.0
+	   |-- com_twelvemonkeys_imageio_imageio-core 3.12.0
+	   |-- com_twelvemonkeys_imageio_imageio-metadata 3.12.0
+	   |-- com_twelvemonkeys_imageio_imageio-webp 3.12.0
+	   |-- voxelsprout_controls 0.6.0
+	   |-- voxelsprout_core 0.6.0
+	   |-- voxelsprout_ghost 0.6.0
+	   |-- voxelsprout_onboarding 0.6.0
+	   |-- voxelsprout_render 0.6.0
+	   \-- voxelsprout_ui 0.6.0
+	- buildprint_toning 0.1.24
+	- cloth-config 26.3.159
+	   \-- cloth-basic-math 0.6.1
+	- codecui 26.3-1.4.3
+	- controlling 26.3.4
+	- fabric-api 0.162.0+26.3
+	   |-- fabric-advancement-api-v1 1.0.0+38c7a2d55d
+	   |-- fabric-api-base 2.0.6+fcdff87f5d
+	   |-- fabric-api-lookup-api-v1 2.0.24+3434d6d95d
+	   |-- fabric-biome-api-v1 20.1.0+c6aa69a85d
+	   |-- fabric-block-api-v1 3.1.0+0ae6f9115d
+	   |-- fabric-block-getter-api-v2 2.0.9+3434d6d95d
+	   |-- fabric-command-api-v2 3.1.2+fcdff87f5d
+	   |-- fabric-content-registries-v0 15.0.4+74ed1ea55d
+	   |-- fabric-convention-tags-v2 4.10.3+6b5b47fd5d
+	   |-- fabric-crash-report-info-v1 1.0.7+fcdff87f5d
+	   |-- fabric-creative-tab-api-v1 5.0.21+fcdff87f5d
+	   |-- fabric-data-attachment-api-v1 2.2.31+b9b88df45d
+	   |-- fabric-data-generation-api-v1 27.3.0+5be2453c5d
+	   |-- fabric-debug-api-v1 1.0.4+3434d6d95d
+	   |-- fabric-dimensions-v1 5.1.19+47f74c985d
+	   |-- fabric-entity-events-v1 6.0.4+3434d6d95d
+	   |-- fabric-events-interaction-v0 5.3.7+b9b88df45d
+	   |-- fabric-game-rule-api-v1 4.0.10+3434d6d95d
+	   |-- fabric-item-api-v1 14.7.0+cf6bc2db5d
+	   |-- fabric-key-mapping-api-v1 2.0.8+3434d6d95d
+	   |-- fabric-lifecycle-events-v1 4.1.9+ffef5f675d
+	   |-- fabric-loot-api-v3 4.0.8+4068fd645d
+	   |-- fabric-menu-api-v1 2.0.28+ed66f0a35d
+	   |-- fabric-message-api-v1 7.0.10+3434d6d95d
+	   |-- fabric-model-loading-api-v1 8.0.35+fcdff87f5d
+	   |-- fabric-networking-api-v1 6.3.9+b9b88df45d
+	   |-- fabric-object-builder-api-v1 24.1.10+3434d6d95d
+	   |-- fabric-particles-v1 5.0.25+3434d6d95d
+	   |-- fabric-permission-api-v1 1.0.8+fcdff87f5d
+	   |-- fabric-recipe-api-v1 10.0.9+b9b88df45d
+	   |-- fabric-registry-sync-v0 8.0.2+1ca9f6365d
+	   |-- fabric-renderer-api-v1 17.0.15+79385d0b5d
+	   |-- fabric-renderer-indigo 9.1.23+b9d63e335d
+	   |-- fabric-rendering-fluids-v1 6.0.6+3434d6d95d
+	   |-- fabric-rendering-v1 27.0.14+901a437c5d
+	   |-- fabric-resource-conditions-api-v1 6.2.0+0d124ae85d
+	   |-- fabric-resource-loader-v0 3.3.26+4fc5413f5d
+	   |-- fabric-resource-loader-v1 3.0.4+ba0d6c0d5d
+	   |-- fabric-screen-api-v1 5.2.4+48607d035d
+	   |-- fabric-serialization-api-v1 2.0.7+74ed1ea55d
+	   |-- fabric-sound-api-v1 2.0.7+3434d6d95d
+	   |-- fabric-tag-api-v1 2.1.10+fcdff87f5d
+	   |-- fabric-transfer-api-v1 8.0.25+fcdff87f5d
+	   \-- fabric-transitive-access-wideners-v1 8.1.16+52268a0e5d
+	- fabric-client-gametest-api-v1 6.0.7+4be74c3f5d
+	- fabric-language-kotlin 1.14.2+kotlin.2.4.21
+	   |-- org_jetbrains_kotlin_kotlin-reflect 2.4.21
+	   |-- org_jetbrains_kotlin_kotlin-stdlib 2.4.21
+	   |-- org_jetbrains_kotlin_kotlin-stdlib-jdk7 2.4.21
+	   |-- org_jetbrains_kotlin_kotlin-stdlib-jdk8 2.4.21
+	   |-- org_jetbrains_kotlinx_atomicfu-jvm 0.33.0
+	   |-- org_jetbrains_kotlinx_kotlinx-coroutines-core-jvm 1.11.0
+	   |-- org_jetbrains_kotlinx_kotlinx-coroutines-jdk8 1.11.0
+	   |-- org_jetbrains_kotlinx_kotlinx-datetime-jvm 0.8.0
+	   |-- org_jetbrains_kotlinx_kotlinx-io-bytestring-jvm 0.9.1
+	   |-- org_jetbrains_kotlinx_kotlinx-io-core-jvm 0.9.1
+	   |-- org_jetbrains_kotlinx_kotlinx-serialization-cbor-jvm 1.11.0
+	   |-- org_jetbrains_kotlinx_kotlinx-serialization-core-jvm 1.11.0
+	   \-- org_jetbrains_kotlinx_kotlinx-serialization-json-jvm 1.11.0
+	- fabricloader 0.19.5
+	   \-- mixinextras 0.5.5
+	- fzzy_config 0.7.7+fix3+26.3
+	   |-- blue_endless_jankson 1.2.3
+	   |-- fabric-permissions-api-v0 0.7.0
+	   \-- net_peanuuutz_tomlkt_tomlkt-jvm 0.3.7
+	- hotkey_wheel 1.0.7+26.3
+	- hotkey_wheel_qa 1
+	- java 25
+	- minecraft 26.3
+	- mixson 2.2.1
+	- modmenu 21.0.0
+	   \-- placeholder-api 3.2.0+26.3
+	- searchables 1.0.3
+	- sorted 0.1.26
+	   \-- org_xerial_sqlite-jdbc 3.46.1.3-slim
+	- vpp_mod_suite 1.4.4+26.3
+	   |-- amethyst_curse_cleanser 1.0.1+26.3
+	   |-- bannerpoint 1.1.2
+	   |-- bannerpoint_polymer_compat 1.0.1+26.3
+	   |-- chalk 3.2.1+26.3
+	   |-- chalk-colorful-addon 2.1.1-port.1+26.3
+	   |-- chalk_polymer_compat 1.1.1-suite.1+26.3
+	   |-- mapstitch 1.1.7
+	   |    \-- com_moulberry_mixinconstraints 1.1.0
+	   |-- mapstitch_mixed_scales 1.1.12+26.3
+	   |-- misctweaks 1.4.4
+	   |    \-- com_moulberry_mixinconstraints 1.1.0
+	   |-- sensible_stackables 3.1.1
+	   |-- sensible_stackables_polymer_compat 1.0.2+26.3
+	   |-- shared_region_maps 1.0.5-combo.1+mc26.3
+	   |-- simple_death_improvements 1.6.0
+	   |    \-- com_moulberry_mixinconstraints 1.1.0
+	   |-- simple_smithing_overhaul 2.10.0
+	   |    \-- com_moulberry_mixinconstraints 1.1.0
+	   |-- sso_backpack_toolpouch_mapstitch_shim 1.4.3+26.3
+	   |-- tiered_backpacks 1.0.20
+	   |-- toolpouch 1.1.10
+	   |    \-- com_moulberry_mixinconstraints 1.1.0
+	   |-- toolpouch_atlas_elytra_compat 1.0.11+26.3
+	   \-- vpp_backpack_crafting 1.0.3+26.3
+	- yet_another_config_lib_v3 3.9.7+26.3-fabric
+	   |-- com_twelvemonkeys_common_common-image 3.12.0
+	   |-- com_twelvemonkeys_common_common-io 3.12.0
+	   |-- com_twelvemonkeys_common_common-lang 3.12.0
+	   |-- com_twelvemonkeys_imageio_imageio-core 3.12.0
+	   |-- com_twelvemonkeys_imageio_imageio-metadata 3.12.0
+	   |-- com_twelvemonkeys_imageio_imageio-webp 3.12.0
+	   |-- org_quiltmc_parsers_gson 0.2.1
+	   \-- org_quiltmc_parsers_json 0.2.1
+[19:38:14] [main/INFO]: SpongePowered MIXIN Subsystem Version=0.8.7 Source=file:/home/thenathe/.local/share/ModrinthApp/meta/libraries/net/fabricmc/sponge-mixin/0.17.4+mixin.0.8.7/sponge-mixin-0.17.4+mixin.0.8.7.jar Service=Knot/Fabric Env=CLIENT
+/******************************************************************************************************************************************************************************************************/
+/*                                                                                        SpongePowered MIXIN                                                                                         */
+/******************************************************************************************************************************************************************************************************/
+/*                                         Code source : file:/home/thenathe/.local/share/ModrinthApp/meta/libraries/net/fabricmc/sponge-mixin/0.17.4+mixin.0.8.7/sponge-mixin-0.17.4+mixin.0.8.7.jar */
+/*                                    Internal Version : 0.8.7                                                                                                                                        */
+/*                                        Java Version : 25.0 (supports compatibility 6-25)                                                                                                           */
+/*                         Default Compatibility Level : JAVA_8                                                                                                                                       */
+/*                   Max Effective Compatibility Level : JAVA_13                                                                                                                                      */
+/*                                Detected ASM Version : ASM 9.10.1 (ASM10_EXPERIMENTAL)                                                                                                              */
+/*                          Detected ASM Supports Java : Up to Java 27 (class file version 71.0)                                                                                                      */
+/******************************************************************************************************************************************************************************************************/
+/*                                        Service Name : Knot/Fabric                                                                                                                                  */
+/*                                 Mixin Service Class : net.fabricmc.loader.impl.launch.knot.MixinServiceKnot                                                                                        */
+/*                       Global Property Service Class : net.fabricmc.loader.impl.launch.knot.FabricGlobalPropertyService                                                                             */
+/*                                 Logger Adapter Type : Fabric Mixin Logger                                                                                                                          */
+/******************************************************************************************************************************************************************************************************/
+/*                                         mixin.debug : <false>                                                                                                                                      */
+/*                                  mixin.debug.export : - <true>                                                                                                                                     */
+/*                           mixin.debug.export.filter : - - <null>                                                                                                                                   */
+/*                        mixin.debug.export.decompile : - - <true>                                                                                                                                   */
+/*                  mixin.debug.export.decompile.async : - - - <true>                                                                                                                                 */
+/* mixin.debug.export.decompile.mergeGenericSignatures : - - - <true>                                                                                                                                 */
+/*                                  mixin.debug.verify : - <false>                                                                                                                                    */
+/*                                 mixin.debug.verbose : - <false>                                                                                                                                    */
+/*                         mixin.debug.countInjections : - <false>                                                                                                                                    */
+/*                                  mixin.debug.strict : - <false>                                                                                                                                    */
+/*                           mixin.debug.strict.unique : - - <false>                                                                                                                                  */
+/*                          mixin.debug.strict.targets : - - <false>                                                                                                                                  */
+/*                                mixin.debug.profiler : - <false>                                                                                                                                    */
+/*                           mixin.dumpTargetOnFailure : <false>                                                                                                                                      */
+/*                                        mixin.checks : <false>                                                                                                                                      */
+/*                             mixin.checks.interfaces : - <false>                                                                                                                                    */
+/*                      mixin.checks.interfaces.strict : - - <false>                                                                                                                                  */
+/*                             mixin.ignoreConstraints : <false>                                                                                                                                      */
+/*                                       mixin.hotSwap : <false>                                                                                                                                      */
+/*                                       mixin.env.obf : - <false>                                                                                                                                    */
+/*                             mixin.env.disableRefMap : - <false>                                                                                                                                    */
+/*                               mixin.env.remapRefMap : - <false>                                                                                                                                    */
+/*                       mixin.env.refMapRemappingFile : - <>                                                                                                                                         */
+/*                        mixin.env.refMapRemappingEnv : - <searge>                                                                                                                                   */
+/*                      mixin.env.allowPermissiveMatch : - <false>                                                                                                                                    */
+/*                            mixin.env.ignoreRequired : - <false>                                                                                                                                    */
+/*                               mixin.env.compatLevel : - <false>                                                                                                                                    */
+/*                          mixin.env.shiftByViolation : - <warn>                                                                                                                                     */
+/*                      mixin.initialiserInjectionMode : <default>                                                                                                                                    */
+/*               mixin.tunable.classReaderExpandFrames : - <false>                                                                                                                                    */
+/******************************************************************************************************************************************************************************************************/
+/*                                    UNSAFE_INJECTION : available=<true> enabled=<true>                                                                                                              */
+/*                       INJECTORS_IN_INTERFACE_MIXINS : available=<true> enabled=<true>                                                                                                              */
+/******************************************************************************************************************************************************************************************************/
+/*                                       Detected Side : CLIENT                                                                                                                                       */
+/******************************************************************************************************************************************************************************************************/
+[19:38:14] [main/INFO]: Attempting to load Fernflower decompiler (Threaded mode)
+[19:38:14] [main/INFO]: Fernflower could not be loaded, exported classes will not be decompiled. NoClassDefFoundError: org/jetbrains/java/decompiler/main/extern/IResultSaver
+[19:38:14] [main/WARN]: Reference map 'controlling.refmap.json' for controlling.mixins.json could not be read. If this is a development environment you can ignore this message
+[19:38:14] [main/WARN]: Reference map 'searchables.refmap.json' for searchables.mixins.json could not be read. If this is a development environment you can ignore this message
+[19:38:14] [main/WARN]: Reference map 'searchables.refmap.json' for searchables.fabric.mixins.json could not be read. If this is a development environment you can ignore this message
+[19:38:14] [main/WARN]: Reference map 'yet_another_config_lib_v3.refmap.json' for yacl.mixins.json could not be read. If this is a development environment you can ignore this message
+[19:38:14] [main/WARN]: Reference map 'yet_another_config_lib_v3.refmap.json' for yacl-fabric.mixins.json could not be read. If this is a development environment you can ignore this message
+[19:38:15] [main/INFO]: Initializing MixinExtras via com.llamalad7.mixinextras.service.MixinExtrasServiceImpl(version=0.5.5).
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by org.lwjgl.system.Library$$Lambda/0x00000000222ed878 in an unnamed module (file:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl/3.4.3/lwjgl-3.4.3.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.lwjgl.system.MemoryBackendUnsafeLegacy (file:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl/3.4.3/lwjgl-3.4.3.jar)
+WARNING: Please consider reporting this to the maintainers of class org.lwjgl.system.MemoryBackendUnsafeLegacy
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+[19:38:16] [Datafixer Bootstrap #0/INFO]: 307 Datafixer optimizations took 562 milliseconds
+[19:38:19] [main/INFO]: Loaded config sensible_stackables:config in 19ms
+[19:38:20] [main/INFO]: Loaded config simple_smithing_overhaul:config-v2 in 0ms
+[19:38:21] [Render thread/INFO]: Environment: Environment[discoveryUrl=https://discovery.minecraftservices.com/minecraft/client, name=PROD]
+[19:38:21] [Render thread/INFO]: Setting user: WheelQA
+[19:38:21] [Render thread/INFO]: Amethyst Curse Cleanser is ready.
+[19:38:21] [Render thread/INFO]: Loaded config bannerpoint:config in 0ms
+[19:38:22] [Render thread/INFO]: BuildPrint initialized
+[19:38:22] [Render thread/INFO]: Loaded config mapstitch:config in 0ms
+[19:38:22] [Render thread/INFO]: Loaded config misctweaks:config in 0ms
+[19:38:22] [Render thread/INFO]: Loaded config simple_death_improvements:config in 0ms
+[19:38:22] [Render thread/INFO]: Sorted initialized
+[19:38:22] [Render thread/INFO]: Loaded config tiered_backpacks:config in 0ms
+[19:38:22] [Render thread/INFO]: Loaded config toolpouch:config in 0ms
+[19:38:22] [Render thread/INFO]: Saved config config to file /tmp/wheel-editor-baseline-107/native-callbacks/game/config/toolpouch/config.toml
+[19:38:22] [Render thread/INFO]: Saved config config to file /tmp/wheel-editor-baseline-107/native-callbacks/game/config/toolpouch/config.toml
+[19:38:22] [Render thread/INFO]: Loaded config vpp_mod_suite:features in 1ms
+[19:38:22] [Render thread/INFO]: Saved config config to file /tmp/wheel-editor-baseline-107/native-callbacks/game/config/toolpouch/config.toml
+[19:38:22] [Render thread/INFO]: Loaded config bannerpoint:client_config in 0ms
+[19:38:22] [Render thread/INFO]: BuildPrint editor: buildprint_toning:clear_selection added to make
+[19:38:22] [Render thread/INFO]: BuildPrint editor: buildprint_toning:spline added to buildprint_toning:selection
+[19:38:22] [Render thread/INFO]: BuildPrint editor: buildprint_toning:spline_settings added to buildprint_toning:selection
+[19:38:22] [Render thread/INFO]: BuildPrint editor: buildprint_toning:tone added to buildprint_toning:toning
+[19:38:22] [Render thread/INFO]: BuildPrint editor: buildprint_toning:optimizer added to buildprint_toning:toning
+[19:38:22] [Render thread/INFO]: BuildPrint editor: buildprint_toning:save_temporary added to buildprint_toning:toning
+[19:38:22] [Render thread/INFO]: BuildPrint editor: buildprint_toning added to the editor
+[19:38:22] [Render thread/INFO]: BuildPrint client initialized
+[19:38:22] [Render thread/INFO]: Buildprint Toning experiment loaded; enter Buildprint freecam with B, scroll to Toning, then left-click. Native Tab selects with the cursor.
+[19:38:22] [Render thread/INFO]: [Indigo] Registering Indigo renderer!
+[19:38:22] [Render thread/INFO]: Loaded config fzzy_config:keybinds in 0ms
+[19:38:22] [Render thread/INFO]: Loaded config mapstitch:client_config in 0ms
+[19:38:22] [Render thread/INFO]: Loaded config misctweaks:client_config in 0ms
+[19:38:22] [Render thread/INFO]: Checking mod updates...
+[19:38:22] [Render thread/INFO]: Loaded config sensible_stackables:client_config in 0ms
+[19:38:22] [Download-2/ERROR]: Failed to fetch user properties
+com.mojang.authlib.exceptions.InvalidCredentialsException: Status: 401
+	at knot//com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:70)
+	at knot//com.mojang.authlib.services.MinecraftServicesUserApiService.fetchProperties(MinecraftServicesUserApiService.java:168)
+	at knot//net.minecraft.client.Minecraft.lambda$new$1(Minecraft.java:451)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+Caused by: MinecraftClientHttpException[type=HTTP_ERROR, status=401, response=ErrorResponse[path=/player/attributes, error=null, errorMessage=null, details=null]]
+	at knot//com.mojang.authlib.minecraft.client.MinecraftClient.buildHttpException(MinecraftClient.java:170)
+	at knot//com.mojang.authlib.minecraft.client.MinecraftClient.readServiceResponse(MinecraftClient.java:147)
+	at knot//com.mojang.authlib.minecraft.client.MinecraftClient.getWithEtag(MinecraftClient.java:81)
+	at knot//com.mojang.authlib.minecraft.client.MinecraftClient.get(MinecraftClient.java:65)
+	at knot//com.mojang.authlib.services.MinecraftServicesUserApiService.fetchProperties(MinecraftServicesUserApiService.java:118)
+	... 5 more
+[19:38:22] [Render thread/INFO]: Loaded config toolpouch:client_config in 0ms
+[19:38:22] [Render thread/INFO]: VoxelSprout libraries: core 0.6.0 (built 2026-10-13 22:06:37, from buildprint:META-INF/jars/voxelsprout-core-0.6.0.jar); ui 0.6.0 (built 2026-10-13 22:06:37, from buildprint:META-INF/jars/voxelsprout-ui-0.6.0.jar); controls 0.6.0 (built 2026-10-13 22:06:37, from buildprint:META-INF/jars/voxelsprout-controls-0.6.0.jar); render 0.6.0 (built 2026-10-13 22:06:37, from buildprint:META-INF/jars/voxelsprout-render-0.6.0.jar); ghost 0.6.0 (built 2026-10-13 22:06:37, from buildprint:META-INF/jars/voxelsprout-ghost-0.6.0.jar); onboarding 0.6.0 (built 2026-10-13 22:06:37, from buildprint:META-INF/jars/voxelsprout-onboarding-0.6.0.jar)
+[19:38:22] [Render thread/INFO]: Config file '/tmp/wheel-editor-baseline-107/native-callbacks/game/config/yacl.json5' does not exist. Creating it with default values.
+[19:38:22] [Render thread/INFO]: Serializing class dev.isxander.yacl3.platform.YACLConfig to '/tmp/wheel-editor-baseline-107/native-callbacks/game/config/yacl.json5'
+[19:38:23] [Render thread/ERROR]: Illegal option value 0 for Anisotropic Filtering
+[19:38:23] [Render thread/INFO]: Backend library: LWJGL version 3.4.3-snapshot
+[19:38:23] [Render thread/INFO]: SDL [SYSTEM]: App name: Minecraft
+[19:38:23] [Render thread/INFO]: SDL [SYSTEM]: App version: 26.3
+[19:38:23] [Render thread/INFO]: SDL [SYSTEM]: App ID: com.mojang.minecraft
+[19:38:23] [Render thread/INFO]: SDL [SYSTEM]: SDL revision: SDL-3.4.14--128-NOTFOUND
+[19:38:23] [Render thread/INFO]: SDL [VIDEO]: Detected XWayland
+WARNING: radv is not a conformant Vulkan implementation, testing use only.
+[19:38:23] [Render thread/ERROR]: Failed to create backend OpenGL
+com.mojang.renderpearl.api.device.BackendCreationException: OpenGL is not supported: Could not retrieve OpenGL functions
+	at knot//com.mojang.renderpearl.backend.opengl.GlBackend.loadLibrary(GlBackend.java:36)
+	at knot//net.minecraft.client.Minecraft.<init>(Minecraft.java:530)
+	at knot//net.minecraft.client.main.Main.main(Main.java:278)
+	at net.fabricmc.loader.impl.game.minecraft.MinecraftGameProvider.launch(MinecraftGameProvider.java:517)
+	at net.fabricmc.loader.impl.launch.knot.Knot.launch(Knot.java:72)
+	at net.fabricmc.loader.impl.launch.knot.KnotClient.main(KnotClient.java:23)
+WARNING: radv is not a conformant Vulkan implementation, testing use only.
+[19:38:23] [Render thread/INFO]: Enabling optional FeatureSet [AMD Buffer Marker]
+[19:38:23] [Render thread/INFO]: Optional FeatureSet [NV Diagnostic Checkpoint] not supported
+[19:38:23] [Render thread/INFO]: Enabling optional FeatureSet [Wireframe]
+[19:38:23] [Render thread/INFO]: Enabling optional FeatureSet [Calibrated Timestamps]
+[19:38:23] [Render thread/INFO]: Enabling optional FeatureSet [EXT MultiDraw]
+[19:38:23] [Render thread/INFO]: Using graphics backend Vulkan, using drivers: 1.4.354 radv Mesa 26.2.4-arch1.1
+[19:38:23] [Render thread/INFO]: Using graphics device: AMD Radeon RX 9070 XT (RADV GFX1201) (AMD)
+[19:38:23] [Render thread/INFO]: Using graphics device extensions: VK_EXT_calibrated_timestamps (D), VK_KHR_synchronization2 (D), VK_EXT_multi_draw (D), VK_AMD_buffer_marker (D), VK_EXT_vertex_attribute_divisor (D), VK_KHR_swapchain (D), VK_KHR_surface (I), VK_KHR_push_descriptor (D), VK_KHR_xlib_surface (I), VK_EXT_debug_utils (I), VK_KHR_dynamic_rendering (D)
+[19:38:23] [Render thread/INFO]: Created window using SDL video driver: x11
+[19:38:23] [Render thread/WARN]: Removed resource pack simple_smithing_overhaul:rename_mending_description from options because it is no longer compatible
+[19:38:23] [Render thread/WARN]: Removed resource pack simple_smithing_overhaul:rename_xp_bottle from options because it is no longer compatible
+[19:38:23] [Render thread/INFO]: BuildPrint: schematic-preview PIP renderer registered (6 PIP renderers total)
+[19:38:24] [Render thread/ERROR]: Error while loading the narrator
+com.mojang.text2speech.Narrator$InitializeException: Failed to load library flite
+	at knot//com.mojang.text2speech.NarratorLinux$FliteLibrary.loadNative(NarratorLinux.java:82)
+	at knot//com.mojang.text2speech.NarratorLinux.<init>(NarratorLinux.java:19)
+	at knot//com.mojang.text2speech.Narrator.getNarrator(Narrator.java:41)
+	at knot//net.minecraft.client.GameNarrator.<init>(GameNarrator.java:20)
+	at knot//net.minecraft.client.Minecraft.<init>(Minecraft.java:740)
+	at knot//net.minecraft.client.main.Main.main(Main.java:278)
+	at net.fabricmc.loader.impl.game.minecraft.MinecraftGameProvider.launch(MinecraftGameProvider.java:517)
+	at net.fabricmc.loader.impl.launch.knot.Knot.launch(Knot.java:72)
+	at net.fabricmc.loader.impl.launch.knot.KnotClient.main(KnotClient.java:23)
+Caused by: java.lang.UnsatisfiedLinkError: Unable to load library 'flite':
+libflite.so: cannot open shared object file: No such file or directory
+libflite.so: cannot open shared object file: No such file or directory
+Native library (linux-x86-64/libflite.so) not found in resource path (/home/thenathe/.local/share/ModrinthApp/meta/versions/26.3/26.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/at/yawk/lz4/lz4-java/1.10.1/lz4-java-1.10.1.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/azure/azure-json/1.4.0/azure-json-1.4.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/github/oshi/oshi-core/6.9.0/oshi-core-6.9.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/google/code/gson/gson/2.14.0/gson-2.14.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/google/guava/failureaccess/1.0.3/failureaccess-1.0.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/google/guava/guava/33.6.0-jre/guava-33.6.0-jre.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/ibm/icu/icu4j/78.3/icu4j-78.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/microsoft/azure/msal4j/1.24.1/msal4j-1.24.1.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/mojang/authlib/10.0.77/authlib-10.0.77.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/mojang/blocklist/1.0.10/blocklist-1.0.10.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/mojang/brigadier/1.3.11/brigadier-1.3.11.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/mojang/datafixerupper/10.0.21/datafixerupper-10.0.21.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/mojang/jtracy/1.14.38/jtracy-1.14.38.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/mojang/logging/1.7.12/logging-1.7.12.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/mojang/patchy/2.2.10/patchy-2.2.10.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/mojang/text2speech/1.19.12/text2speech-1.19.12.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/commons-codec/commons-codec/1.22.0/commons-codec-1.22.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/commons-io/commons-io/2.20.0/commons-io-2.20.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-buffer/4.2.16.Final/netty-buffer-4.2.16.Final.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-codec-base/4.2.16.Final/netty-codec-base-4.2.16.Final.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-codec-compression/4.2.16.Final/netty-codec-compression-4.2.16.Final.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-codec-http/4.2.16.Final/netty-codec-http-4.2.16.Final.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-common/4.2.16.Final/netty-common-4.2.16.Final.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-handler/4.2.16.Final/netty-handler-4.2.16.Final.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-resolver/4.2.16.Final/netty-resolver-4.2.16.Final.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-transport-classes-epoll/4.2.16.Final/netty-transport-classes-epoll-4.2.16.Final.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-transport-classes-kqueue/4.2.16.Final/netty-transport-classes-kqueue-4.2.16.Final.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-transport-native-epoll/4.2.16.Final/netty-transport-native-epoll-4.2.16.Final-linux-aarch_64.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-transport-native-epoll/4.2.16.Final/netty-transport-native-epoll-4.2.16.Final-linux-x86_64.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-transport-native-unix-common/4.2.16.Final/netty-transport-native-unix-common-4.2.16.Final.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-transport/4.2.16.Final/netty-transport-4.2.16.Final.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/it/unimi/dsi/fastutil/8.5.18/fastutil-8.5.18.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/net/java/dev/jna/jna-platform/5.17.0/jna-platform-5.17.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/net/java/dev/jna/jna/5.17.0/jna-5.17.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/net/sf/jopt-simple/jopt-simple/5.0.4/jopt-simple-5.0.4.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/apache/commons/commons-compress/1.28.0/commons-compress-1.28.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/apache/commons/commons-lang3/3.20.0/commons-lang3-3.20.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/apache/logging/log4j/log4j-api/2.26.0/log4j-api-2.26.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/apache/logging/log4j/log4j-core/2.26.0/log4j-core-2.26.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/apache/logging/log4j/log4j-slf4j2-impl/2.26.0/log4j-slf4j2-impl-2.26.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/jcraft/jorbis/0.0.17/jorbis-0.0.17.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/joml/joml/1.10.9/joml-1.10.9.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/jspecify/jspecify/1.0.0/jspecify-1.0.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl-freetype/3.4.3/lwjgl-freetype-3.4.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl-jemalloc/3.4.3/lwjgl-jemalloc-3.4.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl-openal/3.4.3/lwjgl-openal-3.4.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl-opengl/3.4.3/lwjgl-opengl-3.4.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl-sdl/3.4.3/lwjgl-sdl-3.4.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl-shaderc/3.4.3/lwjgl-shaderc-3.4.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl-spvc/3.4.3/lwjgl-spvc-3.4.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl-stb/3.4.3/lwjgl-stb-3.4.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl-vma/3.4.3/lwjgl-vma-3.4.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl-vulkan/3.4.3/lwjgl-vulkan-3.4.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl/3.4.3/lwjgl-3.4.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/ow2/asm/asm/9.10.1/asm-9.10.1.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/ow2/asm/asm-analysis/9.10.1/asm-analysis-9.10.1.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/ow2/asm/asm-commons/9.10.1/asm-commons-9.10.1.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/ow2/asm/asm-tree/9.10.1/asm-tree-9.10.1.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/ow2/asm/asm-util/9.10.1/asm-util-9.10.1.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/net/fabricmc/sponge-mixin/0.17.4+mixin.0.8.7/sponge-mixin-0.17.4+mixin.0.8.7.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/net/fabricmc/intermediary/26.3/intermediary-26.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/net/fabricmc/fabric-loader/0.19.5/fabric-loader-0.19.5.jar)
+	at knot//com.sun.jna.NativeLibrary.loadLibrary(NativeLibrary.java:325)
+	at knot//com.sun.jna.NativeLibrary.getInstance(NativeLibrary.java:481)
+	at knot//com.sun.jna.NativeLibrary.getInstance(NativeLibrary.java:423)
+	at knot//com.mojang.text2speech.NarratorLinux$FliteLibrary.loadNative(NarratorLinux.java:80)
+	... 8 more
+	Suppressed: java.lang.UnsatisfiedLinkError: libflite.so: cannot open shared object file: No such file or directory
+		at knot//com.sun.jna.Native.open(Native Method)
+		at knot//com.sun.jna.NativeLibrary.loadLibrary(NativeLibrary.java:213)
+		... 11 more
+	Suppressed: java.lang.UnsatisfiedLinkError: libflite.so: cannot open shared object file: No such file or directory
+		at knot//com.sun.jna.Native.open(Native Method)
+		at knot//com.sun.jna.NativeLibrary.loadLibrary(NativeLibrary.java:226)
+		... 11 more
+	Suppressed: java.io.IOException: Native library (linux-x86-64/libflite.so) not found in resource path (/home/thenathe/.local/share/ModrinthApp/meta/versions/26.3/26.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/at/yawk/lz4/lz4-java/1.10.1/lz4-java-1.10.1.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/azure/azure-json/1.4.0/azure-json-1.4.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/github/oshi/oshi-core/6.9.0/oshi-core-6.9.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/google/code/gson/gson/2.14.0/gson-2.14.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/google/guava/failureaccess/1.0.3/failureaccess-1.0.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/google/guava/guava/33.6.0-jre/guava-33.6.0-jre.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/ibm/icu/icu4j/78.3/icu4j-78.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/microsoft/azure/msal4j/1.24.1/msal4j-1.24.1.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/mojang/authlib/10.0.77/authlib-10.0.77.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/mojang/blocklist/1.0.10/blocklist-1.0.10.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/mojang/brigadier/1.3.11/brigadier-1.3.11.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/mojang/datafixerupper/10.0.21/datafixerupper-10.0.21.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/mojang/jtracy/1.14.38/jtracy-1.14.38.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/mojang/logging/1.7.12/logging-1.7.12.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/mojang/patchy/2.2.10/patchy-2.2.10.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/com/mojang/text2speech/1.19.12/text2speech-1.19.12.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/commons-codec/commons-codec/1.22.0/commons-codec-1.22.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/commons-io/commons-io/2.20.0/commons-io-2.20.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-buffer/4.2.16.Final/netty-buffer-4.2.16.Final.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-codec-base/4.2.16.Final/netty-codec-base-4.2.16.Final.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-codec-compression/4.2.16.Final/netty-codec-compression-4.2.16.Final.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-codec-http/4.2.16.Final/netty-codec-http-4.2.16.Final.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-common/4.2.16.Final/netty-common-4.2.16.Final.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-handler/4.2.16.Final/netty-handler-4.2.16.Final.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-resolver/4.2.16.Final/netty-resolver-4.2.16.Final.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-transport-classes-epoll/4.2.16.Final/netty-transport-classes-epoll-4.2.16.Final.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-transport-classes-kqueue/4.2.16.Final/netty-transport-classes-kqueue-4.2.16.Final.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-transport-native-epoll/4.2.16.Final/netty-transport-native-epoll-4.2.16.Final-linux-aarch_64.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-transport-native-epoll/4.2.16.Final/netty-transport-native-epoll-4.2.16.Final-linux-x86_64.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-transport-native-unix-common/4.2.16.Final/netty-transport-native-unix-common-4.2.16.Final.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/io/netty/netty-transport/4.2.16.Final/netty-transport-4.2.16.Final.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/it/unimi/dsi/fastutil/8.5.18/fastutil-8.5.18.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/net/java/dev/jna/jna-platform/5.17.0/jna-platform-5.17.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/net/java/dev/jna/jna/5.17.0/jna-5.17.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/net/sf/jopt-simple/jopt-simple/5.0.4/jopt-simple-5.0.4.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/apache/commons/commons-compress/1.28.0/commons-compress-1.28.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/apache/commons/commons-lang3/3.20.0/commons-lang3-3.20.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/apache/logging/log4j/log4j-api/2.26.0/log4j-api-2.26.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/apache/logging/log4j/log4j-core/2.26.0/log4j-core-2.26.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/apache/logging/log4j/log4j-slf4j2-impl/2.26.0/log4j-slf4j2-impl-2.26.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/jcraft/jorbis/0.0.17/jorbis-0.0.17.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/joml/joml/1.10.9/joml-1.10.9.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/jspecify/jspecify/1.0.0/jspecify-1.0.0.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl-freetype/3.4.3/lwjgl-freetype-3.4.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl-jemalloc/3.4.3/lwjgl-jemalloc-3.4.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl-openal/3.4.3/lwjgl-openal-3.4.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl-opengl/3.4.3/lwjgl-opengl-3.4.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl-sdl/3.4.3/lwjgl-sdl-3.4.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl-shaderc/3.4.3/lwjgl-shaderc-3.4.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl-spvc/3.4.3/lwjgl-spvc-3.4.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl-stb/3.4.3/lwjgl-stb-3.4.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl-vma/3.4.3/lwjgl-vma-3.4.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl-vulkan/3.4.3/lwjgl-vulkan-3.4.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/lwjgl/lwjgl/3.4.3/lwjgl-3.4.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/ow2/asm/asm/9.10.1/asm-9.10.1.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/ow2/asm/asm-analysis/9.10.1/asm-analysis-9.10.1.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/ow2/asm/asm-commons/9.10.1/asm-commons-9.10.1.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/ow2/asm/asm-tree/9.10.1/asm-tree-9.10.1.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/org/ow2/asm/asm-util/9.10.1/asm-util-9.10.1.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/net/fabricmc/sponge-mixin/0.17.4+mixin.0.8.7/sponge-mixin-0.17.4+mixin.0.8.7.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/net/fabricmc/intermediary/26.3/intermediary-26.3.jar:/home/thenathe/.local/share/ModrinthApp/meta/libraries/net/fabricmc/fabric-loader/0.19.5/fabric-loader-0.19.5.jar)
+		at knot//com.sun.jna.Native.extractFromResourcePath(Native.java:1141)
+		at knot//com.sun.jna.NativeLibrary.loadLibrary(NativeLibrary.java:297)
+		... 11 more
+[19:38:24] [Render thread/INFO]: Reloading ResourceManager: vanilla, vanilla, bannerpoint, brb, buildprint, buildprint_toning, chalk, chalk-colorful-addon, cloth-config, controlling, fabric-advancement-api-v1, fabric-api, fabric-api-base, fabric-api-lookup-api-v1, fabric-biome-api-v1, fabric-block-api-v1, fabric-block-getter-api-v2, fabric-client-gametest-api-v1, fabric-command-api-v2, fabric-content-registries-v0, fabric-convention-tags-v2, fabric-crash-report-info-v1, fabric-creative-tab-api-v1, fabric-data-attachment-api-v1, fabric-data-generation-api-v1, fabric-debug-api-v1, fabric-dimensions-v1, fabric-entity-events-v1, fabric-events-interaction-v0, fabric-game-rule-api-v1, fabric-item-api-v1, fabric-key-mapping-api-v1, fabric-language-kotlin, fabric-lifecycle-events-v1, fabric-loot-api-v3, fabric-menu-api-v1, fabric-message-api-v1, fabric-model-loading-api-v1, fabric-networking-api-v1, fabric-object-builder-api-v1, fabric-particles-v1, fabric-permission-api-v1, fabric-recipe-api-v1, fabric-registry-sync-v0, fabric-renderer-api-v1, fabric-renderer-indigo, fabric-rendering-fluids-v1, fabric-rendering-v1, fabric-resource-conditions-api-v1, fabric-resource-loader-v0, fabric-resource-loader-v1, fabric-screen-api-v1, fabric-serialization-api-v1, fabric-sound-api-v1, fabric-tag-api-v1, fabric-transfer-api-v1, fabric-transitive-access-wideners-v1, fabricloader, fzzy_config, hotkey_wheel, mapstitch, mapstitch_mixed_scales, misctweaks, mixson, modmenu, placeholder-api, searchables, sensible_stackables, simple_death_improvements, simple_smithing_overhaul, sorted, tiered_backpacks, toolpouch, toolpouch_atlas_elytra_compat, voxelsprout_onboarding, voxelsprout_ui, vpp_backpack_crafting, vpp_mod_suite, yet_another_config_lib_v3, vpp_mod_suite:settings_titles, simple_smithing_overhaul:rename_mending_description, simple_smithing_overhaul:rename_xp_bottle
+[19:38:24] [Download-3/INFO]: Could not authorize you against Realms server: java.lang.RuntimeException: Failed to parse into SignedJWT: 0
+[19:38:24] [Download-3/ERROR]: Failed to fetch Realms feature flags
+com.mojang.realmsclient.exception.RealmsServiceException: Realms authentication error with message 'java.lang.RuntimeException: Failed to parse into SignedJWT: 0'
+	at knot//com.mojang.realmsclient.client.RealmsClient.execute(RealmsClient.java:625)
+	at knot//com.mojang.realmsclient.client.RealmsClient.fetchFeatureFlags(RealmsClient.java:204)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+[19:38:24] [Worker-Main-3/INFO]: Found unifont_all_no_pua-17.0.01.hex, loading
+[19:38:24] [Worker-Main-2/INFO]: Found unifont_pua-17.0.01.hex, loading
+[19:38:24] [Worker-Main-3/INFO]: Found unifont_jp_patch-17.0.01.hex, loading
+[19:38:25] [Render thread/INFO]: Saved config client_config to file /tmp/wheel-editor-baseline-107/native-callbacks/game/config/toolpouch/client_config.toml
+[19:38:25] [Render thread/INFO]: OpenAL initialized on device Starship/Matisse HD Audio Controller Analog Stereo
+[19:38:25] [Render thread/INFO]: Sound engine started
+[19:38:25] [Render thread/INFO]: Created: 512x256x0 minecraft:textures/atlas/particles.png-atlas
+[19:38:25] [Render thread/INFO]: Created: 256x128x0 minecraft:textures/atlas/celestials.png-atlas
+[19:38:25] [Render thread/INFO]: Created: 128x128x0 minecraft:textures/atlas/decorated_pot.png-atlas
+[19:38:25] [Render thread/INFO]: Created: 512x256x0 minecraft:textures/atlas/paintings.png-atlas
+[19:38:25] [Render thread/INFO]: Created: 1024x512x0 minecraft:textures/atlas/shield_patterns.png-atlas
+[19:38:25] [Render thread/INFO]: Created: 1024x512x0 minecraft:textures/atlas/banner_patterns.png-atlas
+[19:38:25] [Render thread/INFO]: Created: 2048x2048x4 minecraft:textures/atlas/blocks.png-atlas
+[19:38:25] [Render thread/INFO]: Created: 1024x512x0 minecraft:textures/atlas/items.png-atlas
+[19:38:25] [Render thread/INFO]: Created: 1024x1024x0 minecraft:textures/atlas/gui.png-atlas
+[19:38:26] [Render thread/INFO]: Created: 128x64x0 minecraft:textures/atlas/map_decorations.png-atlas
+[19:38:26] [Render thread/INFO]: Created: 512x512x0 minecraft:textures/atlas/chest.png-atlas
+[19:38:26] [Render thread/INFO]: Created: 512x512x0 minecraft:textures/atlas/shulker_boxes.png-atlas
+[19:38:26] [Download-3/INFO]: Could not authorize you against Realms server: java.lang.RuntimeException: Failed to parse into SignedJWT: 0
+[19:38:26] [Download-3/ERROR]: Couldn't connect to realms
+com.mojang.realmsclient.exception.RealmsServiceException: Realms authentication error with message 'java.lang.RuntimeException: Failed to parse into SignedJWT: 0'
+	at knot//com.mojang.realmsclient.client.RealmsClient.execute(RealmsClient.java:625)
+	at knot//com.mojang.realmsclient.client.RealmsClient.clientCompatible(RealmsClient.java:354)
+	at knot//com.mojang.realmsclient.RealmsAvailability.lambda$check$0(RealmsAvailability.java:48)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+[19:38:29] [Worker-Main-3/INFO]: Loaded 1897 advancements
+[19:38:29] [Render thread/INFO]: World loading finished: null screen: net.minecraft.client.gui.screens.GenericMessageScreen@67ca91fa
+[19:38:29] [Render thread/INFO]: Applied 0 biome modifications to 0 of 67 new biomes in 893.5 μs
+[19:38:29] [Server thread/INFO]: Starting integrated minecraft server version 26.3
+[19:38:29] [Server thread/INFO]: Generating keypair
+[19:38:29] [Server thread/INFO]: Selecting global world spawn...
+[19:38:30] [Server thread/INFO]: Loading 0 persistent chunks...
+[19:38:30] [Server thread/INFO]: Preparing spawn area: 16%
+[19:38:30] [Server thread/INFO]: Saving chunks for level 'ServerLevel[New World]'/minecraft:overworld
+[19:38:30] [Server thread/INFO]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_nether
+[19:38:30] [Server thread/INFO]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_end
+[19:38:30] [Render thread/INFO]: World loading finished: null screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:30] [Render thread/INFO]: World loading finished: null screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:30] [Render thread/INFO]: World loading finished: null screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:30] [Render thread/INFO]: World loading finished: null screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:30] [Render thread/INFO]: World loading finished: null screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:30] [Render thread/INFO]: World loading finished: null screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:30] [Render thread/INFO]: World loading finished: null screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:30] [Netty Local IO #2/INFO]: Suite negotiated native modules [toolpouch, toolpouch_atlas_elytra_compat, shared_region_maps, simple_smithing_overhaul, misctweaks, debugwrench, amethyst_curse_cleanser, simple_death_improvements, tiered_backpacks, mapstitch, sensible_stackables, chalk, vpp_mod_suite] (Polymer absent)
+[19:38:30] [Render thread/INFO]: World loading finished: null screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:30] [Server thread/INFO]: Loading 48 chunks for player spawn...
+[19:38:30] [Server thread/INFO]: Preparing spawn area: 16%
+[19:38:30] [Render thread/INFO]: World loading finished: null screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:30] [Render thread/INFO]: World loading finished: null screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:30] [Render thread/INFO]: World loading finished: null screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:30] [Render thread/INFO]: World loading finished: null screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:30] [Render thread/INFO]: World loading finished: null screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:30] [Server thread/INFO]: Time elapsed: 989 ms
+[19:38:31] [Render thread/INFO]: World loading finished: null screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:31] [Server thread/INFO]: WheelQA[local:E:458631e6] logged in with entity id 1 at (0.5, -60.0, 0.5)
+[19:38:31] [Server thread/INFO]: System chat: WheelQA joined the game
+[19:38:31] [Server thread/INFO]: Changing view distance to 5, from 10
+[19:38:31] [Server thread/INFO]: Changing simulation distance to 5, from 0
+[19:38:31] [Render thread/INFO]: Loaded 2 advancements
+[19:38:31] [Render thread/INFO]: World loading finished: ClientLevel screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:31] [Render thread/WARN]: Requested post effect does not exist: minecraft:end_of_frame
+[19:38:31] [Render thread/INFO]: Resizing Dynamic Transforms UBO, capacity limit of 2 reached during a single frame. New capacity will be 4.
+[19:38:31] [Render thread/INFO]: World loading finished: ClientLevel screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:31] [Render thread/INFO]: Resizing Dynamic Transforms UBO, capacity limit of 4 reached during a single frame. New capacity will be 8.
+[19:38:31] [Render thread/INFO]: Resizing Dynamic Transforms UBO, capacity limit of 8 reached during a single frame. New capacity will be 16.
+[19:38:31] [Render thread/INFO]: World loading finished: ClientLevel screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:31] [Render thread/INFO]: World loading finished: ClientLevel screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:31] [Render thread/INFO]: World loading finished: ClientLevel screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:31] [Render thread/INFO]: Resizing Chunk Sections Command Buffer, capacity limit of 2 reached during a single frame. New capacity will be 4.
+[19:38:31] [Render thread/INFO]: Resizing Chunk Sections Instanced, capacity limit of 2 reached during a single frame. New capacity will be 4.
+[19:38:31] [Render thread/INFO]: Resizing Chunk Sections Command Buffer, capacity limit of 4 reached during a single frame. New capacity will be 8.
+[19:38:31] [Render thread/INFO]: Resizing Chunk Sections Instanced, capacity limit of 4 reached during a single frame. New capacity will be 8.
+[19:38:31] [Render thread/INFO]: World loading finished: ClientLevel screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:31] [Render thread/INFO]: World loading finished: ClientLevel screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:31] [Render thread/INFO]: World loading finished: ClientLevel screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:31] [Render thread/INFO]: World loading finished: ClientLevel screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:32] [Render thread/INFO]: World loading finished: ClientLevel screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:32] [Render thread/INFO]: Resizing Chunk Sections Command Buffer, capacity limit of 8 reached during a single frame. New capacity will be 16.
+[19:38:32] [Render thread/INFO]: Resizing Chunk Sections Instanced, capacity limit of 8 reached during a single frame. New capacity will be 16.
+[19:38:32] [Render thread/INFO]: World loading finished: ClientLevel screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:32] [Render thread/INFO]: World loading finished: ClientLevel screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:32] [Render thread/INFO]: World loading finished: ClientLevel screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:32] [Render thread/INFO]: World loading finished: ClientLevel screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:32] [Render thread/INFO]: World loading finished: ClientLevel screen: net.minecraft.client.gui.screens.LevelLoadingScreen@12e43d4b
+[19:38:32] [Render thread/INFO]: World loading finished: ClientLevel screen: null
+[19:38:32] [Render thread/INFO]: Resizing Chunk Sections Command Buffer, capacity limit of 16 reached during a single frame. New capacity will be 32.
+[19:38:32] [Render thread/INFO]: Resizing Chunk Sections Instanced, capacity limit of 16 reached during a single frame. New capacity will be 32.
+[19:38:33] [Render thread/INFO]: Resizing Chunk Sections Command Buffer, capacity limit of 32 reached during a single frame. New capacity will be 64.
+[19:38:33] [Render thread/INFO]: Resizing Chunk Sections Instanced, capacity limit of 32 reached during a single frame. New capacity will be 64.
+[19:38:35] [Render thread/INFO]: BuildPrint editor: entered
+[19:38:35] [Render thread/INFO]: Resizing Chunk Sections Command Buffer, capacity limit of 64 reached during a single frame. New capacity will be 128.
+[19:38:35] [Render thread/INFO]: Resizing Chunk Sections Instanced, capacity limit of 64 reached during a single frame. New capacity will be 128.
+[19:38:35] [Render thread/INFO]: Resizing Dynamic Transforms UBO, capacity limit of 16 reached during a single frame. New capacity will be 32.
+[19:38:35] [Server thread/INFO]: WheelQA lost connection: Disconnected
+[19:38:35] [Server thread/INFO]: System chat: WheelQA left the game
+[19:38:35] [Server thread/INFO]: Stopping singleplayer server as player logged out
+[19:38:35] [Server thread/INFO]: Stopping server
+[19:38:35] [Server thread/INFO]: Saving players
+[19:38:35] [Server thread/INFO]: Saving worlds
+[19:38:36] [Server thread/INFO]: Saving chunks for level 'ServerLevel[New World]'/minecraft:overworld
+[19:38:36] [Server thread/INFO]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_nether
+[19:38:36] [Server thread/INFO]: Saving chunks for level 'ServerLevel[New World]'/minecraft:the_end
+[19:38:36] [Test thread/ERROR]: Client gametests failed with an exception
+java.lang.AssertionError: Side-mouse Buildprint editor QA
+	at knot//com.thenathe.hotkeywheel.qa.SideMouseEditorTest.runTest(SideMouseEditorTest.java:122)
+	at knot//net.fabricmc.fabric.impl.client.gametest.FabricClientGameTestRunner.lambda$start$0(FabricClientGameTestRunner.java:54)
+	at knot//net.fabricmc.fabric.impl.client.gametest.threading.ThreadingImpl.lambda$runTestThread$0(ThreadingImpl.java:139)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+Caused by: java.lang.AssertionError: hold-release: original side-mouse opener failed to exit the editor; native semicolon succeeds
+	at knot//com.thenathe.hotkeywheel.qa.SideMouseEditorTest.closeEditor(SideMouseEditorTest.java:229)
+	at knot//com.thenathe.hotkeywheel.qa.SideMouseEditorTest.runTest(SideMouseEditorTest.java:61)
+	... 3 more
+[19:38:36] [Render thread/ERROR]: Minecraft has crashed!
+net.fabricmc.loader.impl.FormattedException: java.lang.AssertionError: Side-mouse Buildprint editor QA
+	at net.fabricmc.loader.impl.FormattedException.ofLocalized(FormattedException.java:63)
+	at net.fabricmc.loader.impl.game.minecraft.MinecraftGameProvider.launch(MinecraftGameProvider.java:519)
+	at net.fabricmc.loader.impl.launch.knot.Knot.launch(Knot.java:72)
+	at net.fabricmc.loader.impl.launch.knot.KnotClient.main(KnotClient.java:23)
+Caused by: java.lang.AssertionError: Side-mouse Buildprint editor QA
+	at knot//com.thenathe.hotkeywheel.qa.SideMouseEditorTest.runTest(SideMouseEditorTest.java:122)
+	at knot//net.fabricmc.fabric.impl.client.gametest.FabricClientGameTestRunner.lambda$start$0(FabricClientGameTestRunner.java:54)
+	at knot//net.fabricmc.fabric.impl.client.gametest.threading.ThreadingImpl.lambda$runTestThread$0(ThreadingImpl.java:139)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+Caused by: java.lang.AssertionError: hold-release: original side-mouse opener failed to exit the editor; native semicolon succeeds
+	at knot//com.thenathe.hotkeywheel.qa.SideMouseEditorTest.closeEditor(SideMouseEditorTest.java:229)
+	at knot//com.thenathe.hotkeywheel.qa.SideMouseEditorTest.runTest(SideMouseEditorTest.java:61)
+	... 3 more

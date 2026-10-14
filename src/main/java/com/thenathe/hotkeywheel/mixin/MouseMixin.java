@@ -13,7 +13,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(MouseHandler.class)
 public final class MouseMixin {
-    @Inject(method = "onButton", at = @At("HEAD"), cancellable = true)
+    // Run before Buildprint's order-1000 callback consumes grabbed editor clicks.
+    @Inject(method = "onButton", at = @At("HEAD"), cancellable = true, order = 900)
     private void hotkeyWheel$input(long window, MouseButtonInfo event, int action, CallbackInfo callback) {
         InputConstants.Key key = InputConstants.Type.MOUSE.getOrCreate(event.button());
         if (window == Minecraft.getInstance().getWindow().handle()

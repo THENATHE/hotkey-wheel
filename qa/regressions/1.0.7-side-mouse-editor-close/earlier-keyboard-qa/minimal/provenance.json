@@ -1,0 +1,18 @@
+{
+  "minecraft": "26.3",
+  "loader": "0.19.5",
+  "integrated": false,
+  "suite": false,
+  "polymer": false,
+  "buildprint": null,
+  "blocktone": null,
+  "suite_version": null,
+  "brbr": null,
+  "polymer_version": null,
+  "mods": {
+    "fabric-api-0.162.0+26.3.jar": "8626c189b702f466800b1c8ddac6203cf8a1e0bdaee75a5f9a33b18c2baa81b1",
+    "fabric-client-gametest-api-v1-6.0.7+4be74c3f5d.jar": "09d7d48475eef47a347c12c51bd32c6cffc065a6785f3023f5aa6be4b815cd38",
+    "hotkey-wheel-1.0.7+26.3.jar": "3095b28e981dd995aabc582b7abe785baeccfdc4ac00128eabd6bda0d5a55fd6",
+    "hotkey-wheel-qa.jar": "78047468de49113e28cb627f3d17cd15fd8f6231dfe0cf13c3dfaf78630a652c"
+  }
+}
