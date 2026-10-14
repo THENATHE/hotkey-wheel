@@ -1,0 +1,60 @@
+{
+  "reviewed": "2026-10-13",
+  "minecraft": "26.3",
+  "buildprint": "0.1.19+26.x",
+  "buildprintJarSha256": "bd60814e7ba944d7a67bfbf9831a8fa156223277345dc87569cd358a326e3f1f",
+  "source": "Minecraft/hotkey-wheel",
+  "areas": [
+    {
+      "url": "https://voxelsprout.com/buildprint/wiki/api",
+      "htmlSha256": "7cbded49d876b28290c87c1508d9d05591d13859997287d74da95bbc8b4b870c",
+      "assessment": "API-MIGRATION.md: Fresh review of every documented API area"
+    },
+    {
+      "url": "https://voxelsprout.com/buildprint/wiki/blueprints-api",
+      "htmlSha256": "1d6927730b390de519c59f5c0f9ec6604cff7225233643b6984f4177e86e2e42",
+      "assessment": "API-MIGRATION.md: Fresh review of every documented API area"
+    },
+    {
+      "url": "https://voxelsprout.com/buildprint/wiki/placements-api",
+      "htmlSha256": "e0a41944d664666c61686bacdbf3223ab40eb08f9dfac888a56b93a9adfd5f33",
+      "assessment": "API-MIGRATION.md: Fresh review of every documented API area"
+    },
+    {
+      "url": "https://voxelsprout.com/buildprint/wiki/hud-api",
+      "htmlSha256": "f9f8b8997f7575003c0b7a6cd1ebfc6b9b0db30b71c6c4dd4ff8a8eb4db02593",
+      "assessment": "API-MIGRATION.md: Fresh review of every documented API area"
+    },
+    {
+      "url": "https://voxelsprout.com/buildprint/wiki/previews-api",
+      "htmlSha256": "305d6251986d33c7f0e30e61f1b79af0c70b6861c6c2c9b00e3be2aada79d428",
+      "assessment": "API-MIGRATION.md: Fresh review of every documented API area"
+    },
+    {
+      "url": "https://voxelsprout.com/buildprint/wiki/library-api",
+      "htmlSha256": "4e2138a34acfb154eedd054f96b835363ee01496185245900e076e7378417504",
+      "assessment": "API-MIGRATION.md: Fresh review of every documented API area"
+    },
+    {
+      "url": "https://voxelsprout.com/buildprint/wiki/selection-api",
+      "htmlSha256": "b6f3ab1e50042ee5ca9888493077626d9f8fdeb051d4b375170192af2ed71451",
+      "assessment": "API-MIGRATION.md: Fresh review of every documented API area"
+    },
+    {
+      "url": "https://voxelsprout.com/buildprint/wiki/rules-api",
+      "htmlSha256": "8b043af7d8212a8c4380238c118fcadd53ac51ce3cfce8c58e67244c95870a3b",
+      "assessment": "API-MIGRATION.md: Fresh review of every documented API area"
+    },
+    {
+      "url": "https://voxelsprout.com/buildprint/wiki/editor-api",
+      "htmlSha256": "a1c223cfaf8d89fa41db3f774a3c96a5c2d6f9b6e27bbd2848e9238648e09c5b",
+      "assessment": "API-MIGRATION.md: Fresh review of every documented API area"
+    },
+    {
+      "url": "https://voxelsprout.com/buildprint/wiki/format-api",
+      "htmlSha256": "d1b6d7b898f7c237d7f9a3b6dfaf66543bcbf9aa506bf6d817272f8c93ac4e9e",
+      "assessment": "API-MIGRATION.md: Fresh review of every documented API area"
+    }
+  ],
+  "publicSignatures": "Compiled from \"BuildprintBlueprints.java\"\npublic final class com.buildprint.api.BuildprintBlueprints {\n  public static boolean isAvailable();\n  public static java.lang.String problem(java.lang.String);\n  public static java.lang.String[] set(java.lang.String, java.lang.String, int[], java.lang.String[]);\n  public static java.lang.String[] set(java.lang.String, java.lang.String, int[], java.lang.String[], java.lang.String);\n  public static int blockCount(java.lang.String);\n  public static java.lang.String data(java.lang.String);\n  public static java.lang.String ownerName(java.lang.String);\n  public static java.lang.String displayName(java.lang.String);\n  public static void onClientTick();\n  public static void flush();\n  static boolean validOwner(java.lang.String);\n  static synchronized boolean write(java.nio.file.Path, com.buildprint.schematic.model.Schematic);\n  static {};\n}\nCompiled from \"BuildprintPlacements.java\"\npublic final class com.buildprint.api.BuildprintPlacements {\n  public static final java.lang.String ADDED;\n  public static final java.lang.String REMOVED;\n  public static final java.lang.String MOVED;\n  public static int[] ids();\n  public static boolean exists(int);\n  public static java.lang.String name(int);\n  public static java.lang.String owner(int);\n  public static java.lang.String dimension(int);\n  public static boolean visible(int);\n  public static int[] origin(int);\n  public static int rotation(int);\n  public static boolean flipped(int);\n  public static boolean orientationFixed(int);\n  public static int[] size(int);\n  public static int[] bounds(int);\n  public static int version(int);\n  public static java.util.Map<java.lang.String, java.lang.Object> snapshot(int);\n  public static int placementAt(java.lang.String, int, int, int);\n  public static java.lang.String expectedAt(java.lang.String, int, int, int);\n  public static int[] placementsAt(java.lang.String, int, int, int);\n  public static java.lang.String expectedIn(int, int, int, int);\n  public static java.lang.String statusIn(int, int, int, int);\n  public static java.lang.String statusAt(java.lang.String, int, int, int);\n  public static long[] counts(int);\n  public static double completion(int);\n  public static boolean fullyChecked(int);\n  public static java.util.Map<java.lang.String, int[]> materials(int);\n  public static void listen(java.lang.String, java.util.function.BiConsumer<java.lang.String, java.lang.Integer>);\n  public static void unlisten(java.lang.String);\n  public static void onClientTick();\n  static {};\n}\nCompiled from \"BuildprintHud.java\"\npublic final class com.buildprint.api.BuildprintHud {\n  public static void hideWhile(java.lang.String, java.util.function.BooleanSupplier);\n  public static void release(java.lang.String);\n  public static boolean isHidden();\n  static {};\n}\nCompiled from \"BuildprintPreviews.java\"\npublic final class com.buildprint.api.BuildprintPreviews {\n  public static boolean isAvailable();\n  public static int create(java.lang.String, java.util.Map<java.lang.String, java.lang.Object>, int, int, int, int, boolean);\n  public static boolean update(java.lang.String, int, java.util.Map<java.lang.String, java.lang.Object>);\n  public static boolean discard(java.lang.String, int);\n  public static int[] ids(java.lang.String);\n  public static java.lang.String owner(int);\n  public static boolean hide(java.lang.String, int);\n  public static boolean show(java.lang.String, int);\n  public static void release(java.lang.String);\n  public static void onDisconnect();\n  static {};\n}\nCompiled from \"BuildprintLibrary.java\"\npublic final class com.buildprint.api.BuildprintLibrary {\n  public static boolean isAvailable();\n  public static boolean save(java.lang.String, int, java.lang.String, java.util.function.Consumer<java.lang.String>);\n  static {};\n}\nCompiled from \"BuildprintSelection.java\"\npublic final class com.buildprint.api.BuildprintSelection {\n  public static boolean isAvailable();\n  public static int[] regions();\n  public static int activeRegion();\n  public static int add(int[]);\n  public static boolean remove(int);\n  public static void clear();\n  public static boolean capture(java.lang.String, java.util.function.Consumer<java.util.Map<java.lang.String, java.lang.Object>>);\n  public static boolean captureBoxes(java.lang.String, int[], java.util.function.Consumer<java.util.Map<java.lang.String, java.lang.Object>>);\n}\nCompiled from \"BuildprintRules.java\"\npublic final class com.buildprint.api.BuildprintRules {\n  public static boolean isAvailable();\n  public static boolean serverHasPolicy();\n  public static boolean allows(java.lang.String);\n  public static java.lang.String[] blocked();\n  public static int printerBlocksPerTick();\n  public static int printerRange();\n  public static double printerReach();\n  public static int pasteMaxBlocks();\n}\nCompiled from \"BuildprintEditor.java\"\npublic final class com.buildprint.api.editor.BuildprintEditor {\n  public static final java.lang.String MAKE;\n  public static final java.lang.String PLACE;\n  public static void registerGroup(java.lang.String, net.minecraft.network.chat.Component);\n  public static void registerTool(java.lang.String, com.buildprint.api.editor.BuildprintTool);\n  public static void registerAction(java.lang.String, com.buildprint.api.editor.BuildprintAction);\n  public static void registerOverlay(java.lang.String, java.util.function.BiConsumer<com.buildprint.api.editor.GizmoDraw, com.buildprint.api.editor.EditorState>);\n  public static void addListener(com.buildprint.api.editor.EditorListener);\n  public static void registerScreen(java.lang.Class<? extends net.minecraft.client.gui.screens.Screen>);\n  public static boolean isActive();\n  public static java.lang.String activeTool();\n  public static boolean selectTool(java.lang.String);\n  public static boolean open();\n  public static boolean close();\n  public static boolean isEditorScreen(net.minecraft.client.gui.screens.Screen);\n  public static boolean setTarget(int);\n  public static com.buildprint.api.editor.EditorState state();\n  public static com.buildprint.api.editor.EditorRay crosshair();\n}\nCompiled from \"EditorListener.java\"\npublic interface com.buildprint.api.editor.EditorListener {\n  public default void onEnter();\n  public default void onExit();\n  public default void onToolChanged(java.lang.String, java.lang.String);\n  public default void onTargetChanged(int);\n}\nCompiled from \"BuildprintEditorPlugin.java\"\npublic interface com.buildprint.api.editor.BuildprintEditorPlugin {\n  public abstract void registerEditor();\n}\nCompiled from \"BuildprintFormats.java\"\npublic final class com.buildprint.api.BuildprintFormats {\n  public static void register(com.buildprint.api.format.BlueprintFormat);\n  static com.buildprint.api.format.BlueprintData toData(com.buildprint.schematic.model.Schematic);\n  static com.buildprint.schematic.model.Schematic fromData(com.buildprint.api.format.BlueprintData) throws java.io.IOException;\n}\nCompiled from \"BlueprintFormat.java\"\npublic interface com.buildprint.api.format.BlueprintFormat {\n  public abstract java.lang.String id();\n  public abstract java.lang.String label();\n  public abstract java.lang.String[] extensions();\n  public abstract com.buildprint.api.format.BlueprintData read(java.io.InputStream) throws java.io.IOException;\n  public default boolean canWrite();\n  public default void write(com.buildprint.api.format.BlueprintData, java.io.OutputStream) throws java.io.IOException;\n}\nCompiled from \"BlueprintData.java\"\npublic final class com.buildprint.api.format.BlueprintData extends java.lang.Record {\n  public com.buildprint.api.format.BlueprintData(java.lang.String, java.lang.String, int, int, int, java.lang.String[], int[], java.util.Map<java.lang.Integer, java.lang.String>);\n  public int index(int, int, int);\n  public final java.lang.String toString();\n  public final int hashCode();\n  public final boolean equals(java.lang.Object);\n  public java.lang.String name();\n  public java.lang.String author();\n  public int width();\n  public int height();\n  public int length();\n  public java.lang.String[] palette();\n  public int[] blocks();\n  public java.util.Map<java.lang.Integer, java.lang.String> blockEntities();\n}\n"
+}

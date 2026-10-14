@@ -39,7 +39,7 @@ Turn a slot's unbinding option off, remove its last active use with unbinding en
 
 ## Tool Pouch and Vanilla++
 
-With **Tool Pouch contextual wheel: ON**, selecting Tool Pouch's **Contextual Open** control in a wheel automatically opens an item radial. This works with Tool Pouch 1.1.10, including the copy bundled in Vanilla++ 1.4.0.
+With **Tool Pouch contextual wheel: ON**, selecting Tool Pouch's **Contextual Open** control in a wheel automatically opens an item radial. This works with Tool Pouch 1.1.10, including the copy bundled in Vanilla++ 1.4.4.
 
 The item radial follows Tool Pouch's actual contextual menu: it shows **shulker boxes** normally, or **compatible ammunition** while holding a supported projectile weapon. Other stored tools/items are filtered exactly as the native contextual menu filters them. Selection uses Tool Pouch's normal networking and inventory behavior, with the original stack names, counts, and item data.
 
@@ -82,10 +82,14 @@ python3 qa/run.py --api-baseline
 python3 qa/run.py --legacy
 ```
 
-The metadata directory must contain Minecraft 26.3, Fabric Loader 0.19.5 launcher metadata, libraries, natives, and assets. The Gradle cache supplies the Fabric client gametest API. A graphical X11 session is required. The integrated profile adds Controlling, Searchables, Sorted, Buildprint, Blocktone, Mod Menu, and YACL. The suite profile adds Vanilla++ 1.4.0 and its installed dependencies for actual Tool Pouch interactions and suite configuration navigation. The Polymer profile includes the same combined suite, Buildprint, and Blocktone with Polymer 0.18.4+26.3.
+The metadata directory must contain Minecraft 26.3, Fabric Loader 0.19.5 launcher metadata, libraries, natives, and assets. The Gradle cache supplies the Fabric client gametest API. A graphical X11 session is required. The integrated profile adds Controlling, Searchables, Sorted, Buildprint, Blocktone, Mod Menu, and YACL. The suite profile adds Vanilla++ 1.4.4, BRBR 1.11.7, and installed dependencies for actual Tool Pouch interactions, suite configuration navigation, and BRBR pin/settings coexistence. The Polymer profile includes the same four-mod combination with the suite's supported Polymer 0.18.2+26.3 installation.
+
+Set `HOTKEY_WHEEL_SUITE_JAR`, `HOTKEY_WHEEL_BRBR_JAR`, `HOTKEY_WHEEL_BLOCKTONE_JAR`, or `HOTKEY_WHEEL_POLYMER_JAR` to test an exact candidate artifact; runtime reports and provenance record its declared version and SHA-256. `--prepare-only` builds the isolated QA profile and test JAR without launching a rendered client. The ten-area Buildprint API audit in [API-MIGRATION.md](API-MIGRATION.md) links the official documentation and records the relevant hooks and unused areas.
 
 See [QA.md](QA.md) for current results, exact versions, and verification boundaries. The verification ZIP contains test reports, dependency hashes, and rendered screenshots. Local release folders additionally retain console logs and the earlier crash regression evidence. `python3 qa/package_release.py` packages only after every expected report passes against the final JAR; it validates archive/metadata/icon integrity and calculates assertion totals from the reports. QA code is excluded from the installable mod.
 
 For a standalone checkout, set `HOTKEY_WHEEL_RELEASE_DIR=/path/to/release-folder` when running the packager. Private local crash evidence is copied only when present and is excluded from the public source archive.
+
+The 2026-10-13 integration review preserves the original 1.0.7 production JAR, tag, source archive, and release verification archive. Updated test source and all-four evidence are separate dated `reviewed-source` and `combined-QA` assets. Set `HOTKEY_WHEEL_REVIEW_DATE=2026-10-13` and `HOTKEY_WHEEL_REVIEW_QUALIFIER=suite-1.4.4` when packaging the final review; files go under the existing version's `reviews/2026-10-13/suite-1.4.4/` folder and do not replace original artifacts or the earlier Suite 1.4.3 baseline review. [QA.md](QA.md) records the current review; each original archive retains its historical dependency versions and results.
 
 The simplified wheel icon was generated with the built-in imagegen tool. See [ICON.md](ICON.md) for the saved asset and generation prompt.

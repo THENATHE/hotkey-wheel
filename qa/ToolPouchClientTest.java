@@ -65,7 +65,8 @@ public final class ToolPouchClientTest implements FabricClientGameTest {
             report.put("polymer_client", FabricLoader.getInstance().isModLoaded("polymer-core"));
             FabricLoader.getInstance().getModContainer("polymer-core").ifPresent(mod ->
                     report.put("polymer", mod.getMetadata().getVersion().getFriendlyString()));
-            check(report.get("suite").equals("1.4.0+26.3"), "Tests use the exact active Vanilla++ Suite 1.4.0 developer track");
+            String suiteVersion = System.getProperty("wheel.qa.suite.version", "1.4.4+26.3");
+            check(report.get("suite").equals(suiteVersion), "Tests use the exact candidate Vanilla++ Suite " + suiteVersion + " developer track");
             check(report.get("toolpouch").equals("1.1.10"), "Tests use official Tool Pouch 1.1.10 nested in the suite");
             try (var world = context.worldBuilder().create()) {
                 world.getConnection().waitForChunksDownload();
