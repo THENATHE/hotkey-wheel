@@ -1,6 +1,15 @@
-# Buildprint API integration in Hotkey Wheel 1.0.8
+# Buildprint API integration in Hotkey Wheel 1.0.9
 
-Target: original developer Buildprint 0.1.19+26.x on Minecraft 26.3. Buildprint remains optional and compile-only; none of its classes or libraries are bundled. The 0.1.17/0.1.18 API paths and 0.1.16 legacy fallback remain available. No original Buildprint or Blocktone source/JAR is modified.
+Target: original developer Buildprint 0.1.38+26.3 on Minecraft 26.3. Buildprint remains optional and compile-only; none of its classes or libraries are bundled. The 0.1.17/0.1.18 API paths and 0.1.16 legacy fallback remain available. No original Buildprint or Blocktone source/JAR is modified.
+
+## Buildprint 0.1.38 review in 1.0.9
+
+Every public method the wheel calls keeps its 0.1.19 signature in 0.1.38: `BuildprintEditor.isActive`, `open`, `close`, `isEditorScreen` and `addListener`, `EditorListener.onEnter/onExit`, and `BuildprintHud.hideWhile`. 0.1.38 adds `BuildprintEditor.isAvailable()` and `BuildprintHud.isAvailable()` (both mean "a world and player exist") and a new `BuildprintActions` registry. The wheel already checks for a player and world, and it lists registered key mappings rather than Buildprint actions, so neither addition is needed. Buildprint now bundles its UI, camera and settings code as VoxelSprout libraries. The menus the wheel tracks still open through `BuildprintScreen`, and child screens keep Screen-valued parents.
+
+- **Reserved editor keys.** Buildprint's order-1000 keyboard handler now also consumes C, the Drop and Inventory keys, Backspace and Escape while the editor has the mouse grabbed, plus Enter, Ctrl+Z, P, R, N and the arrow keys in some tools. Version 1.0.9 adds an order-900 keyboard injector that only runs the wheel's owned-menu return. The original opener of a wheel-owned editor therefore closes it before Buildprint handles the key, as the 1.0.8 mouse injector already does. Opening wheels and every other key keep the ordinary order, so Buildprint's raw shortcuts stay native in editors the wheel did not open.
+- **Camera choice.** `open()` goes through VoxelSprout's `CameraChoice`. Singleplayer defaults to the free camera. On a multiplayer server Buildprint asks once (free or walking camera) and `open()` returns false while the dialog is shown. The wheel then gives up its pending claim, so that one session closes through Buildprint's own key. This is recorded as a parked decision in `QA.md`.
+- **Walking camera.** The editor can run from the player's own camera. Session identity comes from the public lifecycle listener, not freecam, so ownership and closure work unchanged; QA checks it.
+- **Toolbar and lists.** The Magic tool moves Save to toolbar number 4, and loaded schematics are grouped into place sections. These affect only the QA fixtures, which now read tool numbers from Buildprint's registry.
 
 ## Side-mouse input ordering in 1.0.8
 
@@ -22,12 +31,12 @@ API methods are detected individually and direct calls stay in isolated classes.
 
 ## Requested additions and what remains useful
 
-| Suggested API | Status in 0.1.19 | Remaining work or benefit |
+| Suggested API | Status in 0.1.19, rechecked in 0.1.38 | Remaining work or benefit |
 | --- | --- | --- |
 | `openEditor()` / `closeEditor()` | Available as `open()` / `close()`; adopted. | Private `EditorController.exit` remains only for older Buildprint. |
 | `isEditorScreen(Screen)` and addon registration | Available as `isEditorScreen` / `registerScreen`; adopted. | Parent introspection remains for unregistered nested screens and separately wheel-opened main menus, which the editor API does not classify. |
 | Validation-aware `requestCloseEditorSession()` | `close()` exits the session and dismisses recognized screens, but does not call their normal `onClose()`. | A supported operation that invokes normal handlers and reports validation refusal could replace our explicit dialog unwinding and Material List embedded-picker special case. |
-| `tools()` / `actions()` with IDs, labels, icons and availability | Not exposed publicly. | Would allow automatic discovery of direct editor tool/action entries rather than a manually maintained list. No direct-tool picker feature is added here. |
+| `tools()` / `actions()` with IDs, labels, icons and availability | 0.1.38 adds `BuildprintActions.ids()`, `label(id)`, `isOn(id)` and `run(id)` for Buildprint's quick actions; editor tools are still not listed. | The actions registry could back direct wheel entries for Buildprint actions in a future feature. No such picker is added in 1.0.9, which keeps feature parity. |
 
 `selectTool(id)` still requires an active editor. Selecting a tool generally does not execute its later click or open settings. Future direct-settings entries need an explicit addon action/hook that preserves ordinary validation and lifecycle behavior.
 
@@ -35,9 +44,9 @@ API methods are detected individually and direct calls stay in isolated classes.
 
 Buildprint 0.1.17/0.1.18 retain public lifecycle/HUD tracking but use private native exit and narrow screen classification because the newer methods do not exist. Buildprint 0.1.16 retains private activity/freecam identity as well. All private fallback sites are marked in code for removal only when those older versions are deliberately retired.
 
-The editor API recognizes registered classes and subclasses, not arbitrary screen ancestry. Buildprint's main menu, Migration/YACL screens and directly wheel-opened Blocktone instant-break settings therefore retain their separate screen-parent ownership path. Unrelated replacement screens relinquish wheel ownership. Buildprint's raw reserved editor shortcuts remain native behavior.
+The editor API recognizes registered classes and subclasses, not arbitrary screen ancestry. Buildprint's main menu, Migration and settings screens and directly wheel-opened Blocktone instant-break settings therefore retain their separate screen-parent ownership path. Unrelated replacement screens relinquish wheel ownership. Buildprint's raw reserved editor shortcuts remain native behavior, except that the original opener of a wheel-owned session closes it.
 
-See `QA.md` for exact artifacts and results. The 1.0.8 release targets Buildprint 0.1.19 with the installable Blocktone 0.1.24 JAR built from its source targeting 0.1.19. The retained 1.0.7 review and older compatibility paths have separately identified historical evidence; their counts are not accepted as current release verification.
+See `QA.md` for exact artifacts and results. The 1.0.9 release targets Buildprint 0.1.38. The 1.0.8 release targeted Buildprint 0.1.19 with the installable Blocktone 0.1.24 JAR built from its source targeting 0.1.19. The retained 1.0.7 review and older compatibility paths have separately identified historical evidence; their counts are not accepted as current release verification.
 
 Official references: [API overview](https://voxelsprout.com/buildprint/wiki/api), [Editor API](https://voxelsprout.com/buildprint/wiki/editor-api).
 

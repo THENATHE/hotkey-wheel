@@ -20,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.EditBox;
@@ -32,6 +33,8 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
     private static final String BUILDPRINT_SCREEN = "com.buildprint.client.gui.BuildprintScreen";
     private static final String INSTAMINE_SCREEN = "com.thenathe.buildprinttoning.client.InstamineSettingsScreen";
     private final List<String> checks = new ArrayList<>();
+    // Blocktone pins one Buildprint release; a newer Buildprint can be checked before its Blocktone build exists.
+    private final boolean blocktone = Boolean.parseBoolean(System.getProperty("wheel.qa.blocktone", "true"));
     private Object schematic;
     private Object loaded;
     private InputConstants.Key forwardKey;
@@ -50,7 +53,10 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
     public void runTest(ClientGameTestContext context) {
         var report = new LinkedHashMap<String, Object>();
         report.put("checks", checks);
+        report.put("blocktone", blocktone);
         try {
+            check(FabricLoader.getInstance().isModLoaded("buildprint_toning") == blocktone,
+                    "Blocktone presence matches the requested profile");
             context.runOnClient(client -> {
                 Object onboarding = Class.forName("com.buildprint.client.onboarding.BuildprintOnboarding")
                         .getConstructor().newInstance();
@@ -70,7 +76,7 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
                 childClose(context);
                 originalCycleOpener(context);
                 nativeOpeningStaysIndependent(context);
-                validatedAddonClose(context);
+                if (blocktone) validatedAddonClose(context);
                 disabledIntegration(context);
                 unrelatedReplacement(context);
                 nonMenuActionDoesNotClaimScreen(context);
@@ -231,9 +237,25 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
         openSelectionEditor(context, false, false);
         context.getInput().pressKey(InputConstants.KEY_TAB);
         context.waitTicks(2);
-        context.runOnClient(client -> check(client.gui.screen() != null
-                        && client.gui.screen().getClass().getName().equals("com.buildprint.client.gui.ToolPickerScreen"),
-                "Wheel-owned editor opens Buildprint's native API tool picker"));
+        Object activeRegion = context.computeOnClient(client ->
+                call(callStatic("com.buildprint.client.edit.EditorMode", "selection"), "active"));
+        context.runOnClient(client -> {
+            check(client.gui.screen() != null
+                            && client.gui.screen().getClass().getName().equals("com.buildprint.client.gui.ToolPickerScreen"),
+                    "Wheel-owned editor opens Buildprint's native API tool picker");
+            var registry = Class.forName("com.buildprint.client.edit.ToolRegistry");
+            var ordered = (List<?>) registry.getMethod("ordered").invoke(null);
+            var ids = new java.util.HashSet<Object>();
+            for (Object slot : ordered) ids.add(call(slot, "id"));
+            check(!ordered.isEmpty() && ids.size() == ordered.size(),
+                    "Wheel-owned native picker lists each tool once without duplicate shortcuts");
+            if (blocktone) {
+                var toning = (List<?>) registry.getMethod("slotsIn", String.class)
+                        .invoke(null, "buildprint_toning:toning");
+                check(toning.size() == 3, "Wheel-owned native picker keeps exactly three Toning entries");
+            }
+        });
+        context.takeScreenshot("buildprint-native-api-picker-wheel-owned");
         context.getInput().pressKey(InputConstants.KEY_G);
         context.waitTicks(3);
         context.runOnClient(client -> {
@@ -241,16 +263,19 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
                     "Original wheel opener closes the API tool picker and its editor session");
             check(client.getCameraEntity() == client.player && client.player.input == originalInput,
                     "Closing the API tool picker restores native camera and player input");
+            check(call(callStatic("com.buildprint.client.edit.EditorMode", "selection"), "active") == activeRegion,
+                    "Native API picker closure preserves selected regions");
             check(editorEnters == entersBefore + 1 && editorExits == exitsBefore + 1,
                     "Wheel-owned native editor open and close each deliver exactly one public lifecycle event");
         });
 
+        if (!blocktone) return;
         openSelectionEditor(context, false, false);
         openSplineSettings(context);
         double previousWidth = context.computeOnClient(client ->
                 Class.forName("com.thenathe.buildprinttoning.AddonSession").getField("halfWidth").getDouble(null));
         context.runOnClient(client -> ((EditBox) field(client.gui.screen(), "halfWidth")).setValue("-1"));
-        context.clickScreenButton("Done");
+        clickButton(context, "Done");
         context.waitTicks(2);
         context.runOnClient(client -> check(!((String) field(client.gui.screen(), "error")).isEmpty(),
                 "API addon spline settings keep native validation when Done is pressed"));
@@ -449,6 +474,8 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
                 activeEditorWheelToggle(context);
             }
         }
+        reservedEditorKeyOpeners(context, originalInput[0]);
+        walkingCameraEditor(context, originalInput[0]);
 
         openSelectionEditor(context, true, false);
         context.getInput().pressKey(InputConstants.KEY_G);
@@ -477,7 +504,7 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
 
         openSelectionEditor(context, false, false);
         openSelectionSave(context);
-        context.clickScreenButton("Cancel");
+        clickButton(context, "Cancel");
         context.waitTicks(2);
         context.runOnClient(client -> {
             check(editorActive() && client.gui.screen() == null, "Native selection Save dialog Cancel returns to the active editor");
@@ -505,7 +532,7 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
             return ((Path) callStatic("com.buildprint.schematic.SchematicLibrary", "rootDir")).resolve((String) fileName.invoke(save));
         });
         String saveButton = context.computeOnClient(client -> net.minecraft.network.chat.Component.translatable("buildprint.save.quick").getString());
-        context.clickScreenButton(saveButton);
+        clickButton(context, saveButton);
         context.waitFor(client -> Files.isRegularFile(output), 200);
         context.runOnClient(client -> {
             check(Files.size(output) > 0, "Native selection Save still writes an actual blueprint file");
@@ -532,7 +559,7 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
             Object selection = callStatic("com.buildprint.client.edit.EditorMode", "selection");
             selection.getClass().getMethod("add", region[0].getClass()).invoke(selection, region[0]);
         });
-        if (editorApi) {
+        if (editorApi && blocktone) {
             String previousTool = context.computeOnClient(client ->
                     (String) callStatic("com.buildprint.api.editor.BuildprintEditor", "activeTool"));
             openSplineSettings(context);
@@ -541,7 +568,7 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
             context.waitTicks(2);
             context.runOnClient(client -> check(client.gui.screen() == nativeSpline && editorActive(),
                     "Wheel opener leaves API addon settings in an independently opened editor alone"));
-            context.clickScreenButton("Cancel");
+            clickButton(context, "Cancel");
             context.waitTicks(2);
             context.runOnClient(client -> check((boolean) Class.forName("com.buildprint.api.editor.BuildprintEditor")
                             .getMethod("selectTool", String.class).invoke(null, previousTool),
@@ -554,7 +581,7 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
         context.runOnClient(client -> check(client.gui.screen() == nativeSave && editorActive(),
                 "Wheel opener leaves a native Save dialog open after an earlier wheel-owned editor session closed"));
         context.takeScreenshot("buildprint-native-editor-save-not-owned-by-wheel");
-        context.clickScreenButton("Cancel");
+        clickButton(context, "Cancel");
         context.waitTicks(2);
         context.runOnClient(client -> {
             check(client.gui.screen() == null && editorActive(), "Native Save dialog Cancel still returns to its independently opened editor");
@@ -588,6 +615,69 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
         });
     }
 
+    // Buildprint 0.1.38 consumes more raw keys inside the editor: C switches camera, Q and E step tools.
+    private void reservedEditorKeyOpeners(ClientGameTestContext context, Object originalInput) throws Exception {
+        InputConstants.Key previousKey = context.computeOnClient(client ->
+                InputConstants.getKey(HotkeyWheelClient.WHEEL_KEYS[0].saveString()));
+        for (int key : new int[] {InputConstants.KEY_C, InputConstants.KEY_E}) {
+            String name = context.computeOnClient(client -> {
+                HotkeyWheelClient.WHEEL_KEYS[0].setKey(InputConstants.Type.KEYBOARD.getOrCreate(key));
+                KeyMapping.resetMapping();
+                return InputConstants.Type.KEYBOARD.getOrCreate(key).getDisplayName().getString();
+            });
+            context.getInput().holdKey(key);
+            context.waitTicks(2);
+            context.runOnClient(client -> check(client.gui.screen() instanceof WheelScreen,
+                    "Wheel bound to Buildprint's reserved editor key " + name + " opens from gameplay"));
+            pointTop(context);
+            context.getInput().releaseKey(key);
+            context.waitTicks(4);
+            context.runOnClient(client -> check(editorActive() && client.gui.screen() == null,
+                    "Wheel on " + name + " opens the selection editor"));
+            context.getInput().pressKey(key);
+            context.waitTicks(3);
+            context.runOnClient(client -> {
+                check(!editorActive() && client.gui.screen() == null,
+                        "Original opener " + name + " closes the wheel-owned editor before Buildprint's editor shortcut");
+                check(client.getCameraEntity() == client.player && client.player.input == originalInput,
+                        "Closing with " + name + " restores native camera and player input");
+            });
+        }
+        context.runOnClient(client -> {
+            HotkeyWheelClient.WHEEL_KEYS[0].setKey(previousKey);
+            KeyMapping.resetMapping();
+        });
+    }
+
+    // Buildprint 0.1.38 can run the editor from the player's own camera instead of freecam.
+    private void walkingCameraEditor(ClientGameTestContext context, Object originalInput) throws Exception {
+        Class<?> cameraChoice;
+        try {
+            cameraChoice = Class.forName("com.voxelsprout.common.freecam.CameraChoice");
+        } catch (ClassNotFoundException freecamOnly) {
+            return;
+        }
+        Class<?> view = Class.forName("com.voxelsprout.common.freecam.CameraChoice$View");
+        Object walk = view.getField("WALK").get(null);
+        Object free = view.getField("FREE").get(null);
+        context.runOnClient(client -> cameraChoice.getMethod("setOwnWorlds", view).invoke(null, walk));
+        context.getInput().holdKey(InputConstants.KEY_G);
+        context.waitTicks(2);
+        pointTop(context);
+        context.getInput().releaseKey(InputConstants.KEY_G);
+        context.waitTicks(4);
+        context.runOnClient(client -> check(editorActive() && client.gui.screen() == null && client.getCameraEntity() == client.player,
+                "Wheel opens the selection editor with Buildprint's walking camera"));
+        context.getInput().pressKey(InputConstants.KEY_G);
+        context.waitTicks(3);
+        context.runOnClient(client -> {
+            check(!editorActive() && client.gui.screen() == null,
+                    "Original opener closes a wheel-owned walking-camera editor");
+            check(client.player.input == originalInput, "Walking-camera editor closure restores native player input");
+            cameraChoice.getMethod("setOwnWorlds", view).invoke(null, free);
+        });
+    }
+
     private void openSelectionEditor(ClientGameTestContext context, boolean toggle, boolean cycle) throws Exception {
         context.runOnClient(client -> {
             WheelConfig config = WheelConfig.get().copy();
@@ -611,8 +701,19 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
         });
     }
 
-    private void openSelectionSave(ClientGameTestContext context) {
-        context.getInput().pressKey(InputConstants.KEY_3);
+    // Buildprint numbers its toolbar from the registered tool order, which changes as tools are added.
+    private static int saveToolKey() throws Exception {
+        var ordered = (List<?>) Class.forName("com.buildprint.client.edit.ToolRegistry").getMethod("ordered").invoke(null);
+        for (int index = 0; index < ordered.size() && index < 9; index++) {
+            Object slot = ordered.get(index);
+            if (slot.getClass().getMethod("id").invoke(slot).equals("buildprint:save")) return InputConstants.KEY_1 + index;
+        }
+        throw new AssertionError("Buildprint Save tool has no number key");
+    }
+
+    private void openSelectionSave(ClientGameTestContext context) throws Exception {
+        int saveKey = context.computeOnClient(client -> saveToolKey());
+        context.getInput().pressKey(saveKey);
         context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
         context.waitTicks(3);
         context.runOnClient(client -> check(client.gui.screen() != null
@@ -683,14 +784,26 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
             select.setAccessible(true);
             select.invoke(root, loadedPane);
             Object list = field(root, "loadedList");
-            list.getClass().getMethod("setSelectedIndex", int.class).invoke(list, 0);
+            List<?> rows = (List<?>) call(list, "items");
+            int row = -1;
+            for (int index = 0; index < rows.size(); index++) {
+                if (loadedRow(rows.get(index)) == loaded) row = index;
+            }
+            check(row >= 0, "Native loaded list shows the schematic fixture");
+            list.getClass().getMethod("setSelectedIndex", int.class).invoke(list, row);
             Method initLoaded = root.getClass().getDeclaredMethod("initLoaded");
             initLoaded.setAccessible(true);
             initLoaded.invoke(root);
+        });
+        context.waitTicks(3);
+        context.runOnClient(client -> {
+            Screen root = client.gui.screen();
+            check(loadedRow(call(field(root, "loadedList"), "selected")) == loaded,
+                    "Native loaded-list selection still references the edited schematic after relayout");
             EditBox name = (EditBox) field(root, "nameBox");
             check(name != null, "Loaded schematic has editable native name field");
-            name.setResponder(value -> { });
             name.setValue("Committed through wheel close");
+            check(name.getValue().equals("Committed through wheel close"), "Native name field retains the pending edit");
             showPreview();
             check(!HotkeyWheelClient.WHEEL_KEYS[0].isDown() && !HotkeyWheelClient.WHEEL_KEYS[0].consumeClick(),
                     "Wheel opener starts with no held state or pending click before menu closure");
@@ -711,7 +824,7 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
         context.waitTicks(2);
         context.runOnClient(client -> {
             check(client.gui.screen() == null, "Pressing original wheel opener again closes the root menu");
-            check(call(loaded, "displayName").equals("Committed through wheel close"), "Native Buildprint onClose commits pending schematic edits");
+            check(call(loaded, "displayName").equals("Committed through wheel close"), "Native Buildprint onClose commits pending schematic edits; actual name: " + call(loaded, "displayName"));
             check(callStatic("com.buildprint.client.render.SchematicPreview", "isActive").equals(false),
                     "Native Buildprint onClose hides its schematic preview");
             check(!HotkeyWheelClient.WHEEL_KEYS[0].isDown() && !HotkeyWheelClient.WHEEL_KEYS[0].consumeClick(),
@@ -728,19 +841,19 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
             Screen settings = (Screen) Class.forName("com.buildprint.client.gui.SettingsScreen")
                     .getMethod("create", Screen.class).invoke(null, root);
             client.gui.setScreen(settings);
-            check(settings.getClass().getName().equals("dev.isxander.yacl3.gui.YACLScreen"), "Actual Buildprint settings use YACL outside Buildprint package");
+            check(settings.getClass().getName().equals("com.voxelsprout.common.ui.settings.SettingsScreen"), "Actual Buildprint settings use the current VoxelSprout screen outside Buildprint package");
             Screen migration = (Screen) Class.forName("com.buildprint.client.gui.MigrationScreen")
                     .getConstructor(Screen.class).newInstance(settings);
             client.gui.setScreen(migration);
             showPreview();
-            check(client.gui.screen() == migration, "Actual migration child retains YACL and Buildprint parent ancestry");
+            check(client.gui.screen() == migration, "Actual migration child retains VoxelSprout settings and Buildprint parent ancestry");
         });
         context.waitTicks(2);
         context.takeScreenshot("buildprint-wheel-owned-migration-child");
         context.getInput().pressKey(InputConstants.KEY_G);
         context.waitTicks(2);
         context.runOnClient(client -> {
-            check(client.gui.screen() == null, "Wheel opener unwinds migration, YACL settings, and Buildprint root");
+            check(client.gui.screen() == null, "Wheel opener unwinds migration, VoxelSprout settings, and Buildprint root");
             check(callStatic("com.buildprint.client.render.SchematicPreview", "isActive").equals(false),
                     "Unwinding descendants invokes root preview cleanup");
         });
@@ -780,8 +893,8 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
         context.getInput().pressKey(InputConstants.KEY_G);
         context.waitTicks(1);
         context.runOnClient(client -> {
-            check(client.gui.screen().getClass().getName().equals("dev.isxander.yacl3.gui.YACLScreen"),
-                    "YACL under a directly opened Buildprint menu remains independent");
+            check(client.gui.screen().getClass().getName().equals("com.voxelsprout.common.ui.settings.SettingsScreen"),
+                    "VoxelSprout settings under a directly opened Buildprint menu remain independent");
             client.gui.screen().onClose();
             client.gui.screen().onClose();
         });
@@ -919,10 +1032,44 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
         check(callStatic("com.buildprint.client.render.SchematicPreview", "isActive").equals(true), "Native schematic preview starts active before closure");
     }
 
+    private static void clickButton(ClientGameTestContext context, String label) {
+        double[] position = context.computeOnClient(client -> {
+            Screen screen = client.gui.screen();
+            var button = screen.children().stream()
+                    .filter(net.minecraft.client.gui.components.AbstractButton.class::isInstance)
+                    .map(net.minecraft.client.gui.components.AbstractButton.class::cast)
+                    .filter(widget -> widget.getMessage().getString().equals(label))
+                    .findFirst().orElseThrow(() -> new AssertionError("Missing button '" + label + "' in " + screen.getClass().getName()));
+            if (!button.active || !button.visible) throw new AssertionError("Unavailable button '" + label + "'");
+            return new double[] {
+                    (button.getX() + button.getWidth() / 2.0) * client.getWindow().getScreenWidth() / screen.width,
+                    (button.getY() + button.getHeight() / 2.0) * client.getWindow().getScreenHeight() / screen.height};
+        });
+        context.getInput().setCursorPos(position[0], position[1]);
+        context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
+    }
+
     private static Object field(Object instance, String name) throws Exception {
         Field field = instance.getClass().getDeclaredField(name);
         field.setAccessible(true);
         return field.get(instance);
+    }
+
+    // Buildprint 0.1.38 groups loaded schematics into place sections; earlier lists held them directly.
+    private static Object loadedRow(Object row) throws Exception {
+        if (row == null) return null;
+        Method itemMethod;
+        try {
+            itemMethod = row.getClass().getDeclaredMethod("item");
+        } catch (NoSuchMethodException directSchematic) {
+            return row;
+        }
+        itemMethod.setAccessible(true);
+        Object item = itemMethod.invoke(row);
+        if (item == null) return null;
+        Method build = item.getClass().getDeclaredMethod("build");
+        build.setAccessible(true);
+        return build.invoke(item);
     }
 
     private static Object call(Object instance, String method) throws Exception {

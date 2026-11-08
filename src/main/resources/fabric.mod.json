@@ -29,7 +29,7 @@
   "suggests": {
     "controlling": "*",
     "modmenu": "*",
-    "toolpouch": "1.1.10",
+    "toolpouch": ">=1.1.10",
     "buildprint": "*"
   },
   "icon": "assets/hotkey_wheel/icon.png",

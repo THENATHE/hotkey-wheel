@@ -74,7 +74,15 @@ public final class WheelConfig {
             loaded.normalize();
             current = loaded;
         } catch (Exception failure) {
-            LoggerFactory.getLogger("hotkey-wheel").error("Cannot read hotkey-wheel.json; original file preserved", failure);
+            // A later Save replaces the unreadable file, so keep a copy for manual recovery.
+            Path backup = path().resolveSibling("hotkey-wheel.json.unreadable");
+            try {
+                Files.copy(path(), backup, StandardCopyOption.REPLACE_EXISTING);
+                LoggerFactory.getLogger("hotkey-wheel").error("Cannot read hotkey-wheel.json; a copy is kept at {}", backup, failure);
+            } catch (IOException copyFailure) {
+                failure.addSuppressed(copyFailure);
+                LoggerFactory.getLogger("hotkey-wheel").error("Cannot read hotkey-wheel.json; original file preserved", failure);
+            }
         }
     }
 

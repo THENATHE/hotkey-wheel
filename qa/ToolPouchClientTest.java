@@ -46,6 +46,8 @@ import net.minecraft.world.item.component.ItemContainerContents;
 public final class ToolPouchClientTest implements FabricClientGameTest {
     private final List<String> checks = new ArrayList<>();
     private final List<String> diagnostics = new ArrayList<>();
+    // The suite profile uses its nested Tool Pouch; the standalone profile tests newer Tool Pouch releases.
+    private final boolean suite = FabricLoader.getInstance().isModLoaded("vpp_mod_suite");
 
     private void check(boolean condition, String description) {
         if (!condition) throw new AssertionError(description);
@@ -59,15 +61,21 @@ public final class ToolPouchClientTest implements FabricClientGameTest {
         report.put("diagnostics", diagnostics);
         try {
             context.getInput().resizeWindow(1280, 800);
-            report.put("suite_mod_id", "vpp_mod_suite");
-            report.put("suite", FabricLoader.getInstance().getModContainer("vpp_mod_suite").orElseThrow().getMetadata().getVersion().getFriendlyString());
+            if (suite) {
+                report.put("suite_mod_id", "vpp_mod_suite");
+                report.put("suite", FabricLoader.getInstance().getModContainer("vpp_mod_suite").orElseThrow().getMetadata().getVersion().getFriendlyString());
+            }
             report.put("toolpouch", FabricLoader.getInstance().getModContainer("toolpouch").orElseThrow().getMetadata().getVersion().getFriendlyString());
             report.put("polymer_client", FabricLoader.getInstance().isModLoaded("polymer-core"));
             FabricLoader.getInstance().getModContainer("polymer-core").ifPresent(mod ->
                     report.put("polymer", mod.getMetadata().getVersion().getFriendlyString()));
-            String suiteVersion = System.getProperty("wheel.qa.suite.version", "1.4.4+26.3");
-            check(report.get("suite").equals(suiteVersion), "Tests use the exact candidate Vanilla++ Suite " + suiteVersion + " developer track");
-            check(report.get("toolpouch").equals("1.1.10"), "Tests use official Tool Pouch 1.1.10 nested in the suite");
+            if (suite) {
+                String suiteVersion = System.getProperty("wheel.qa.suite.version", "1.4.5+26.3");
+                check(report.get("suite").equals(suiteVersion), "Tests use the exact candidate Vanilla++ Suite " + suiteVersion + " developer track");
+            }
+            String toolPouchVersion = System.getProperty("wheel.qa.toolpouch.version", "1.1.10");
+            check(report.get("toolpouch").equals(toolPouchVersion), "Tests use official Tool Pouch " + toolPouchVersion
+                    + (suite ? " nested in the suite" : " installed on its own"));
             try (var world = context.worldBuilder().create()) {
                 world.getConnection().waitForChunksDownload();
                 context.waitTicks(20);
@@ -80,7 +88,8 @@ public final class ToolPouchClientTest implements FabricClientGameTest {
                 staleAndEmpty(context);
                 paging(context);
                 pouchLookup(context);
-                suiteConfiguration(context);
+                if (disabledSlotsComponent() != null) disabledSlots(context);
+                if (suite) suiteConfiguration(context);
             }
             report.put("passed", true);
         } catch (Throwable failure) {
@@ -128,9 +137,9 @@ public final class ToolPouchClientTest implements FabricClientGameTest {
             for (KeyMapping mapping : List.of(ModKeybinds.OPEN_WIDGET, ModKeybinds.OPEN_TOOL_POUCH,
                     ModKeybinds.OPEN_ENDER_CHEST, ModKeybinds.USE_SPYGLASS, ModKeybinds.TOGGLE_MINIMAP)) {
                 check(HotkeyWheelClient.findControl(mapping.getName()) == mapping,
-                        "Wheel discovers the suite's original registered control " + mapping.getName());
+                        "Wheel discovers Tool Pouch's original registered control " + mapping.getName());
             }
-            check(HotkeyWheelClient.findControl("key.vpp_mod_suite.open_settings") != null,
+            if (suite) check(HotkeyWheelClient.findControl("key.vpp_mod_suite.open_settings") != null,
                     "Current authored suite settings control remains discoverable under vpp_mod_suite");
         });
         InputConstants.Key original = context.computeOnClient(client -> InputConstants.getKey(ModKeybinds.OPEN_WIDGET.saveString()));
@@ -648,5 +657,41 @@ public final class ToolPouchClientTest implements FabricClientGameTest {
         point(context, false, 0);
         context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
         verifyShulker(context, "Leggings attachment", Items.IRON_INGOT, 6);
+    }
+    // Tool Pouch 1.2.0 can disable pouch slots; disabled items leave both the native list and the server's slot lookup.
+    @SuppressWarnings("unchecked")
+    private static net.minecraft.core.component.DataComponentType<List<Integer>> disabledSlotsComponent() {
+        try {
+            return (net.minecraft.core.component.DataComponentType<List<Integer>>)
+                    Class.forName("me.pajic.toolpouch.component.ModDataComponents").getField("DISABLED_SLOTS").get(null);
+        } catch (ReflectiveOperationException olderToolPouch) {
+            return null;
+        }
+    }
+
+    private void disabledSlots(ClientGameTestContext context) throws Exception {
+        List<ItemStack> contents = List.of(shulker("Enabled first", Items.COAL, 1), shulker("Disabled middle", Items.DIAMOND, 2),
+                shulker("Enabled last", Items.EMERALD, 3));
+        fixture(context, contents, false, true, ItemStack.EMPTY);
+        onServer(context, player -> {
+            player.getInventory().getItem(4).set(disabledSlotsComponent(), List.of(1));
+            player.inventoryMenu.broadcastChanges();
+            return true;
+        });
+        context.runOnClient(client -> client.player.getInventory().getItem(4).set(disabledSlotsComponent(), List.of(1)));
+        context.waitTicks(3);
+        settings(context, true, false, false, true);
+        launchParent(context, false, false);
+        context.runOnClient(client -> {
+            var choices = radial(client).snapshot().choices();
+            check(choices.size() == 2, "Shulker in a disabled pouch slot is left out of the item wheel, as in the native menu");
+            check(choices.get(1).stack().getHoverName().getString().equals("Enabled last") && choices.get(1).index() == 1,
+                    "Shulkers after a disabled slot keep the native filtered index");
+        });
+        point(context, false, 1);
+        context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
+        verifyShulker(context, "Enabled last", Items.EMERALD, 3);
+        check(onServer(context, player -> player.getInventory().getItem(4).get(disabledSlotsComponent()).equals(List.of(1))),
+                "Choosing from the item wheel leaves the pouch's disabled slots unchanged");
     }
 }

@@ -1,46 +1,35 @@
-# Hotkey Wheel 1.0.8+26.3 verification
+# Hotkey Wheel 1.0.9+26.3 verification
+
+**Status: phase 1 of 2.** The candidate passes its own QA against the new Buildprint and Tool Pouch releases and the released Vanilla++ 1.4.5. The required three-way check with the new Vanilla++ and Blocktone candidates has not been run yet, so this is not a release record. The 1.0.8 results below this section remain the last accepted release.
+
+Candidate JAR: `build/libs/hotkey-wheel-1.0.9+26.3.jar`, SHA-256 `b3f6fcf41e0ee23728515434caada70ec2eea92f0ac448b0e06e24e6c8a12c0f`. Built with Microsoft OpenJDK 25.0.4.1, Fabric Loom 1.17.20 and Gradle 9.6.0.
+
+## Phase-1 results, 2026-11-08
+
+All runs used the exact candidate JAR on Xvfb with Mesa's software renderer. None of them touched the user's profile or display.
+
+| Profile | Inputs beyond the base set | Reports | Checks |
+| --- | --- | --- | --- |
+| minimal | none | wheel 150, key management 88 | 238 passed |
+| integrated, no Blocktone | Buildprint 0.1.38+26.3 | wheel 154, key management 88, Buildprint menus 199, Mouse 4 67 | 508 passed |
+| toolpouch, no Blocktone | + standalone Tool Pouch 1.2.0+26.3, Fzzy Config 0.7.7+fix3 | integrated reports + Tool Pouch 179 | 687 passed |
+| suite, no Blocktone | + Vanilla++ 1.4.5+26.3 (nested Tool Pouch 1.1.10), BRBR 1.11.7+26.3 | integrated reports + Tool Pouch 183, BRBR 27 | 718 passed |
+| suite-polymer, no Blocktone | + Polymer 0.18.2+26.3 | same as suite | 718 passed |
+
+Base set: Minecraft 26.3, Java 25, Fabric Loader 0.19.5, Fabric API 0.165.2+26.3 and its matching client gametest module 6.0.12. Integrated profiles add Controlling 26.3.4, Searchables 1.0.3, Sorted 0.1.41, Mod Menu 21.0.0 and YACL 3.9.7. Exact hashes for every mod are in each profile's `provenance.json`.
+
+**Blocktone.** The released Blocktone 0.1.25 declares `buildprint = 0.1.25+26.3` and cannot load with Buildprint 0.1.38. The phase-1 runs therefore use `--no-blocktone`, which skips the Blocktone-specific scenarios (spline settings, Toning picker entries, instant-break settings). These are not counted as Blocktone compatibility.
+
+New checks in this release: Buildprint-reserved openers C and E close a wheel-owned editor; the walking-camera editor; tool numbers read from Buildprint's registry; the sectioned loaded-schematic list; a 1.0.8 configuration loads and saves without changes; an unreadable configuration is copied aside; Tool Pouch 1.2.0 disabled slots. The shipped 1.0.8 JAR fails the reserved-key and unreadable-config checks and passes the 1.0.8 load and save checks; see `qa/regressions/1.0.8-upstream-2026-11/`.
+
+Remaining for phase 2: the Blocktone 0.1.38 candidate and the new Vanilla++ candidate, run together in the native and Polymer profiles; an independent source rebuild; and release packaging. `qa/package_release.py` still describes 1.0.8 and must be updated before it can package 1.0.9.
+
+## Parked decision
+
+On a multiplayer server where Buildprint has not yet asked which camera to use, the first editor opening shows a camera dialog. `open()` returns false while the dialog is shown, so the wheel does not claim that session. The wheel's opener does not close it; Buildprint's editor key does. Later openings work normally, and singleplayer never asks. Options: (a) keep this behavior, as documented in the README; (b) keep the wheel's claim while Buildprint's camera dialog is open. Option (b) needs a dedicated-server gametest before it can be verified.
+
+# Hotkey Wheel 1.0.8+26.3 verification (previous release)
 
 The focused native Mouse Button 4 regression passes **67 checks across seven owned-editor scenarios**, with exit status 0. The fresh release matrix passes **2,188 checks** against the exact final JAR. Version 1.0.8 sets the existing mouse injector's order to 900 while retaining ordinary mixin priority; transformed-bytecode inspection confirms that it runs before Buildprint's grabbed editor callbacks. A priority-only candidate failed and remains separately identified. No additional editor API bridge or menu-to-editor ownership transfer was added.
 
-Exact final JAR SHA-256: `ed47efefe6f06e7940a5250974b022228a2b61b441ca704571f9a44d3134d4ca`. An independent, cache-disabled Java 25 build from exported source reproduced this JAR and its source JAR byte for byte. Only `MouseMixin.class` and the declared version in `fabric.mod.json` differ from the shipping 1.0.7 JAR; all other packaged entries remain identical.
-
-## Fresh final-candidate results
-
-| Profile | Required coverage | Status |
-| --- | --- | --- |
-| minimal | Wheel UI, controls, key recovery and optional-mod absence | Passed: 232 |
-| integrated | Wheel, Buildprint/Blocktone editor/menu behavior and native side-mouse regression | Passed: 512 |
-| suite | All four requested mods, suite/Tool Pouch menus, BRBR coexistence and native side-mouse regression | Passed: 722 |
-| suite-polymer | Same all-four matrix with supported Polymer 0.18.2 | Passed: 722 |
-
-Each profile used the exact final installable 1.0.8 JAR. Prior 1.0.7 results are not counted. Release packaging verifies passing current reports, matching candidate/dependency hashes, executed fixture source hashes, archive and mod metadata integrity, and exclusion of development QA classes from the installable JAR. The verification archive retains all 94 fresh full-profile screenshots (9/25/30/30), authenticated console logs, executed-source manifests and snapshots, and the independent source rebuild and artifact comparison.
-
-## Reported side-mouse failure
-
-The user reports that opening Buildprint Selection Editor from a wheel bound to `key.mouse.4` leaves the same button unable to close the editor. Native button index 3 is Minecraft's Mouse Button 4. Buildprint can consume grabbed editor mouse input before the old wheel mixin runs. The 1.0.8 change is limited to mouse callback ordering and the declared release version.
-
-The new regression uses Fabric's native mouse callbacks rather than directly calling the wheel handler. The focused pass covers Hold release opening and same-button closure, click selection while the opener remains held, Toggle and cycled original-opener behavior, Save/Cancel and child dialogs, successful native Save, camera/input restoration, and independent native openings. Press/release consumption and native fallthrough are checked through actual callbacks. The shipping 1.0.7 baseline and rejected priority-only candidate both reproduced the failure; their results remain separate from the passing order-900 candidate and the fresh full-matrix counts.
-
-Narrow old-JAR, rejected priority-only and focused final proof is recorded under `qa/regressions/1.0.7-side-mouse-editor-close/`, with identical fixture ZIP entries and executed sources across all three attempts. The passing focused attempt is separate from the 2,188 full-matrix checks.
-
-The previous exact-artifact editor tests used keyboard openers. Their successful camera/session and validation checks did not establish this side-button input path. No native Buildprint main-menu-to-editor callback was found during the focused investigation, so no additional ownership handoff was introduced.
-
-## Exact integration targets
-
-Minecraft 26.3, Java 25, Fabric Loader 0.19.5. Compilation targets Fabric API 0.161.0+26.3; the existing wheel acceptance profiles use Fabric API 0.162.0+26.3. Required integrations remain:
-
-- Buildprint 0.1.19+26.x: `bd60814e7ba944d7a67bfbf9831a8fa156223277345dc87569cd358a326e3f1f`.
-- Blocktone for Buildprint 0.1.24: `b9c42fd4679f9c70c584a6f8a888e51911c0dfe90f10dddd92c4e427efec5940`.
-- Vanilla++ Quality of Life Suite 1.4.4+26.3: `e4663dddf2e176c3d5d7a669f59822dc76286ed28e195cc1a77b1bb1b3e7d269`.
-- Better Recipe Book Rebetterered 1.11.7+26.3: `28868f38950057d850d634364881855503093dcd8e70064faf7febcecb81621f`.
-- Polymer 0.18.2+26.3: `3d79318e8202d0e87af308d7f232220714e5f1409d06c23db774877ec6f3848f`.
-
-The integrated profile also retains Controlling, Searchables, Mod Menu, Sorted and YACL. Suite profiles retain the supported configuration libraries and Tool Pouch 1.1.10. Current provenance must identify the full actual dependency set.
-
-## Historical evidence and release boundaries
-
-The immutable old installable 1.0.7 JAR is SHA-256 `3095b28e981dd995aabc582b7abe785baeccfdc4ac00128eabd6bda0d5a55fd6`. Its release tag, original source/verification archives, 2026-10-13 suite-1.4.4 review and prior baseline/intermediate records remain preserved under `Builds/Minecraft/Hotkey Wheel/Main Plugin/1.0.7+26.3/`. Baseline reproduction for the new side-mouse issue uses that old JAR explicitly.
-
-The validated 1.0.8 release is packaged under `Builds/Minecraft/Hotkey Wheel/Main Plugin/1.0.8+26.3/` with its installable JAR, source/evidence archives, metadata and checksums. All freshly captured PNG screenshots are included; launcher assets, private dependency JARs, game/world files and Minecraft mixin-exported classes are excluded from public archives.
-
-Hotkey Wheel remains an original client mod with no port counterpart. The user's installed profile, saved preferences and worlds are preserved. Dedicated multiplayer, arbitrary third-party raw-input controls, Realms/Friends service behavior, fullscreen and the intentional debug-crash chord are outside this acceptance scope. Older Buildprint fallback paths remain available without a fresh compatibility claim. See [API-MIGRATION.md](API-MIGRATION.md) for the retained public API integration and native input-ordering boundary.
+Exact final JAR SHA-256: `ed47efefe6f06e7940a5250974b022228a2b61b441ca704571f9a44d3134d4ca`. An independent, cache-disabled Java 25 build from exported source reproduced this JAR and its source JAR byte for byte. The release folder `Builds/Minecraft/Hotkey Wheel/Main Plugin/1.0.8+26.3/` keeps the full 1.0.8 verification record, including its 0.1.19 Buildprint, Blocktone 0.1.24, Vanilla++ 1.4.4 and Polymer inputs.

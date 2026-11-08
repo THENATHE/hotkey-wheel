@@ -13,6 +13,18 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(KeyboardHandler.class)
 public final class KeyboardMixin {
+    // Buildprint's order-1000 editor handler consumes reserved keys such as C, Q and E.
+    // Only the original-opener closure runs first; other wheel keys keep their ordinary order.
+    @Inject(method = "keyPress", at = @At("HEAD"), cancellable = true, order = 900)
+    private void hotkeyWheel$menuReturn(long window, int action, KeyEvent event, CallbackInfo callback) {
+        InputConstants.Key key = InputConstants.getKey(event);
+        if (window == Minecraft.getInstance().getWindow().handle()
+                && HotkeyWheelClient.handleMenuReturn(key, action)) {
+            KeyMapping.set(key, false);
+            callback.cancel();
+        }
+    }
+
     @Inject(method = "keyPress", at = @At("HEAD"), cancellable = true)
     private void hotkeyWheel$input(long window, int action, KeyEvent event, CallbackInfo callback) {
         InputConstants.Key key = InputConstants.getKey(event);

@@ -16,19 +16,28 @@ PREVIOUS = '--api-previous' in sys.argv
 LEGACY = '--legacy' in sys.argv
 POLYMER = '--polymer' in sys.argv
 SUITE = '--suite' in sys.argv or POLYMER
-INTEGRATED = '--integrated' in sys.argv or SUITE or BASELINE or PREVIOUS or LEGACY
-BUILDPRINT_VERSION = '0.1.16+26.x' if LEGACY else '0.1.17+26.x' if BASELINE else '0.1.18+26.x' if PREVIOUS else '0.1.19+26.x'
-BLOCKTONE_VERSION = '0.1.20' if LEGACY else '0.1.23' if BASELINE or PREVIOUS else '0.1.24'
-SUITE_VERSION = os.environ.get('HOTKEY_WHEEL_SUITE_VERSION', '1.4.4+26.3')
+# Standalone Tool Pouch with Buildprint, for Tool Pouch releases newer than the copy nested in the suite.
+TOOLPOUCH = '--toolpouch' in sys.argv
+INTEGRATED = '--integrated' in sys.argv or SUITE or TOOLPOUCH or BASELINE or PREVIOUS or LEGACY
+# Blocktone pins one exact Buildprint release, so a new Buildprint can be checked before its Blocktone build exists.
+BLOCKTONE = INTEGRATED and '--no-blocktone' not in sys.argv
+CURRENT_BUILDPRINT = '0.1.38+26.3'
+BUILDPRINT_VERSION = '0.1.16+26.x' if LEGACY else '0.1.17+26.x' if BASELINE else '0.1.18+26.x' if PREVIOUS else CURRENT_BUILDPRINT
+BLOCKTONE_VERSION = '0.1.20' if LEGACY else '0.1.23' if BASELINE or PREVIOUS else '0.1.38'
+SUITE_VERSION = os.environ.get('HOTKEY_WHEEL_SUITE_VERSION', '1.4.5+26.3')
+TOOLPOUCH_VERSION = os.environ.get('HOTKEY_WHEEL_TOOLPOUCH_VERSION', '1.2.0+26.3')
 BRBR_VERSION = os.environ.get('HOTKEY_WHEEL_BRBR_VERSION', '1.11.7+26.3')
 POLYMER_VERSION = os.environ.get('HOTKEY_WHEEL_POLYMER_VERSION', '0.18.2+26.3')
 WORKSPACE = ROOT.parents[2]
-if sum([BASELINE, PREVIOUS, LEGACY, SUITE]) > 1:
+if sum([BASELINE, PREVIOUS, LEGACY, SUITE, TOOLPOUCH]) > 1:
     raise SystemExit('Baseline and legacy modes are separate integrated profiles.')
-RUN = Path(os.environ.get('HOTKEY_WHEEL_QA_RUN_ROOT', str(ROOT / ('legacy' if LEGACY else 'api-baseline' if BASELINE else 'api-previous' if PREVIOUS else 'suite-polymer' if POLYMER else 'suite' if SUITE else 'integrated' if INTEGRATED else 'minimal'))))
+RUN = Path(os.environ.get('HOTKEY_WHEEL_QA_RUN_ROOT', str(ROOT / ('legacy' if LEGACY else 'api-baseline' if BASELINE else 'api-previous' if PREVIOUS else 'suite-polymer' if POLYMER else 'suite' if SUITE else 'toolpouch' if TOOLPOUCH else 'integrated' if INTEGRATED else 'minimal'))))
 RUN.mkdir(parents=True, exist_ok=True)
 GAME = RUN / 'game'
 MODS = GAME / 'mods'
+# Mod settings saved by an earlier run, such as Buildprint's remembered camera mode, must not leak into this one.
+if (GAME / 'config').exists():
+    shutil.rmtree(GAME / 'config')
 MODS.mkdir(parents=True, exist_ok=True)
 for old in MODS.glob('*.jar'):
     old.unlink()
@@ -40,6 +49,8 @@ if INTEGRATED:
 if SUITE:
     patterns += ['fzzy_config-0.7.7+fix3+26.3.jar',
                  'cloth-config-*.jar', 'fabric-language-kotlin-*.jar', 'codecui-*.jar', 'mixson-*.jar']
+if TOOLPOUCH:
+    patterns += ['fzzy_config-0.7.7+fix3+26.3.jar', 'fabric-language-kotlin-*.jar']
 for pattern in patterns:
     matches = list((PROFILE / 'mods').glob(pattern))
     if len(matches) != 1:
@@ -72,19 +83,39 @@ if POLYMER:
         raise SystemExit(f'Unexpected Polymer mod ID: {metadata["id"]}')
     POLYMER_VERSION = metadata['version']
     shutil.copy2(source, MODS / source.name)
+if TOOLPOUCH:
+    source = Path(os.environ.get('HOTKEY_WHEEL_TOOLPOUCH_JAR', str(WORKSPACE / 'Builds/Minecraft/Tool Pouch/Main Plugin' / TOOLPOUCH_VERSION / f'toolpouch-fabric-{TOOLPOUCH_VERSION}.jar')))
+    if not source.is_file():
+        raise SystemExit(f'Missing pinned Tool Pouch artifact: {source}')
+    # Tool Pouch publishes Fabric and NeoForge files under the same version number.
+    with zipfile.ZipFile(source) as archive:
+        if 'fabric.mod.json' not in archive.namelist():
+            raise SystemExit(f'Expected the Fabric Tool Pouch JAR: {source}')
+        metadata = json.loads(archive.read('fabric.mod.json'))
+    if metadata['id'] != 'toolpouch':
+        raise SystemExit(f'Unexpected Tool Pouch mod ID: {metadata["id"]}')
+    TOOLPOUCH_VERSION = metadata['version']
+    shutil.copy2(source, MODS / source.name)
 if INTEGRATED:
-    for source in [
-        WORKSPACE / 'Builds/Minecraft/Buildprint/Main Plugin' / BUILDPRINT_VERSION / f'buildprint-fabric-{BUILDPRINT_VERSION}.jar',
-        Path(os.environ.get('HOTKEY_WHEEL_BLOCKTONE_JAR', str(WORKSPACE / 'Builds/Minecraft/Buildprint/Feature Addon - Blocktone Toning' / BLOCKTONE_VERSION / f'buildprint-toning-{BLOCKTONE_VERSION}.jar'))) if BUILDPRINT_VERSION == '0.1.19+26.x' else WORKSPACE / 'Builds/Minecraft/Buildprint/Feature Addon - Blocktone Toning' / BLOCKTONE_VERSION / f'buildprint-toning-{BLOCKTONE_VERSION}.jar',
-    ]:
+    current = BUILDPRINT_VERSION == CURRENT_BUILDPRINT
+    buildprint = WORKSPACE / 'Builds/Minecraft/Buildprint/Main Plugin' / BUILDPRINT_VERSION / f'buildprint-fabric-{BUILDPRINT_VERSION}.jar'
+    blocktone = WORKSPACE / 'Builds/Minecraft/Buildprint/Feature Addon - Blocktone Toning' / BLOCKTONE_VERSION / f'buildprint-toning-{BLOCKTONE_VERSION}.jar'
+    if current:
+        buildprint = Path(os.environ.get('HOTKEY_WHEEL_BUILDPRINT_JAR', str(buildprint)))
+        blocktone = Path(os.environ.get('HOTKEY_WHEEL_BLOCKTONE_JAR', str(blocktone)))
+    for source in [buildprint, blocktone] if BLOCKTONE else [buildprint]:
         if not source.is_file():
             raise SystemExit(f'Missing pinned integration artifact: {source}')
-        if source.name.startswith('buildprint-toning-'):
-            with zipfile.ZipFile(source) as archive:
-                metadata = json.loads(archive.read('fabric.mod.json'))
+        with zipfile.ZipFile(source) as archive:
+            metadata = json.loads(archive.read('fabric.mod.json'))
+        if source == blocktone:
             if metadata['id'] != 'buildprint_toning':
                 raise SystemExit(f'Unexpected Blocktone mod ID: {metadata["id"]}')
             BLOCKTONE_VERSION = metadata['version']
+        else:
+            if metadata['id'] != 'buildprint':
+                raise SystemExit(f'Unexpected Buildprint mod ID: {metadata["id"]}')
+            BUILDPRINT_VERSION = metadata['version']
         shutil.copy2(source, MODS / source.name)
 version = next(line.split('=', 1)[1].strip() for line in (ROOT.parent / 'gradle.properties').read_text().splitlines()
                if line.startswith('mod_version='))
@@ -94,7 +125,14 @@ with zipfile.ZipFile(addon) as archive:
 if wheel_metadata['id'] != 'hotkey_wheel':
     raise SystemExit('Focused wheel override must be a Hotkey Wheel JAR')
 shutil.copy2(addon, MODS / addon.name)
-gametest = next((CACHE / 'net.fabricmc.fabric-api/fabric-client-gametest-api-v1/6.0.7+4be74c3f5d').glob('*/*5d.jar'))
+# The client gametest module is published separately; use the build that matches the profile's Fabric API.
+fabric_api = next(MODS.glob('fabric-api-*.jar')).name.removeprefix('fabric-api-').removesuffix('.jar')
+fabric_pom = next((CACHE / 'net.fabricmc.fabric-api/fabric-api' / fabric_api).glob('*/*.pom'), None)
+if fabric_pom is None:
+    raise SystemExit(f'Resolve Fabric API {fabric_api} with Gradle before running QA')
+pom = fabric_pom.read_text()
+gametest_version = pom.split('<artifactId>fabric-client-gametest-api-v1</artifactId>', 1)[1].split('<version>', 1)[1].split('</version>', 1)[0]
+gametest = next((CACHE / 'net.fabricmc.fabric-api/fabric-client-gametest-api-v1' / gametest_version).glob('*/*.jar'))
 shutil.copy2(gametest, MODS / gametest.name)
 info = json.loads((META / 'versions/26.3-0.19.5/26.3-0.19.5.json').read_text())
 classpath = [META / 'versions/26.3/26.3.jar']
@@ -138,10 +176,12 @@ if compiler is None or not compiler.is_file():
 test_names = ['WheelClientTest', 'KeyManagementTest']
 if INTEGRATED:
     test_names.append('BuildprintMenuTest')
-    if BUILDPRINT_VERSION == '0.1.19+26.x':
+    if BUILDPRINT_VERSION == CURRENT_BUILDPRINT:
         test_names.append('SideMouseEditorTest')
 if SUITE:
     test_names += ['ToolPouchClientTest', 'BrbrIntegrationTest']
+if TOOLPOUCH:
+    test_names.append('ToolPouchClientTest')
 if os.environ.get('HOTKEY_WHEEL_QA_TESTS'):
     test_names = os.environ['HOTKEY_WHEEL_QA_TESTS'].split(',')
     if any(not name.isidentifier() or not (ROOT / (name + '.java')).is_file() for name in test_names):
@@ -173,7 +213,9 @@ command = [str(compiler.parent / 'java'), '-Xmx2G', '-XX:ActiveProcessorCount=4'
            '-Djava.library.path=' + str(META / 'natives/26.3-0.19.5/lwjgl/3.4.3-snapshot/x64'),
            '-Dfabric.client.gametest', '-Dfabric.client.gametest.timeout=2400',
            '-Dwheel.qa.root=' + str(RUN), '-Dwheel.qa.suite.version=' + SUITE_VERSION,
-           '-Dwheel.qa.brbr.version=' + BRBR_VERSION, '-Dfabric.log.disableAnsi=true',
+           '-Dwheel.qa.brbr.version=' + BRBR_VERSION, '-Dwheel.qa.blocktone=' + str(BLOCKTONE).lower(),
+           '-Dwheel.qa.toolpouch.version=' + (TOOLPOUCH_VERSION.split('+')[0] if TOOLPOUCH else '1.1.10'),
+           '-Dfabric.log.disableAnsi=true',
            '-cp', os.pathsep.join(map(str, classpath)), 'net.fabricmc.loader.impl.launch.knot.KnotClient',
            '--gameDir', str(GAME), '--version', '26.3', '--username', 'WheelQA', '--accessToken', '0',
            '--assetsDir', str(META / 'assets'), '--assetIndex', '34', '--width', '1280', '--height', '800']
@@ -181,7 +223,8 @@ if os.environ.get('HOTKEY_WHEEL_QA_EXPORT') == 'true':
     command.insert(1, '-Dmixin.debug.export=true')
 (RUN / 'provenance.json').write_text(json.dumps({
     'minecraft': '26.3', 'loader': '0.19.5', 'integrated': INTEGRATED, 'suite': SUITE, 'polymer': POLYMER,
-    'buildprint': BUILDPRINT_VERSION if INTEGRATED else None, 'blocktone': BLOCKTONE_VERSION if INTEGRATED else None,
+    'toolpouch_standalone': TOOLPOUCH_VERSION if TOOLPOUCH else None,
+    'buildprint': BUILDPRINT_VERSION if INTEGRATED else None, 'blocktone': BLOCKTONE_VERSION if BLOCKTONE else None,
     'suite_version': SUITE_VERSION if SUITE else None, 'brbr': BRBR_VERSION if SUITE else None,
     'polymer_version': POLYMER_VERSION if POLYMER else None,
     'wheel_version': wheel_metadata['version'], 'wheel_source': str(addon.resolve()),
@@ -192,6 +235,8 @@ if '--prepare-only' in sys.argv:
     raise SystemExit(0)
 environment = os.environ.copy()
 environment['SDL_VIDEODRIVER'] = 'x11'
+# SDL's GLX path cannot load Xvfb's Mesa GL; EGL works on Xvfb and on hardware displays.
+environment.setdefault('SDL_VIDEO_FORCE_EGL', '1')
 with (RUN / 'console.log').open('w') as log:
     process = subprocess.Popen(command, cwd=GAME, env=environment, stdout=log, stderr=subprocess.STDOUT)
     try:

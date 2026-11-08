@@ -59,13 +59,18 @@ public final class HotkeyWheelClient implements ClientModInitializer {
         });
     }
 
+    /** Closes menus and editors a wheel opened; keyboard input reaches this before other mods' raw key handlers. */
+    public static boolean handleMenuReturn(InputConstants.Key key, int action) {
+        if (action == InputConstants.PRESS) physicalKeys.add(key);
+        if (action == InputConstants.RELEASE) physicalKeys.remove(key);
+        return WheelMenuReturn.handleInput(key, action);
+    }
+
     public static boolean handleInput(InputConstants.Key key, int action) {
         Minecraft client = Minecraft.getInstance();
         boolean press = action == InputConstants.PRESS;
         boolean release = action == InputConstants.RELEASE;
-        if (press) physicalKeys.add(key);
-        if (release) physicalKeys.remove(key);
-        if (WheelMenuReturn.handleInput(key, action)) return true;
+        if (handleMenuReturn(key, action)) return true;
         if (release && ToolPouchIntegration.handleNativeKey(key, action)) {
             consumedKeys.remove(key);
             return true;

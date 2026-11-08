@@ -1,6 +1,7 @@
 package com.thenathe.hotkeywheel.qa;
 
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParser;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.thenathe.hotkeywheel.HotkeyWheelClient;
 import com.thenathe.hotkeywheel.WheelBindings;
@@ -94,6 +95,7 @@ public final class KeyManagementTest implements FabricClientGameTest {
                     original[0] = new ClientState(client);
                     editorAndBindings(client);
                     failures(client);
+                    previousReleaseConfiguration(client);
                 } catch (Exception failure) {
                     throw new RuntimeException(failure);
                 }
@@ -299,6 +301,79 @@ public final class KeyManagementTest implements FabricClientGameTest {
                             && json(WheelConfig.get()).equals(before),
                     "Safe mode rejects wheel opener " + reserved.getName() + " without modifying keys or settings");
         }
+    }
+
+    // Written in the 1.0.8 format with every setting changed from its default, including a slot and a
+    // remembered key for a mod that is not installed. The settings schema is unchanged since 1.0.8.
+    private static final String RELEASE_1_0_8_CONFIG = """
+            {
+              "wheelCount": 2,
+              "safeMode": false,
+              "toolPouchWheel": false,
+              "replaceToolPouchContextualKey": true,
+              "closeBuildprintWithWheelKey": false,
+              "managedBindings": {
+                "key.togglePerspective": "key.keyboard.f5",
+                "key.absent_mod.action": "key.keyboard.k"
+              },
+              "wheels": [
+                {
+                  "name": "Builder",
+                  "toggleOpen": true,
+                  "selectOutside": true,
+                  "entries": [
+                    {"control": "key.togglePerspective", "icon": "minecraft:spyglass", "label": "Camera", "holdAction": false, "unbindKey": true},
+                    {"control": "key.absent_mod.action", "icon": "absent_mod:widget", "label": "", "holdAction": true, "unbindKey": true},
+                    {"control": "", "icon": "minecraft:stone", "label": "Spare", "holdAction": false, "unbindKey": false}
+                  ]
+                },
+                {
+                  "name": "Second",
+                  "toggleOpen": false,
+                  "selectOutside": false,
+                  "entries": [
+                    {"control": "key.buildprint.editor", "icon": "minecraft:oak_planks", "label": "", "holdAction": false, "unbindKey": false}
+                  ]
+                },
+                {
+                  "name": "Hidden third",
+                  "toggleOpen": false,
+                  "selectOutside": true,
+                  "entries": []
+                }
+              ]
+            }
+            """;
+
+    private void previousReleaseConfiguration(Minecraft client) throws IOException {
+        WheelConfig current = WheelConfig.get().copy();
+        Map<KeyMapping, InputConstants.Key> keysBefore = new LinkedHashMap<>();
+        for (KeyMapping mapping : client.options.keyMappings) keysBefore.put(mapping, InputConstants.getKey(mapping.saveString()));
+        var expected = JsonParser.parseString(RELEASE_1_0_8_CONFIG);
+        Files.writeString(WheelConfig.path(), RELEASE_1_0_8_CONFIG);
+        WheelConfig.load();
+        check(JsonParser.parseString(json(WheelConfig.get())).equals(expected),
+                "A 1.0.8 configuration loads with every wheel, slot, setting and remembered key unchanged");
+        boolean keysUnchanged = true;
+        for (var entry : keysBefore.entrySet()) {
+            keysUnchanged &= InputConstants.getKey(entry.getKey().saveString()).equals(entry.getValue());
+        }
+        check(keysUnchanged, "Loading a 1.0.8 configuration leaves every Minecraft key binding unchanged");
+        check(WheelConfig.save(WheelConfig.get()) && JsonParser.parseString(Files.readString(WheelConfig.path())).equals(expected),
+                "Saving a loaded 1.0.8 configuration keeps absent-mod slots and their remembered keys");
+
+        Path backup = WheelConfig.path().resolveSibling("hotkey-wheel.json.unreadable");
+        Files.deleteIfExists(backup);
+        String before = json(WheelConfig.get());
+        String unreadable = "{ \"wheelCount\": 2, \"wheels\": [ unfinished";
+        Files.writeString(WheelConfig.path(), unreadable);
+        WheelConfig.load();
+        check(json(WheelConfig.get()).equals(before), "An unreadable configuration file leaves the loaded settings unchanged");
+        check(Files.readString(WheelConfig.path()).equals(unreadable), "An unreadable configuration file stays in place");
+        check(Files.isRegularFile(backup) && Files.readString(backup).equals(unreadable),
+                "An unreadable configuration file is copied aside before a later Save can replace it");
+        Files.delete(backup);
+        if (!WheelConfig.save(current)) throw new IOException("Cannot restore the configuration after the 1.0.8 fixture");
     }
 
     private void failures(Minecraft client) throws IOException {

@@ -1,0 +1,45 @@
+{
+  "recorded": "2026-11-08",
+  "note": "Original developer releases used to compile and test Hotkey Wheel 1.0.9+26.3. Modrinth version IDs are pinned because Tool Pouch and Buildprint publish Fabric and NeoForge files under the same version number.",
+  "compile": {
+    "fabric-api": {
+      "version": "0.165.2+26.3",
+      "source": "https://maven.fabricmc.net/ (net.fabricmc.fabric-api:fabric-api)",
+      "modrinth_version_id": "nJlcvFfj",
+      "sha256": "2612a078a5daa06d9a14cabad40fe66de36b8cb22ee8cdf346d5d9894478c392",
+      "previous": "0.161.0+26.3 (bNnaTiuM)"
+    },
+    "buildprint": {
+      "version": "0.1.38+26.3",
+      "maven": "maven.modrinth:buildprint:MOGfNH4Y",
+      "modrinth_version_id": "MOGfNH4Y",
+      "file": "buildprint-fabric-0.1.38+26.3.jar",
+      "sha256": "97f1d94530a42ea9632d848964d591aa94b7af9df526bb637d767b5fae39ecc8",
+      "sha512": "7a1be91f095322bb779070e35d130bdbe8e8ca55467d6da070c89da4984737d6297e4828d86be5312c5f5fbd2482c3654a7c7326406a60369b428d1be867bbc6",
+      "previous": "0.1.19+26.x (RJ3uTCda)"
+    },
+    "tool-pouch": {
+      "version": "1.2.0+26.3",
+      "loader": "fabric",
+      "maven": "maven.modrinth:tool-pouch:LDL8NLQd",
+      "modrinth_version_id": "LDL8NLQd",
+      "file": "toolpouch-fabric-1.2.0+26.3.jar",
+      "sha256": "fcc2f984c910c4002f9936bb5dcd2ee4f6a065b0bfee5d814325c425d0a9a1e1",
+      "sha512": "0ee459dee47e7ec438940e9e50479e48205b6b7d11d89edf96aa47b3ca2847de8af95ea513ff3f468c779438e80a2ee688ec4a5a859738ab22b5dfd00e19f436",
+      "not_this": "maven.modrinth:tool-pouch:1.2.0+26.3 resolves to the NeoForge file rgxWpWUA (sha1 ade4b589483faebfc9102ba2cf412f69328d2d9a)",
+      "previous": "1.1.10+26.3 (6Z3zMyN8)"
+    },
+    "modmenu": {
+      "version": "21.0.0",
+      "maven": "com.terraformersmc:modmenu:21.0.0",
+      "modrinth_version_id": "kyy7dbrZ",
+      "sha256": "837812c6c98d66141db7b5dcae668f27fb78d557e8f4c0c89912985fc26a5e6f",
+      "previous": "unchanged; latest Mod Menu release for 26.3"
+    }
+  },
+  "runtime_unchanged": {
+    "minecraft": "26.3",
+    "fabric-loader": "0.19.5 (0.20.1 exists; the user's profiles and the Vanilla++ suite still run 0.19.5, and Hotkey Wheel declares >=0.19.5)",
+    "java": "25"
+  }
+}

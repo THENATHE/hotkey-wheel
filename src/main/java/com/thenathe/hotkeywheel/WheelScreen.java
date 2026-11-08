@@ -1,7 +1,9 @@
 package com.thenathe.hotkeywheel;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
@@ -22,6 +24,9 @@ public final class WheelScreen extends Screen {
     private int innerRadius;
     private boolean closing;
     private List<RadialGeometry.Run> ring = List.of();
+    // Looked up once per wheel instead of every frame; null marks a control that is not registered.
+    private List<ItemStack> icons = List.of();
+    private List<KeyMapping> controls = List.of();
 
     public WheelScreen(int index, InputConstants.Key opener, boolean toggleOpen) {
         super(Component.literal("Hotkey Wheel"));
@@ -45,16 +50,25 @@ public final class WheelScreen extends Screen {
         centerY = (height - 32) / 2;
         radius = Math.max(36, Math.min(110, Math.min(width / 2 - 22, (height - 90) / 2)));
         innerRadius = (int) (radius * 0.42);
-        rebuildRing();
+        rebuildWheel();
         // Always begin inside Cancel, including after a window resize.
         RadialCursor.center(this);
     }
 
-    private void rebuildRing() { ring = RadialGeometry.ring(innerRadius, radius, wheel().entries.size()); }
+    private void rebuildWheel() {
+        List<WheelConfig.Entry> entries = wheel().entries;
+        ring = RadialGeometry.ring(innerRadius, radius, entries.size());
+        icons = new ArrayList<>(entries.size());
+        controls = new ArrayList<>(entries.size());
+        for (WheelConfig.Entry entry : entries) {
+            icons.add(icon(entry.icon));
+            controls.add(HotkeyWheelClient.findControl(entry.control));
+        }
+    }
 
     public void switchWheel(int index) {
         wheelIndex = Math.floorMod(index, WheelConfig.get().wheelCount);
-        rebuildRing();
+        rebuildWheel();
     }
 
     public void cycle() { switchWheel(wheelIndex + 1); }
@@ -130,7 +144,6 @@ public final class WheelScreen extends Screen {
         graphics.centeredText(font, wheel().name + "  " + (wheelIndex + 1) + "/" + WheelConfig.get().wheelCount,
                 centerX, Math.max(8, centerY - radius - 24), 0xfff1c56c);
         for (int slot = 0; slot < wheel().entries.size(); slot++) {
-            WheelConfig.Entry entry = wheel().entries.get(slot);
             double angle = RadialGeometry.angle(slot, wheel().entries.size());
             double distance = radius * 0.73 + (selected == slot ? 10 : 0);
             int x = centerX + (int) Math.round(Math.cos(angle) * distance);
@@ -139,9 +152,9 @@ public final class WheelScreen extends Screen {
             graphics.pose().translate(x, y);
             float scale = selected == slot ? 1.25f : 1.0f;
             graphics.pose().scale(scale, scale);
-            graphics.fakeItem(icon(entry.icon), -8, -8);
+            graphics.fakeItem(icons.get(slot), -8, -8);
             graphics.pose().popMatrix();
-            if (HotkeyWheelClient.findControl(entry.control) == null) graphics.text(font, "!", x + 5, y - 11, 0xffff9999);
+            if (controls.get(slot) == null) graphics.text(font, "!", x + 5, y - 11, 0xffff9999);
         }
         drawLine(graphics, centerX, centerY, mouseX, mouseY, selected < 0 ? 0x998a9199 : 0xfff1c56c);
         graphics.fill(centerX - 2, centerY - 2, centerX + 2, centerY + 2, 0xfff1c56c);
@@ -149,7 +162,7 @@ public final class WheelScreen extends Screen {
         graphics.fill(0, centerY + radius + 13, width, height, 0x99000000);
         if (selected >= 0) {
             WheelConfig.Entry entry = wheel().entries.get(selected);
-            var mapping = HotkeyWheelClient.findControl(entry.control);
+            KeyMapping mapping = controls.get(selected);
             String label = !entry.label.isBlank() ? entry.label : mapping == null ? "Unassigned" : Component.translatable(mapping.getName()).getString();
             graphics.centeredText(font, font.plainSubstrByWidth(label, width - 24), centerX, centerY + radius + 18, 0xffe6e8ea);
         }

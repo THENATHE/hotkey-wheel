@@ -1,14 +1,14 @@
-# Hotkey Wheel 1.0.8+26.3
+# Hotkey Wheel 1.0.9+26.3
 
 <img src="src/main/resources/assets/hotkey_wheel/icon.png" alt="Hotkey Wheel radial icon" width="128">
 
 A client-side Fabric mod for Minecraft Java 26.3. Create up to three radial menus with separate opening keys, assign Minecraft or registered mod controls, and choose floating block/item icons. Hold or toggle a wheel, select by dragging from the center, and cycle wheels without releasing the original opener.
 
-Version 1.0.8 corrects the reported side-mouse editor-closing issue by running the existing ownership check before Buildprint's grabbed editor mouse handler. The native Mouse Button 4 regression and all 2,188 fresh checks pass, including the all-four native and Polymer profiles. The public editor open/close and screen-ownership APIs adopted in 1.0.7 remain in use. Dialogs still close through their normal save/cancel/validation handlers before editor exit, and native-opened editors remain independent. [API-MIGRATION.md](API-MIGRATION.md) records the input-ordering change, adopted hooks, and remaining API gaps.
+Version 1.0.9 updates the integrations to Buildprint 0.1.38 and Tool Pouch 1.2.0. Buildprint 0.1.38 reserves more keys inside its editor, for example C and E. A wheel bound to one of those keys now closes the editor it opened. Tool Pouch's disabled slots are respected, and an unreadable settings file is now kept as a copy instead of being replaced on the next Save. Existing 1.0.8 settings and key bindings load unchanged. [AUDIT-2026-11-08.md](AUDIT-2026-11-08.md) lists every finding, and [API-MIGRATION.md](API-MIGRATION.md) covers the Buildprint hooks and input ordering.
 
 ## Install and configure
 
-Requires **Minecraft 26.3**, **Fabric Loader 0.19.5+**, **Java 25+**, and **Fabric API 0.161.0+26.3 or newer for 26.3**. Replace older Hotkey Wheel JARs with `hotkey-wheel-1.0.8+26.3.jar` in your client's `mods` folder, then restart. Install only one Hotkey Wheel version. Servers do not need Hotkey Wheel.
+Requires **Minecraft 26.3**, **Fabric Loader 0.19.5+**, **Java 25+**, and **Fabric API 0.161.0+26.3 or newer for 26.3**. Replace older Hotkey Wheel JARs with `hotkey-wheel-1.0.9+26.3.jar` in your client's `mods` folder, then restart. Install only one Hotkey Wheel version. Servers do not need Hotkey Wheel.
 
 Open **Options → Controls → Key Binds → Wheels…**, or use Hotkey Wheel's settings in Mod Menu. Controlling can search **hotkey wheel** to find the three opening keys, cycle key, and configuration shortcut. Sorted, Buildprint, Blocktone, Tool Pouch, Vanilla++, Controlling, Searchables, and Mod Menu are optional; Hotkey Wheel runs without them.
 
@@ -39,9 +39,9 @@ Turn a slot's unbinding option off, remove its last active use with unbinding en
 
 ## Tool Pouch and Vanilla++
 
-With **Tool Pouch contextual wheel: ON**, selecting Tool Pouch's **Contextual Open** control in a wheel automatically opens an item radial. This works with Tool Pouch 1.1.10, including the copy bundled in Vanilla++ 1.4.4.
+With **Tool Pouch contextual wheel: ON**, selecting Tool Pouch's **Contextual Open** control in a wheel automatically opens an item radial. This works with Tool Pouch 1.1.10 and 1.2.0, standalone or bundled in Vanilla++.
 
-The item radial follows Tool Pouch's actual contextual menu: it shows **shulker boxes** normally, or **compatible ammunition** while holding a supported projectile weapon. Other stored tools/items are filtered exactly as the native contextual menu filters them. Selection uses Tool Pouch's normal networking and inventory behavior, with the original stack names, counts, and item data.
+The item radial follows Tool Pouch's actual contextual menu: it shows **shulker boxes** normally, or **compatible ammunition** while holding a supported projectile weapon. Other stored tools/items are filtered exactly as the native contextual menu filters them, including pouch slots disabled in Tool Pouch 1.2.0. Selection uses Tool Pouch's normal networking and inventory behavior, with the original stack names, counts, and item data.
 
 **Always click an item to select it**, including after opening from a Hold wheel. Releasing the original opening key leaves the item radial open. The center cancels; right click or Escape cancels. Larger lists use pages of 12 items, with the cycle key, arrows, or scrolling to change pages. The item radial selects by direction outside its edge. If the pouch contents or held weapon change before selection, reopen the radial.
 
@@ -52,6 +52,8 @@ Enable **Native contextual key uses wheel** to use the same radial when pressing
 **Wheel key closes Buildprint menus** starts ON. After a wheel opens Buildprint's menu, Selection Editor, or Blocktone's instant-break settings, press the **original wheel opener again** to close that menu and its child screens. This includes Buildprint's YACL settings and nested migration screens. Cycling wheels before selection keeps the original opening key as the closing key.
 
 Closing uses each screen's normal save/cancel rules and commits Buildprint's pending edits. Invalid Blocktone settings can refuse closure and show their normal validation error; correct the fields and press the opener again. Menus opened through native Buildprint shortcuts or other routes retain their normal behavior. The Selection Editor is tracked by its freecam session rather than a screen parent. Its Save dialog can be canceled with the original opener before native editor exit. Public enter/exit events identify modern editor sessions; older Buildprint retains the private freecam fallback. Editors opened through their native binding remain independent; other non-menu controls retain their normal behavior.
+
+Buildprint 0.1.38 uses more raw keys inside the editor, such as C for the camera and the Drop and Inventory keys for switching tools. When a wheel opened the editor, its original opener closes it even if Buildprint uses that key; otherwise Buildprint's shortcuts work as usual. Opening another wheel while the editor is active still follows Buildprint's reserved keys. The walking-camera editor closes the same way as freecam. The first time you open the editor on a multiplayer server, Buildprint asks which camera to use. That one session is not wheel-owned, so close it with Buildprint's editor key; later openings on the server work normally.
 
 ## Compatibility and configuration
 
@@ -65,7 +67,7 @@ Wheel settings and recovery assignments are stored in `config/hotkey-wheel.json`
 
 Repository: [THENATHE/hotkey-wheel](https://github.com/THENATHE/hotkey-wheel). This is an original client mod with no upstream port counterpart. The local source is `Minecraft/hotkey-wheel/`.
 
-Use a complete Java 25 JDK and run `bash gradlew build`. Mod Menu 21.0.0 and Tool Pouch 1.1.10+26.3 resolve as optional compile APIs and are not bundled. Existing local JARs can be supplied with `-PmodMenuJar=/path/to/modmenu-21.0.0.jar -PtoolPouchJar=/path/to/tool-pouch-1.1.10+26.3.jar`.
+Use a complete Java 25 JDK and run `bash gradlew build`. Mod Menu 21.0.0, Buildprint 0.1.38+26.3 and Tool Pouch 1.2.0+26.3 resolve as optional compile APIs and are not bundled. Buildprint and Tool Pouch are pinned by Modrinth version ID, because their Fabric and NeoForge files share version numbers. [qa/upstream-inputs.json](qa/upstream-inputs.json) records the IDs and hashes. Existing local JARs can be supplied with `-PmodMenuJar=/path/to/modmenu-21.0.0.jar -PbuildprintJar=/path/to/buildprint-fabric-0.1.38+26.3.jar -PtoolPouchJar=/path/to/toolpouch-fabric-1.2.0+26.3.jar`.
 
 Rendered development tests live in `qa/*Test.java` and run in isolated game directories; they do not install into the user's profile. The harness defaults to a Modrinth profile named Vanilla Fast. Set these environment variables for another machine:
 
@@ -73,24 +75,25 @@ Rendered development tests live in `qa/*Test.java` and run in isolated game dire
 export HOTKEY_WHEEL_JDK=/path/to/java-25-jdk
 export HOTKEY_WHEEL_PROFILE="/path/to/ModrinthApp/profiles/Vanilla Fast"
 export HOTKEY_WHEEL_META=/path/to/ModrinthApp/meta
-python3 qa/run.py
-python3 qa/run.py --integrated
-python3 qa/run.py --suite
-python3 qa/run.py --polymer
+xvfb-run -a -s "-screen 0 1280x800x24" python3 qa/run.py
+xvfb-run -a -s "-screen 0 1280x800x24" python3 qa/run.py --integrated
+xvfb-run -a -s "-screen 0 1280x800x24" python3 qa/run.py --toolpouch
+xvfb-run -a -s "-screen 0 1280x800x24" python3 qa/run.py --suite
+xvfb-run -a -s "-screen 0 1280x800x24" python3 qa/run.py --polymer
 python3 qa/run.py --api-previous
 python3 qa/run.py --api-baseline
 python3 qa/run.py --legacy
 ```
 
-The metadata directory must contain Minecraft 26.3, Fabric Loader 0.19.5 launcher metadata, libraries, natives, and assets. The Gradle cache supplies the Fabric client gametest API. A graphical X11 session is required. The integrated profile adds Controlling, Searchables, Sorted, Buildprint, Blocktone, Mod Menu, and YACL. The suite profile adds Vanilla++ 1.4.4, BRBR 1.11.7, and installed dependencies for actual Tool Pouch interactions, suite configuration navigation, and BRBR pin/settings coexistence. The Polymer profile includes the same four-mod combination with the suite's supported Polymer 0.18.2+26.3 installation.
+The metadata directory must contain Minecraft 26.3, Fabric Loader 0.19.5 launcher metadata, libraries, natives, and assets. The Gradle cache supplies the Fabric client gametest API that matches the profile's Fabric API, so build once first. Run the clients on a virtual display such as Xvfb rather than your desktop. The runner sets `SDL_VIDEO_FORCE_EGL=1`, which Mesa needs on Xvfb. Each run starts from an empty mod `config/` folder in its isolated game directory. The integrated profile adds Controlling, Searchables, Sorted, Buildprint, Blocktone, Mod Menu, and YACL. The Tool Pouch profile adds standalone Tool Pouch 1.2.0 with Fzzy Config to the integrated set. The suite profile adds Vanilla++ 1.4.5, BRBR 1.11.7, and installed dependencies for actual Tool Pouch interactions, suite configuration navigation, and BRBR pin/settings coexistence. The Polymer profile includes the same four-mod combination with the suite's supported Polymer 0.18.2+26.3 installation. `--no-blocktone` leaves Blocktone out and skips its checks; use it only to check a Buildprint release before its Blocktone build exists, because release packaging requires Blocktone.
 
-Set `HOTKEY_WHEEL_SUITE_JAR`, `HOTKEY_WHEEL_BRBR_JAR`, `HOTKEY_WHEEL_BLOCKTONE_JAR`, or `HOTKEY_WHEEL_POLYMER_JAR` to test an exact candidate artifact; runtime reports and provenance record its declared version and SHA-256. `--prepare-only` builds the isolated QA profile and test JAR without launching a rendered client. The ten-area Buildprint API audit in [API-MIGRATION.md](API-MIGRATION.md) links the official documentation and records the relevant hooks and unused areas.
+Set `HOTKEY_WHEEL_SUITE_JAR`, `HOTKEY_WHEEL_BRBR_JAR`, `HOTKEY_WHEEL_BUILDPRINT_JAR`, `HOTKEY_WHEEL_BLOCKTONE_JAR`, `HOTKEY_WHEEL_TOOLPOUCH_JAR`, or `HOTKEY_WHEEL_POLYMER_JAR` to test an exact candidate artifact; runtime reports and provenance record its declared version and SHA-256. `--prepare-only` builds the isolated QA profile and test JAR without launching a rendered client. The ten-area Buildprint API audit in [API-MIGRATION.md](API-MIGRATION.md) links the official documentation and records the relevant hooks and unused areas.
 
 See [QA.md](QA.md) for current results, exact versions, and verification boundaries. The verification ZIP contains test reports, dependency hashes, and rendered screenshots. Local release folders additionally retain console logs and the earlier crash regression evidence. `python3 qa/package_release.py` packages only after every expected report passes against the final JAR; it validates archive/metadata/icon integrity and calculates assertion totals from the reports. QA code is excluded from the installable mod. Set `HOTKEY_WHEEL_BUILD_LOG`, `HOTKEY_WHEEL_ARTIFACT_DIFF`, and `HOTKEY_WHEEL_SOURCE_REBUILD` to include an exact build log, artifact comparison and independently reproduced-source proof. Shared build-index updates require `HOTKEY_WHEEL_UPDATE_INDEX=1`.
 
 For a standalone checkout, set `HOTKEY_WHEEL_RELEASE_DIR=/path/to/release-folder` when running the packager. Private local crash evidence is copied only when present and is excluded from the public source archive.
 
-The earlier 1.0.7 release, its original tag/archives, and the 2026-10-13 four-mod review remain available with their own exact inputs and results. Version 1.0.8 has a separate release folder and repeats the complete acceptance matrix against its own JAR. Historical keyboard-opening coverage does not establish the new side-mouse regression; [QA.md](QA.md) records that distinction and the current release's verification.
+The earlier 1.0.7 and 1.0.8 releases keep their own release folders, exact inputs and results. Version 1.0.9 has a separate release folder and repeats the acceptance matrix against its own JAR; [QA.md](QA.md) records the current release's verification.
 
 For future documentation-only reviews of an unchanged release, `HOTKEY_WHEEL_REVIEW_DATE` and optional `HOTKEY_WHEEL_REVIEW_QUALIFIER` create a separate review subfolder and explicitly require the original production binary to remain identical. A production fix such as 1.0.8 uses ordinary release packaging instead.
 

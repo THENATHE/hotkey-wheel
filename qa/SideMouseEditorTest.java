@@ -68,7 +68,7 @@ public final class SideMouseEditorTest implements FabricClientGameTest {
 
                 openEditor(context, false, false, false);
                 openSave(context);
-                context.clickScreenButton("Cancel");
+                clickButton(context, "Cancel");
                 context.waitTicks(3);
                 context.runOnClient(client -> check(active() && client.gui.screen() == null,
                         "Native Save Cancel returns to the side-mouse-owned freecam"));
@@ -90,7 +90,7 @@ public final class SideMouseEditorTest implements FabricClientGameTest {
                 });
                 String saveLabel = context.computeOnClient(client -> net.minecraft.network.chat.Component
                         .translatable("buildprint.save.quick").getString());
-                context.clickScreenButton(saveLabel);
+                clickButton(context, saveLabel);
                 context.waitFor(client -> Files.isRegularFile(output), 200);
                 context.runOnClient(client -> {
                     check(Files.size(output) > 0 && active(), "Native Save writes a real blueprint and retains the editor");
@@ -242,8 +242,19 @@ public final class SideMouseEditorTest implements FabricClientGameTest {
         });
     }
 
-    private void openSave(ClientGameTestContext context) {
-        context.getInput().pressKey(InputConstants.KEY_3);
+    // Buildprint numbers its toolbar from the registered tool order, which changes as tools are added.
+    private static int saveToolKey() throws Exception {
+        var ordered = (List<?>) Class.forName("com.buildprint.client.edit.ToolRegistry").getMethod("ordered").invoke(null);
+        for (int index = 0; index < ordered.size() && index < 9; index++) {
+            Object slot = ordered.get(index);
+            if (slot.getClass().getMethod("id").invoke(slot).equals("buildprint:save")) return InputConstants.KEY_1 + index;
+        }
+        throw new AssertionError("Buildprint Save tool has no number key");
+    }
+
+    private void openSave(ClientGameTestContext context) throws Exception {
+        int saveKey = context.computeOnClient(client -> saveToolKey());
+        context.getInput().pressKey(saveKey);
         context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
         context.waitTicks(3);
         context.runOnClient(client -> check(client.gui.screen() != null && client.gui.screen().getClass().getName()
@@ -268,6 +279,23 @@ public final class SideMouseEditorTest implements FabricClientGameTest {
 
     private static Object call(String type, String method) throws Exception {
         return Class.forName(type).getMethod(method).invoke(null);
+    }
+
+    private static void clickButton(ClientGameTestContext context, String label) {
+        double[] position = context.computeOnClient(client -> {
+            Screen screen = client.gui.screen();
+            var button = screen.children().stream()
+                    .filter(net.minecraft.client.gui.components.AbstractButton.class::isInstance)
+                    .map(net.minecraft.client.gui.components.AbstractButton.class::cast)
+                    .filter(widget -> widget.getMessage().getString().equals(label))
+                    .findFirst().orElseThrow(() -> new AssertionError("Missing button '" + label + "' in " + screen.getClass().getName()));
+            if (!button.active || !button.visible) throw new AssertionError("Unavailable button '" + label + "'");
+            return new double[] {
+                    (button.getX() + button.getWidth() / 2.0) * client.getWindow().getScreenWidth() / screen.width,
+                    (button.getY() + button.getHeight() / 2.0) * client.getWindow().getScreenHeight() / screen.height};
+        });
+        context.getInput().setCursorPos(position[0], position[1]);
+        context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
     }
 
     private static Object field(Object target, String name) throws Exception {
