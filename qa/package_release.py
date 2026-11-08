@@ -226,15 +226,19 @@ for mode, names in REPORTS.items():
             require(isinstance(result.get('scenarios'), list) and result['scenarios'],
                     f'{mode}: missing side-mouse scenario evidence')
         if name in ('toolpouch-results.json', 'brbr-integration-results.json'):
-            prefix = 'vanilla-plusplus-quality-of-life-suite-' if name == 'toolpouch-results.json' else 'better-recipe-book-rebetterered-'
+            if name == 'brbr-integration-results.json':
+                prefix, runtime_version = 'better-recipe-book-rebetterered-', result.get('brbr')
+            elif mode == 'toolpouch':
+                prefix, runtime_version = 'toolpouch-fabric-', result.get('toolpouch')
+            else:
+                prefix, runtime_version = 'vanilla-plusplus-quality-of-life-suite-', result.get('suite')
             inputs = [filename for filename in provenance['mods'] if filename.startswith(prefix)]
             require(len(inputs) == 1, f'{mode}: missing or duplicate input for {name}')
             dependency = root / 'game/mods' / inputs[0]
             require(provenance['mods'][inputs[0]] == sha256(dependency), f'{mode}: retained candidate differs from tested dependency')
             with zipfile.ZipFile(dependency) as archive:
                 tested_metadata = json.loads(archive.read('fabric.mod.json'))
-            require(tested_metadata['version'] == result.get('suite' if name == 'toolpouch-results.json' else 'brbr'),
-                    f'{mode}: candidate metadata differs from runtime version')
+            require(tested_metadata['version'] == runtime_version, f'{mode}: candidate metadata differs from runtime version')
         counts[name] = len(checks)
     counts['total'] = sum(counts.values())
     results[mode] = counts
