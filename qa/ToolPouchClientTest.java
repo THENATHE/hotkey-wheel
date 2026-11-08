@@ -70,7 +70,7 @@ public final class ToolPouchClientTest implements FabricClientGameTest {
             FabricLoader.getInstance().getModContainer("polymer-core").ifPresent(mod ->
                     report.put("polymer", mod.getMetadata().getVersion().getFriendlyString()));
             if (suite) {
-                String suiteVersion = System.getProperty("wheel.qa.suite.version", "1.4.5+26.3");
+                String suiteVersion = System.getProperty("wheel.qa.suite.version", "1.5.0+26.3");
                 check(report.get("suite").equals(suiteVersion), "Tests use the exact candidate Vanilla++ Suite " + suiteVersion + " developer track");
             }
             String toolPouchVersion = System.getProperty("wheel.qa.toolpouch.version", "1.1.10");

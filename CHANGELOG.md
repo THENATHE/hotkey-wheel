@@ -9,6 +9,7 @@
 - Buildprint's walking-camera editor works with the original-opener closure.
 - The build pins Modrinth version IDs. The version number alone resolved to the NeoForge Tool Pouch file.
 - The radial looks up icons and controls once per wheel instead of every frame.
+- Verified with Vanilla++ 1.5.0+26.3, Buildprint 0.1.38+26.3, Blocktone for Buildprint 0.1.38, standalone Tool Pouch 1.2.0, BRBR 1.11.8 and Polymer 0.18.7: 3,005 checks across five profiles. See [QA.md](QA.md).
 - QA runs on a virtual display, adds a standalone Tool Pouch profile and checks that 1.0.8 settings load and save without loss. See [AUDIT-2026-11-08.md](AUDIT-2026-11-08.md).
 
 ## 1.0.8+26.3
