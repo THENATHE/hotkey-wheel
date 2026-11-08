@@ -13,10 +13,10 @@ Every profile used the release JAR and the same fixture sources, on Xvfb with Me
 | minimal | none | wheel 150, key management 88 | 238 passed |
 | integrated | Buildprint 0.1.38+26.3, Blocktone 0.1.38 | wheel 154, key management 88, Buildprint/Blocktone menus 227, Mouse 4 67 | 536 passed |
 | toolpouch | integrated + standalone Tool Pouch 1.2.0+26.3, Fzzy Config 0.7.7+fix3 | integrated reports + Tool Pouch 179 | 715 passed |
-| suite | integrated + Vanilla++ 1.5.0+26.3 (bundles Tool Pouch 1.2.0), BRBR 1.11.8+26.3 | integrated reports + Tool Pouch and suite 194, BRBR 27 | 758 passed |
-| suite-polymer | suite + Polymer 0.18.7+26.3 | same as suite | 758 passed |
+| suite | integrated + Vanilla++ 1.5.0+26.3 (bundles Tool Pouch 1.2.0), BRBR 1.11.8+26.3 | integrated reports + Tool Pouch and suite 194, BRBR 27 | 757 passed |
+| suite-polymer | suite + Polymer 0.18.7+26.3 | same as suite | 757 passed |
 
-Total: 3,005 passing checks.
+Total: 3,003 passing checks.
 
 Exact inputs, SHA-256:
 
