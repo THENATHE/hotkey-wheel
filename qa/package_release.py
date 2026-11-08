@@ -36,9 +36,12 @@ BUILD_LOG = Path(os.environ.get('HOTKEY_WHEEL_BUILD_LOG', str(SOURCE / 'build.lo
 ARTIFACT_DIFF = os.environ.get('HOTKEY_WHEEL_ARTIFACT_DIFF')
 SOURCE_REBUILD = os.environ.get('HOTKEY_WHEEL_SOURCE_REBUILD')
 SIDE_MOUSE_REGRESSION = SOURCE / 'qa/regressions/1.0.7-side-mouse-editor-close'
+UPSTREAM_REGRESSION = SOURCE / 'qa/regressions/1.0.8-upstream-2026-11'
+BUILDPRINT_VERSION = '0.1.38+26.3'
 REPORTS = {
     'minimal': ['results.json', 'key-management-results.json'],
     'integrated': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json'],
+    'toolpouch': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json', 'toolpouch-results.json'],
     'suite': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json', 'toolpouch-results.json', 'brbr-integration-results.json'],
     'suite-polymer': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json', 'toolpouch-results.json', 'brbr-integration-results.json'],
 }
@@ -82,15 +85,25 @@ def validate_png(data):
 
 
 release_hash = sha256(JAR)
+existing_jar = RELEASE / JAR_NAME
+require(not existing_jar.exists() or sha256(existing_jar) == release_hash,
+        f'{RELEASE} already holds a different {JAR_NAME}; release folders are never overwritten')
+# Historical evidence keeps its recorded outcome; the side-mouse fixture itself runs in every Buildprint profile below.
 require(SIDE_MOUSE_REGRESSION.is_dir(), 'Missing side-mouse baseline and fixed-candidate regression evidence')
 for attempt, passed in [('shipping-1.0.7-baseline', False), ('priority-only-1.0.8-failed-attempt', False),
                         ('final-order900-1.0.8', True)]:
     result = json.loads((SIDE_MOUSE_REGRESSION / attempt / 'side-mouse-editor-results.json').read_text())
     require(result.get('passed') is passed, f'{attempt}: unexpected regression result')
-    if passed:
-        provenance = json.loads((SIDE_MOUSE_REGRESSION / attempt / 'provenance.json').read_text())
-        require(provenance.get('mods', {}).get(JAR_NAME) == release_hash,
-                'Focused side-mouse regression did not use the final installable JAR')
+# The shipped 1.0.8 JAR must fail exactly the two problems this release fixes.
+SHIPPED_1_0_8 = 'ed47efefe6f06e7940a5250974b022228a2b61b441ca704571f9a44d3134d4ca'
+for attempt, report_name, failure in [
+        ('shipping-1.0.8-reserved-keys', 'buildprint-menu-results.json', 'Original opener C closes the wheel-owned editor'),
+        ('shipping-1.0.8-config', 'key-management-results.json', 'An unreadable configuration file is copied aside')]:
+    result = json.loads((UPSTREAM_REGRESSION / attempt / report_name).read_text())
+    provenance = json.loads((UPSTREAM_REGRESSION / attempt / 'provenance.json').read_text())
+    require(result.get('passed') is False and failure in result.get('failure', ''),
+            f'{attempt}: baseline does not show the expected failure')
+    require(provenance['mods'].get('hotkey-wheel-1.0.8+26.3.jar') == SHIPPED_1_0_8, f'{attempt}: baseline did not use shipped 1.0.8')
 if SOURCE_REBUILD:
     rebuild = json.loads(Path(SOURCE_REBUILD).read_text())
     require(rebuild.get('passed') is True and rebuild.get('compile_from_exported_source') is True,
@@ -131,14 +144,15 @@ for mode, names in REPORTS.items():
     provenance = json.loads((root / 'provenance.json').read_text())
     require(provenance['minecraft'] == '26.3' and provenance['loader'] == '0.19.5', f'{mode}: unexpected game target')
     require(provenance.get('integrated') is (mode != 'minimal') and provenance.get('suite') is mode.startswith('suite')
-            and provenance.get('polymer') is (mode == 'suite-polymer'),
+            and provenance.get('polymer') is (mode == 'suite-polymer')
+            and (provenance.get('toolpouch_standalone') is not None) is (mode == 'toolpouch'),
             f'{mode}: profile provenance mismatch')
     if mode != 'minimal':
-        buildprint_version = '0.1.19+26.x'
         blocktone_version = provenance.get('blocktone')
-        require(provenance.get('buildprint') == buildprint_version and isinstance(blocktone_version, str) and blocktone_version,
+        # A --no-blocktone run records no Blocktone version and cannot be packaged.
+        require(provenance.get('buildprint') == BUILDPRINT_VERSION and isinstance(blocktone_version, str) and blocktone_version,
                 f'{mode}: unexpected Buildprint/Blocktone versions')
-        for filename in [f'buildprint-fabric-{buildprint_version}.jar', f'buildprint-toning-{blocktone_version}.jar']:
+        for filename in [f'buildprint-fabric-{BUILDPRINT_VERSION}.jar', f'buildprint-toning-{blocktone_version}.jar']:
             require(provenance['mods'].get(filename) == sha256(root / 'game/mods' / filename),
                     f'{mode}: retained integration artifact differs from tested dependency')
     require(provenance['mods'].get(JAR_NAME) == release_hash, f'{mode}: tests did not use the final release JAR')
@@ -153,11 +167,21 @@ for mode, names in REPORTS.items():
         require(sha256(root / 'executed-source' / filename) == entry['sha256']
                 and sha256(SOURCE / 'qa' / filename) == entry['sha256'],
                 f'{mode}: packaged QA source differs from the executed fixture: {filename}')
-    callbacks = json.loads((root / 'callback-order.json').read_text())['onButton_callbacks']
+    order = json.loads((root / 'callback-order.json').read_text())
+    callbacks = order['onButton_callbacks']
     require(callbacks and 'hotkey_wheel' in callbacks[0]['method'],
             f'{mode}: transformed mouse callback does not run before other input handlers')
+    keyboard = order['keyPress_callbacks']
+    require(keyboard and keyboard[0]['method'].endswith('hotkeyWheel$menuReturn'),
+            f'{mode}: owned-menu keyboard return does not run before other key handlers')
+    if mode != 'minimal':
+        methods = [callback['method'] for callback in keyboard]
+        editor_keys = [index for index, method in enumerate(methods) if method.endswith('buildprint$toolKeys')]
+        wheel_input = [index for index, method in enumerate(methods) if method.endswith('hotkeyWheel$input')]
+        require(editor_keys and wheel_input and editor_keys[0] < wheel_input[0],
+                f'{mode}: Buildprint editor keys no longer keep precedence over opening wheels')
     for filename, checksum in provenance['mods'].items():
-        if filename.startswith(('buildprint-fabric-', 'buildprint-toning-', 'vanilla-plusplus-quality-of-life-suite-', 'better-recipe-book-rebetterered-', 'polymer-bundled-')):
+        if filename.startswith(('buildprint-fabric-', 'buildprint-toning-', 'toolpouch-fabric-', 'vanilla-plusplus-quality-of-life-suite-', 'better-recipe-book-rebetterered-', 'polymer-bundled-')):
             require(shared_inputs.setdefault(filename, checksum) == checksum,
                     f'{mode}: integration input changed between profiles: {filename}')
             dependency = root / 'game/mods' / filename
@@ -179,11 +203,17 @@ for mode, names in REPORTS.items():
         require(path.stat().st_mtime_ns >= (root / 'provenance.json').stat().st_mtime_ns,
                 f'{mode}/{name}: result predates this profile run')
         if name == 'buildprint-menu-results.json':
-            require(result.get('public_editor_api') is True and result.get('public_editor_close_api') is True,
-                    f'{mode}: public 0.1.19 editor integration was not exercised')
+            require(result.get('public_editor_api') is True and result.get('public_editor_close_api') is True
+                    and result.get('blocktone') is True,
+                    f'{mode}: public editor integration or Blocktone scenarios were not exercised')
         if name == 'toolpouch-results.json':
-            require(result.get('suite') == provenance.get('suite_version') and result.get('toolpouch') == '1.1.10',
-                    f'{mode}: unexpected native suite/Tool Pouch version')
+            if mode == 'toolpouch':
+                require(result.get('toolpouch') == provenance.get('toolpouch_standalone') and 'suite' not in result,
+                        f'{mode}: unexpected standalone Tool Pouch version')
+            else:
+                require(result.get('suite') == provenance.get('suite_version')
+                        and result.get('toolpouch') == provenance.get('suite_toolpouch'),
+                        f'{mode}: unexpected native suite/Tool Pouch version')
             require(result.get('polymer_client') is (mode == 'suite-polymer'), f'{mode}: Polymer runtime mismatch')
             if mode == 'suite-polymer':
                 require(result.get('polymer') == provenance.get('polymer_version'), f'{mode}: unexpected Polymer version')
@@ -214,9 +244,10 @@ total_assertions = sum(profile_totals.values())
 RELEASE.mkdir(parents=True, exist_ok=True)
 for name in [JAR_NAME, f'hotkey-wheel-{VERSION}-sources.jar']:
     shutil.copy2(SOURCE / 'build/libs' / name, RELEASE / name)
-for name in ['README.md', 'QA.md', 'API-MIGRATION.md', 'CHANGELOG.md', 'ICON.md', 'LICENSE']:
+for name in ['README.md', 'QA.md', 'API-MIGRATION.md', 'AUDIT-2026-11-08.md', 'CHANGELOG.md', 'ICON.md', 'LICENSE']:
     shutil.copy2(SOURCE / name, RELEASE / name)
 shutil.copy2(SOURCE / 'qa/buildprint-api-audit.json', RELEASE / 'buildprint-api-audit.json')
+shutil.copy2(SOURCE / 'qa/upstream-inputs.json', RELEASE / 'upstream-inputs.json')
 shutil.copy2(BUILD_LOG, RELEASE / 'build.log')
 if ARTIFACT_DIFF:
     shutil.copy2(Path(ARTIFACT_DIFF), RELEASE / 'ARTIFACT-DIFF.json')
@@ -242,12 +273,15 @@ for mode, names in REPORTS.items():
             shutil.copy2(screenshot, screenshots / screenshot.name)
 
 source_files = [SOURCE / name for name in [
-    '.gitignore', 'LICENSE', 'README.md', 'QA.md', 'API-MIGRATION.md', 'CHANGELOG.md', 'ICON.md', 'build.gradle', 'gradle.properties',
-    'settings.gradle', 'gradlew', 'qa/run.py', 'qa/package_release.py', 'qa/buildprint-api-audit.json']]
+    '.gitignore', 'LICENSE', 'README.md', 'QA.md', 'API-MIGRATION.md', 'AUDIT-2026-11-08.md', 'CHANGELOG.md', 'ICON.md', 'build.gradle',
+    'gradle.properties', 'settings.gradle', 'gradlew', 'qa/run.py', 'qa/package_release.py', 'qa/buildprint-api-audit.json',
+    'qa/upstream-inputs.json']]
 source_files += list((SOURCE / 'qa').glob('*Test.java'))
-regression_files = sorted(path for path in SIDE_MOUSE_REGRESSION.rglob('*') if path.is_file())
+# Console logs stay local; they are ignored by Git and not part of the public archives.
+regression_files = sorted(path for path in [*SIDE_MOUSE_REGRESSION.rglob('*'), *UPSTREAM_REGRESSION.rglob('*')]
+                          if path.is_file() and path.suffix != '.log')
 require(not any(path.suffix in ('.class', '.jar') for path in regression_files),
-        'Side-mouse regression source/evidence must not redistribute exported classes or mod JARs')
+        'Regression source/evidence must not redistribute exported classes or mod JARs')
 source_files += regression_files
 source_files += [path for directory in ['src', 'gradle']
                  for path in (SOURCE / directory).rglob('*') if path.is_file()]
@@ -271,10 +305,10 @@ with zipfile.ZipFile(verification_zip, 'w', zipfile.ZIP_DEFLATED) as archive:
                      *sorted((evidence / 'executed-source').glob('*')),
                      *sorted((evidence / 'screenshots').glob('*.png'))]:
             archive.write(path, Path('hotkey-wheel-qa') / path.relative_to(RELEASE / 'qa'))
-    for name in ['QA.md', 'README.md', 'API-MIGRATION.md', 'CHANGELOG.md', 'ICON.md']:
+    for name in ['QA.md', 'README.md', 'API-MIGRATION.md', 'AUDIT-2026-11-08.md', 'CHANGELOG.md', 'ICON.md', 'upstream-inputs.json']:
         archive.write(RELEASE / name, Path('hotkey-wheel-qa') / name)
     for path in regression_files:
-        archive.write(path, Path('hotkey-wheel-qa/regressions/1.0.7-side-mouse-editor-close') / path.relative_to(SIDE_MOUSE_REGRESSION))
+        archive.write(path, Path('hotkey-wheel-qa/regressions') / path.relative_to(SOURCE / 'qa/regressions'))
 
 for archive_path in [RELEASE / JAR_NAME, RELEASE / f'hotkey-wheel-{VERSION}-sources.jar', source_zip, verification_zip]:
     with zipfile.ZipFile(archive_path) as archive:
@@ -289,9 +323,10 @@ report = {
     'reviewDate': REVIEW_DATE, 'reviewQualifier': REVIEW_QUALIFIER,
     'productionBinaryChanged': not bool(REVIEW_DATE),
     'track': 'original release', 'portCounterpart': None,
-    'minecraft': '26.3', 'loader': '0.19.5', 'compileFabricApi': '0.161.0+26.3',
-    'testedFabricApi': '0.162.0+26.3', 'java': '25',
-    'integrationInputs': shared_inputs, 'legacyRetest': 'older API fallbacks retained; current audit targets exact developer Buildprint 0.1.19',
+    'minecraft': '26.3', 'loader': '0.19.5', 'compileFabricApi': '0.165.2+26.3',
+    'testedFabricApi': '0.165.2+26.3', 'java': '25',
+    'compileInputs': 'upstream-inputs.json',
+    'integrationInputs': shared_inputs, 'legacyRetest': f'older API fallbacks retained but not retested; current audit targets exact developer Buildprint {BUILDPRINT_VERSION}',
     'integrationVersions': {mod_id: version for mod_id, (version, checksum) in integration_versions.items()},
     'source': 'Minecraft/hotkey-wheel', 'repository': 'https://github.com/THENATHE/hotkey-wheel',
     'sourceSnapshot': source_zip.name, 'publicVerification': verification_zip.name, 'sourceSnapshotSha256': sha256(source_zip), 'jarSha256': release_hash,
@@ -302,6 +337,7 @@ report = {
     'artifactDiff': 'ARTIFACT-DIFF.json' if ARTIFACT_DIFF else None,
     'sourceRebuild': 'SOURCE-REBUILD.json' if SOURCE_REBUILD else None,
     'sideMouseRegression': 'qa/regressions/1.0.7-side-mouse-editor-close',
+    'upstreamRegression': 'qa/regressions/1.0.8-upstream-2026-11', 'audit': 'AUDIT-2026-11-08.md',
     'apiAudit': 'buildprint-api-audit.json',
     'sourceFiles': {str(path.relative_to(SOURCE)): sha256(path) for path in sorted(source_files)},
     'verification': 'QA.md', 'published': False, 'installedIntoUserProfile': False,
@@ -317,7 +353,7 @@ if index_path.is_file() and RELEASE.is_relative_to(WORKSPACE) and not REVIEW_DAT
         'loader': 'Fabric', 'id': 'hotkey_wheel', 'version': VERSION,
         'family': 'Hotkey Wheel', 'component': 'Main Plugin', 'source': 'Minecraft/hotkey-wheel',
         'new': str((RELEASE / JAR_NAME).relative_to(WORKSPACE)),
-        'status': (f'Local original client release; {total_assertions} passing assertions across minimal, integrated, '
+        'status': (f'Local original client release; {total_assertions} passing assertions across minimal, integrated, standalone Tool Pouch, '
                    'Vanilla++, BRBR native and Polymer profiles; selection-editor camera/input return, contextual Tool Pouch radial, '
                    'Buildprint menu return, main-menu settings, and Controlling verified.'),
         'verification': str((RELEASE / 'BUILD-REPORT.json').relative_to(WORKSPACE)),

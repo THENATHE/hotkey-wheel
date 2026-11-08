@@ -1,5 +1,6 @@
 from pathlib import Path
 import hashlib
+import io
 import json
 import os
 import shutil
@@ -26,6 +27,7 @@ BUILDPRINT_VERSION = '0.1.16+26.x' if LEGACY else '0.1.17+26.x' if BASELINE else
 BLOCKTONE_VERSION = '0.1.20' if LEGACY else '0.1.23' if BASELINE or PREVIOUS else '0.1.38'
 SUITE_VERSION = os.environ.get('HOTKEY_WHEEL_SUITE_VERSION', '1.4.5+26.3')
 TOOLPOUCH_VERSION = os.environ.get('HOTKEY_WHEEL_TOOLPOUCH_VERSION', '1.2.0+26.3')
+SUITE_TOOLPOUCH_VERSION = None
 BRBR_VERSION = os.environ.get('HOTKEY_WHEEL_BRBR_VERSION', '1.11.7+26.3')
 POLYMER_VERSION = os.environ.get('HOTKEY_WHEEL_POLYMER_VERSION', '0.18.2+26.3')
 WORKSPACE = ROOT.parents[2]
@@ -70,6 +72,13 @@ if SUITE:
             raise SystemExit(f'Unexpected integration mod ID in {source}: {metadata["id"]}')
         if mod_id == 'vpp_mod_suite':
             SUITE_VERSION = metadata['version']
+            # The suite bundles its own Tool Pouch; the Tool Pouch fixture checks that exact version.
+            with zipfile.ZipFile(source) as archive:
+                nested = [name for name in archive.namelist() if name.startswith('META-INF/jars/toolpouch-fabric-')]
+                if len(nested) != 1:
+                    raise SystemExit(f'Expected one nested Tool Pouch in {source}; found {len(nested)}')
+                with zipfile.ZipFile(io.BytesIO(archive.read(nested[0]))) as toolpouch:
+                    SUITE_TOOLPOUCH_VERSION = json.loads(toolpouch.read('fabric.mod.json'))['version']
         else:
             BRBR_VERSION = metadata['version']
         shutil.copy2(source, MODS / source.name)
@@ -207,6 +216,9 @@ with zipfile.ZipFile(MODS / 'hotkey-wheel-qa.jar', 'w', zipfile.ZIP_DEFLATED) as
 (GAME / 'options.txt').write_text('onboardAccessibility:false\nrenderDistance:2\nsimulationDistance:5\n'
                                   'guiScale:2\ntutorialStep:none\nmaxFps:60\npauseOnLostFocus:false\nfullscreen:false\n')
 (RUN / 'results.json').unlink(missing_ok=True)
+(RUN / 'callback-order.json').unlink(missing_ok=True)
+if (GAME / '.mixin.out').exists():
+    shutil.rmtree(GAME / '.mixin.out')
 for name in ['key-management-results.json', 'buildprint-menu-results.json', 'toolpouch-results.json', 'brbr-integration-results.json', 'side-mouse-editor-results.json']:
     (RUN / name).unlink(missing_ok=True)
 command = [str(compiler.parent / 'java'), '-Xmx2G', '-XX:ActiveProcessorCount=4',
@@ -214,7 +226,7 @@ command = [str(compiler.parent / 'java'), '-Xmx2G', '-XX:ActiveProcessorCount=4'
            '-Dfabric.client.gametest', '-Dfabric.client.gametest.timeout=2400',
            '-Dwheel.qa.root=' + str(RUN), '-Dwheel.qa.suite.version=' + SUITE_VERSION,
            '-Dwheel.qa.brbr.version=' + BRBR_VERSION, '-Dwheel.qa.blocktone=' + str(BLOCKTONE).lower(),
-           '-Dwheel.qa.toolpouch.version=' + (TOOLPOUCH_VERSION.split('+')[0] if TOOLPOUCH else '1.1.10'),
+           '-Dwheel.qa.toolpouch.version=' + (TOOLPOUCH_VERSION.split('+')[0] if TOOLPOUCH else SUITE_TOOLPOUCH_VERSION or ''),
            '-Dfabric.log.disableAnsi=true',
            '-cp', os.pathsep.join(map(str, classpath)), 'net.fabricmc.loader.impl.launch.knot.KnotClient',
            '--gameDir', str(GAME), '--version', '26.3', '--username', 'WheelQA', '--accessToken', '0',
@@ -223,7 +235,7 @@ if os.environ.get('HOTKEY_WHEEL_QA_EXPORT') == 'true':
     command.insert(1, '-Dmixin.debug.export=true')
 (RUN / 'provenance.json').write_text(json.dumps({
     'minecraft': '26.3', 'loader': '0.19.5', 'integrated': INTEGRATED, 'suite': SUITE, 'polymer': POLYMER,
-    'toolpouch_standalone': TOOLPOUCH_VERSION if TOOLPOUCH else None,
+    'toolpouch_standalone': TOOLPOUCH_VERSION if TOOLPOUCH else None, 'suite_toolpouch': SUITE_TOOLPOUCH_VERSION,
     'buildprint': BUILDPRINT_VERSION if INTEGRATED else None, 'blocktone': BLOCKTONE_VERSION if BLOCKTONE else None,
     'suite_version': SUITE_VERSION if SUITE else None, 'brbr': BRBR_VERSION if SUITE else None,
     'polymer_version': POLYMER_VERSION if POLYMER else None,
@@ -246,6 +258,34 @@ with (RUN / 'console.log').open('w') as log:
         process.wait(timeout=20)
         raise
 print('EXIT', code)
+
+
+def handler_order(class_file, method):
+    # Mixin inlines each @Inject handler as a call at the top of the target method; list them in call order.
+    listing = subprocess.run([str(compiler.parent / 'javap'), '-c', '-p', str(class_file)],
+                             check=True, capture_output=True, text=True).stdout
+    callbacks = []
+    inside = False
+    for line in listing.splitlines():
+        if line.strip().startswith(('public ', 'private ', 'protected ')) or line.strip().startswith(('void ', 'boolean ')):
+            inside = f' {method}(' in line
+            continue
+        if inside and 'invoke' in line and 'handler$' in line:
+            offset = int(line.split(':', 1)[0].strip())
+            callbacks.append({'offset': offset, 'method': line.split('Method ', 1)[1].split(':', 1)[0].split('.')[-1]})
+    return callbacks
+
+
+exported = GAME / '.mixin.out/class/net/minecraft/client'
+if os.environ.get('HOTKEY_WHEEL_QA_EXPORT') == 'true':
+    if not (exported / 'MouseHandler.class').is_file() or not (exported / 'KeyboardHandler.class').is_file():
+        raise SystemExit('Mixin export did not write the transformed input handlers')
+    (RUN / 'callback-order.json').write_text(json.dumps({
+        'transformed_mouse_handler_sha256': hashlib.sha256((exported / 'MouseHandler.class').read_bytes()).hexdigest(),
+        'transformed_keyboard_handler_sha256': hashlib.sha256((exported / 'KeyboardHandler.class').read_bytes()).hexdigest(),
+        'onButton_callbacks': handler_order(exported / 'MouseHandler.class', 'onButton'),
+        'keyPress_callbacks': handler_order(exported / 'KeyboardHandler.class', 'keyPress'),
+    }, indent=2))
 print((RUN / 'console.log').read_text()[-5000:])
 report_names = {'WheelClientTest': 'results.json', 'KeyManagementTest': 'key-management-results.json',
                 'BuildprintMenuTest': 'buildprint-menu-results.json', 'ToolPouchClientTest': 'toolpouch-results.json',
