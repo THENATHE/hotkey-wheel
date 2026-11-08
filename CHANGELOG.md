@@ -1,6 +1,13 @@
 # Changes
 
+## 1.0.10+26.3
+
+- Fix: on a multiplayer server where Buildprint first asks whether the editor uses freecam or the player's camera, the editor started from the answer now belongs to the wheel that opened it, so the original opener closes it. Pressing the opener while the question is shown closes the question. Escape still cancels it, and editors opened with Buildprint's own key stay independent.
+- QA joins a real dedicated 26.3 server, started in the test JVM, where the question appears. See [QA.md](QA.md).
+
 ## 1.0.9+26.3
+
+Packaged locally but never published; 1.0.10 includes all of its changes.
 
 - Built against Buildprint 0.1.38+26.3, Tool Pouch 1.2.0+26.3 and Fabric API 0.165.2+26.3. The requirements stay at Fabric API 0.161.0 or newer, Tool Pouch 1.1.10 or newer, and any Buildprint with the existing fallbacks.
 - Fix: a wheel bound to a key that Buildprint 0.1.38 reserves in the editor, such as C or E, now closes the editor it opened. Buildprint's own shortcuts are unchanged in editors the wheel did not open.

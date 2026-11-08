@@ -187,6 +187,9 @@ if INTEGRATED:
     test_names.append('BuildprintMenuTest')
     if BUILDPRINT_VERSION == CURRENT_BUILDPRINT:
         test_names.append('SideMouseEditorTest')
+        # Joins a dedicated server started in the same JVM, so it runs once, in the integrated profile.
+        if not SUITE and not TOOLPOUCH:
+            test_names.append('ServerCameraChoiceTest')
 if SUITE:
     test_names += ['ToolPouchClientTest', 'BrbrIntegrationTest']
 if TOOLPOUCH:
@@ -215,13 +218,19 @@ with zipfile.ZipFile(MODS / 'hotkey-wheel-qa.jar', 'w', zipfile.ZIP_DEFLATED) as
         archive.write(source, source.relative_to(classes))
 (GAME / 'options.txt').write_text('onboardAccessibility:false\nrenderDistance:2\nsimulationDistance:5\n'
                                   'guiScale:2\ntutorialStep:none\nmaxFps:60\npauseOnLostFocus:false\nfullscreen:false\n')
+if 'ServerCameraChoiceTest' in test_names:
+    # The in-process dedicated server needs an accepted EULA, as in the workspace's other local test servers.
+    (GAME / 'eula.txt').write_text('eula=true\n')
+    if (GAME / 'world').exists():
+        shutil.rmtree(GAME / 'world')
 (RUN / 'results.json').unlink(missing_ok=True)
 (RUN / 'callback-order.json').unlink(missing_ok=True)
 if (GAME / '.mixin.out').exists():
     shutil.rmtree(GAME / '.mixin.out')
-for name in ['key-management-results.json', 'buildprint-menu-results.json', 'toolpouch-results.json', 'brbr-integration-results.json', 'side-mouse-editor-results.json']:
+for name in ['key-management-results.json', 'buildprint-menu-results.json', 'toolpouch-results.json', 'brbr-integration-results.json',
+             'side-mouse-editor-results.json', 'server-camera-results.json']:
     (RUN / name).unlink(missing_ok=True)
-command = [str(compiler.parent / 'java'), '-Xmx2G', '-XX:ActiveProcessorCount=4',
+command = [str(compiler.parent / 'java'), '-Xmx3G' if 'ServerCameraChoiceTest' in test_names else '-Xmx2G', '-XX:ActiveProcessorCount=4',
            '-Djava.library.path=' + str(META / 'natives/26.3-0.19.5/lwjgl/3.4.3-snapshot/x64'),
            '-Dfabric.client.gametest', '-Dfabric.client.gametest.timeout=2400',
            '-Dwheel.qa.root=' + str(RUN), '-Dwheel.qa.suite.version=' + SUITE_VERSION,
@@ -289,7 +298,8 @@ if os.environ.get('HOTKEY_WHEEL_QA_EXPORT') == 'true':
 print((RUN / 'console.log').read_text()[-5000:])
 report_names = {'WheelClientTest': 'results.json', 'KeyManagementTest': 'key-management-results.json',
                 'BuildprintMenuTest': 'buildprint-menu-results.json', 'ToolPouchClientTest': 'toolpouch-results.json',
-                'BrbrIntegrationTest': 'brbr-integration-results.json', 'SideMouseEditorTest': 'side-mouse-editor-results.json'}
+                'BrbrIntegrationTest': 'brbr-integration-results.json', 'SideMouseEditorTest': 'side-mouse-editor-results.json',
+                'ServerCameraChoiceTest': 'server-camera-results.json'}
 reports = [report_names[name] for name in test_names]
 for name in reports:
     path = RUN / name

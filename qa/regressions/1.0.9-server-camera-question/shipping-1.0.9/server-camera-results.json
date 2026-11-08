@@ -1,0 +1,20 @@
+{
+  "checks": [
+    "Wheel 1 slot 1 holds Buildprint\u0027s editor control",
+    "Client is connected to a dedicated server, not a singleplayer world",
+    "This server has no remembered camera answer",
+    "Editor opening starts from ordinary gameplay",
+    "Holding G opens wheel 1",
+    "First editor opening on a server shows Buildprint\u0027s camera question",
+    "The editor waits for the camera answer",
+    "Camera question offers the free camera",
+    "Choosing the free camera starts the editor",
+    "The answered session uses freecam"
+  ],
+  "scenarios": [
+    "first wheel opening on a new server, free camera answer"
+  ],
+  "server": "localhost:25565",
+  "passed": false,
+  "failure": "java.lang.AssertionError: The wheel opener closes the editor started from the camera question"
+}

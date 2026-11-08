@@ -6,11 +6,15 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import org.slf4j.LoggerFactory;
 
 /** Selection editing is a freecam session, with no Screen to serve as its parent. */
 final class BuildprintEditorReturn {
     private static final String CONTROL = "key.buildprint.editor";
+    private static final int OPEN_TIMEOUT_TICKS = 4;
+    private static final String CAMERA_CHOICE_DIALOG = "com.voxelsprout.common.ui.settings.KitChoiceDialog";
+    private static final String CAMERA_CHOICE_TITLE = "voxelsprout_controls.camera.title";
     private static PendingEditor pending;
     private static Object session;
     private static InputConstants.Key opener;
@@ -33,7 +37,7 @@ final class BuildprintEditorReturn {
             return;
         }
         clearOwnership();
-        pending = new PendingEditor(wheelOpener, editorSession(), ticks + 4);
+        pending = new PendingEditor(wheelOpener, editorSession(), ticks + OPEN_TIMEOUT_TICKS);
     }
 
     static void tick(Minecraft client) {
@@ -45,7 +49,11 @@ final class BuildprintEditorReturn {
         }
         if (pending == null && session == null) return;
         Object current = editorSession();
-        if (pending != null) {
+        Screen screen = client.gui.screen();
+        if (pending != null && current == null && isCameraChoice(screen)) {
+            // The editor starts only after the player answers, so the claim waits while the question is shown.
+            pending = new PendingEditor(pending.opener(), pending.previousSession(), ticks + OPEN_TIMEOUT_TICKS);
+        } else if (pending != null) {
             if (ticks > pending.expires() || pending.previousSession() != null && current == null) {
                 pending = null;
             } else if (current != null && current != pending.previousSession()) {
@@ -54,7 +62,6 @@ final class BuildprintEditorReturn {
                 pending = null;
             }
         }
-        Screen screen = client.gui.screen();
         if (session != null && (current != session || screen != null
                 && !(screen instanceof WheelScreen) && !WheelMenuReturn.isEditorMenu(screen))) clearOwnership();
     }
@@ -68,6 +75,14 @@ final class BuildprintEditorReturn {
         if (!WheelConfig.get().closeBuildprintWithWheelKey || !client.isWindowActive()) {
             clear();
             return false;
+        }
+        if (action == InputConstants.PRESS && pending != null && key.equals(pending.opener())
+                && isCameraChoice(client.gui.screen())) {
+            // Like other wheel-opened menus, the original opener closes the question; no editor starts.
+            consumedKey = key;
+            pending = null;
+            client.gui.screen().onClose();
+            return true;
         }
         if (action != InputConstants.PRESS || session == null || !key.equals(opener)
                 || client.gui.screen() instanceof WheelScreen) return false;
@@ -95,6 +110,13 @@ final class BuildprintEditorReturn {
                     ? BuildprintApiIntegration.closeEditor() : NativeEditor.exit(client);
             if (closed) clearOwnership();
         }
+    }
+
+    /** Buildprint 0.1.38 asks once per server whether the editor uses freecam or the player's camera. */
+    private static boolean isCameraChoice(Screen screen) {
+        return screen != null && screen.getClass().getName().equals(CAMERA_CHOICE_DIALOG)
+                && screen.getTitle().getContents() instanceof TranslatableContents title
+                && title.getKey().equals(CAMERA_CHOICE_TITLE);
     }
 
     private static Object editorSession() {

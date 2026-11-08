@@ -103,7 +103,9 @@ final class BuildprintApiIntegration {
                 BuildprintEditorReturn.clear();
             } else {
                 if (!openApi) return false;
-                if (!PublicLifecycle.open()) BuildprintEditorReturn.clear();
+                // open() is false while Buildprint asks a server's first camera question; the pending
+                // claim then waits for the answer and otherwise expires after a few ticks.
+                PublicLifecycle.open();
             }
         } catch (RuntimeException | LinkageError failure) {
             lifecycleFailed = true;

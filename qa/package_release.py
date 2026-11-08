@@ -37,10 +37,12 @@ ARTIFACT_DIFF = os.environ.get('HOTKEY_WHEEL_ARTIFACT_DIFF')
 SOURCE_REBUILD = os.environ.get('HOTKEY_WHEEL_SOURCE_REBUILD')
 SIDE_MOUSE_REGRESSION = SOURCE / 'qa/regressions/1.0.7-side-mouse-editor-close'
 UPSTREAM_REGRESSION = SOURCE / 'qa/regressions/1.0.8-upstream-2026-11'
+SERVER_REGRESSION = SOURCE / 'qa/regressions/1.0.9-server-camera-question'
 BUILDPRINT_VERSION = '0.1.38+26.3'
 REPORTS = {
     'minimal': ['results.json', 'key-management-results.json'],
-    'integrated': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json'],
+    'integrated': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json',
+                   'server-camera-results.json'],
     'toolpouch': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json', 'toolpouch-results.json'],
     'suite': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json', 'toolpouch-results.json', 'brbr-integration-results.json'],
     'suite-polymer': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json', 'toolpouch-results.json', 'brbr-integration-results.json'],
@@ -104,6 +106,13 @@ for attempt, report_name, failure in [
     require(result.get('passed') is False and failure in result.get('failure', ''),
             f'{attempt}: baseline does not show the expected failure')
     require(provenance['mods'].get('hotkey-wheel-1.0.8+26.3.jar') == SHIPPED_1_0_8, f'{attempt}: baseline did not use shipped 1.0.8')
+# Unpublished 1.0.9 must fail the dedicated-server camera question that 1.0.10 fixes.
+UNPUBLISHED_1_0_9 = 'b3f6fcf41e0ee23728515434caada70ec2eea92f0ac448b0e06e24e6c8a12c0f'
+result = json.loads((SERVER_REGRESSION / 'shipping-1.0.9/server-camera-results.json').read_text())
+provenance = json.loads((SERVER_REGRESSION / 'shipping-1.0.9/provenance.json').read_text())
+require(result.get('passed') is False and 'closes the editor started from the camera question' in result.get('failure', '')
+        and provenance['mods'].get('hotkey-wheel-1.0.9+26.3.jar') == UNPUBLISHED_1_0_9,
+        'Unpublished 1.0.9 baseline does not show the server camera-question failure')
 if SOURCE_REBUILD:
     rebuild = json.loads(Path(SOURCE_REBUILD).read_text())
     require(rebuild.get('passed') is True and rebuild.get('compile_from_exported_source') is True,
@@ -219,6 +228,9 @@ for mode, names in REPORTS.items():
                 require(result.get('polymer') == provenance.get('polymer_version'), f'{mode}: unexpected Polymer version')
         if name == 'brbr-integration-results.json':
             require(result.get('brbr') == provenance.get('brbr'), f'{mode}: unexpected BRBR version')
+        if name == 'server-camera-results.json':
+            require(len(result.get('scenarios', [])) == 6, f'{mode}: dedicated-server camera scenarios are incomplete')
+            require(result.get('server'), f'{mode}: camera-question test did not record its dedicated server')
         if name == 'side-mouse-editor-results.json':
             require(result.get('opener') == 'key.mouse.4', f'{mode}: side-mouse regression did not use the reported opener')
             require(isinstance(result.get('input_path'), str) and 'native mouse callbacks' in result['input_path'],
@@ -282,7 +294,8 @@ source_files = [SOURCE / name for name in [
     'qa/upstream-inputs.json']]
 source_files += list((SOURCE / 'qa').glob('*Test.java'))
 # Console logs stay local; they are ignored by Git and not part of the public archives.
-regression_files = sorted(path for path in [*SIDE_MOUSE_REGRESSION.rglob('*'), *UPSTREAM_REGRESSION.rglob('*')]
+regression_files = sorted(path for path in [*SIDE_MOUSE_REGRESSION.rglob('*'), *UPSTREAM_REGRESSION.rglob('*'),
+                                            *SERVER_REGRESSION.rglob('*')]
                           if path.is_file() and path.suffix != '.log')
 require(not any(path.suffix in ('.class', '.jar') for path in regression_files),
         'Regression source/evidence must not redistribute exported classes or mod JARs')
@@ -342,6 +355,7 @@ report = {
     'sourceRebuild': 'SOURCE-REBUILD.json' if SOURCE_REBUILD else None,
     'sideMouseRegression': 'qa/regressions/1.0.7-side-mouse-editor-close',
     'upstreamRegression': 'qa/regressions/1.0.8-upstream-2026-11', 'audit': 'AUDIT-2026-11-08.md',
+    'serverCameraRegression': 'qa/regressions/1.0.9-server-camera-question',
     'apiAudit': 'buildprint-api-audit.json',
     'sourceFiles': {str(path.relative_to(SOURCE)): sha256(path) for path in sorted(source_files)},
     'verification': 'QA.md', 'published': False, 'installedIntoUserProfile': False,

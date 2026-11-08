@@ -1,14 +1,14 @@
-# Hotkey Wheel 1.0.9+26.3
+# Hotkey Wheel 1.0.10+26.3
 
 <img src="src/main/resources/assets/hotkey_wheel/icon.png" alt="Hotkey Wheel radial icon" width="128">
 
 A client-side Fabric mod for Minecraft Java 26.3. Create up to three radial menus with separate opening keys, assign Minecraft or registered mod controls, and choose floating block/item icons. Hold or toggle a wheel, select by dragging from the center, and cycle wheels without releasing the original opener.
 
-Version 1.0.9 updates the integrations to Buildprint 0.1.38 and Tool Pouch 1.2.0. Buildprint 0.1.38 reserves more keys inside its editor, for example C and E. A wheel bound to one of those keys now closes the editor it opened. Tool Pouch's disabled slots are respected, and an unreadable settings file is now kept as a copy instead of being replaced on the next Save. Existing 1.0.8 settings and key bindings load unchanged. Verified with Vanilla++ 1.5.0, Buildprint 0.1.38 and Blocktone 0.1.38. [AUDIT-2026-11-08.md](AUDIT-2026-11-08.md) lists every finding, and [API-MIGRATION.md](API-MIGRATION.md) covers the Buildprint hooks and input ordering.
+Version 1.0.10 updates the integrations to Buildprint 0.1.38 and Tool Pouch 1.2.0. Buildprint 0.1.38 reserves more keys inside its editor, for example C and E. A wheel bound to one of those keys now closes the editor it opened. Tool Pouch's disabled slots are respected, and an unreadable settings file is now kept as a copy instead of being replaced on the next Save. On a multiplayer server, the editor a wheel opens still closes with the original opener when Buildprint first asks which camera to use. Existing 1.0.8 settings and key bindings load unchanged. [AUDIT-2026-11-08.md](AUDIT-2026-11-08.md) lists every finding, and [API-MIGRATION.md](API-MIGRATION.md) covers the Buildprint hooks and input ordering.
 
 ## Install and configure
 
-Requires **Minecraft 26.3**, **Fabric Loader 0.19.5+**, **Java 25+**, and **Fabric API 0.161.0+26.3 or newer for 26.3**. Replace older Hotkey Wheel JARs with `hotkey-wheel-1.0.9+26.3.jar` in your client's `mods` folder, then restart. Install only one Hotkey Wheel version. Servers do not need Hotkey Wheel.
+Requires **Minecraft 26.3**, **Fabric Loader 0.19.5+**, **Java 25+**, and **Fabric API 0.161.0+26.3 or newer for 26.3**. Replace older Hotkey Wheel JARs with `hotkey-wheel-1.0.10+26.3.jar` in your client's `mods` folder, then restart. Install only one Hotkey Wheel version. Servers do not need Hotkey Wheel.
 
 Open **Options → Controls → Key Binds → Wheels…**, or use Hotkey Wheel's settings in Mod Menu. Controlling can search **hotkey wheel** to find the three opening keys, cycle key, and configuration shortcut. Sorted, Buildprint, Blocktone, Tool Pouch, Vanilla++, Controlling, Searchables, and Mod Menu are optional; Hotkey Wheel runs without them.
 
@@ -53,7 +53,7 @@ Enable **Native contextual key uses wheel** to use the same radial when pressing
 
 Closing uses each screen's normal save/cancel rules and commits Buildprint's pending edits. Invalid Blocktone settings can refuse closure and show their normal validation error; correct the fields and press the opener again. Menus opened through native Buildprint shortcuts or other routes retain their normal behavior. The Selection Editor is tracked by its freecam session rather than a screen parent. Its Save dialog can be canceled with the original opener before native editor exit. Public enter/exit events identify modern editor sessions; older Buildprint retains the private freecam fallback. Editors opened through their native binding remain independent; other non-menu controls retain their normal behavior.
 
-Buildprint 0.1.38 uses more raw keys inside the editor, such as C for the camera and the Drop and Inventory keys for switching tools. When a wheel opened the editor, its original opener closes it even if Buildprint uses that key; otherwise Buildprint's shortcuts work as usual. Opening another wheel while the editor is active still follows Buildprint's reserved keys. The walking-camera editor closes the same way as freecam. The first time you open the editor on a multiplayer server, Buildprint asks which camera to use. That one session is not wheel-owned, so close it with Buildprint's editor key; later openings on the server work normally.
+Buildprint 0.1.38 uses more raw keys inside the editor, such as C for the camera and the Drop and Inventory keys for switching tools. When a wheel opened the editor, its original opener closes it even if Buildprint uses that key; otherwise Buildprint's shortcuts work as usual. Opening another wheel while the editor is active still follows Buildprint's reserved keys. The walking-camera editor closes the same way as freecam. The first time you open the editor on a multiplayer server, Buildprint asks which camera to use. When a wheel asked for the editor, the session you start from that question belongs to the wheel, and the original opener closes it. Pressing the opener while the question is shown closes the question instead, and Escape cancels it as usual. Editors opened with Buildprint's own key are never claimed.
 
 ## Compatibility and configuration
 
@@ -93,7 +93,7 @@ See [QA.md](QA.md) for current results, exact versions, and verification boundar
 
 For a standalone checkout, set `HOTKEY_WHEEL_RELEASE_DIR=/path/to/release-folder` when running the packager. Private local crash evidence is copied only when present and is excluded from the public source archive.
 
-The earlier 1.0.7 and 1.0.8 releases keep their own release folders, exact inputs and results. Version 1.0.9 has a separate release folder and repeats the acceptance matrix against its own JAR; [QA.md](QA.md) records the current release's verification.
+The earlier 1.0.7 and 1.0.8 releases keep their own release folders, exact inputs and results. Version 1.0.9 was packaged locally but never published; its folder is kept as it was. Version 1.0.10 has a separate release folder and repeats the acceptance matrix against its own JAR; [QA.md](QA.md) records the current release's verification.
 
 For future documentation-only reviews of an unchanged release, `HOTKEY_WHEEL_REVIEW_DATE` and optional `HOTKEY_WHEEL_REVIEW_QUALIFIER` create a separate review subfolder and explicitly require the original production binary to remain identical. A production fix such as 1.0.8 uses ordinary release packaging instead.
 
