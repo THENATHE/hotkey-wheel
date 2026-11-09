@@ -194,6 +194,9 @@ if SUITE:
     test_names += ['ToolPouchClientTest', 'BrbrIntegrationTest']
 if TOOLPOUCH:
     test_names.append('ToolPouchClientTest')
+# Slot toggles arrived in Tool Pouch 1.2.0; the fixture compiles against its classes.
+if TOOLPOUCH or SUITE and not SUITE_TOOLPOUCH_VERSION.startswith('1.1.'):
+    test_names.append('ToolPouchToggleTest')
 if os.environ.get('HOTKEY_WHEEL_QA_TESTS'):
     test_names = os.environ['HOTKEY_WHEEL_QA_TESTS'].split(',')
     if any(not name.isidentifier() or not (ROOT / (name + '.java')).is_file() for name in test_names):
@@ -228,7 +231,7 @@ if 'ServerCameraChoiceTest' in test_names:
 if (GAME / '.mixin.out').exists():
     shutil.rmtree(GAME / '.mixin.out')
 for name in ['key-management-results.json', 'buildprint-menu-results.json', 'toolpouch-results.json', 'brbr-integration-results.json',
-             'side-mouse-editor-results.json', 'server-camera-results.json']:
+             'side-mouse-editor-results.json', 'server-camera-results.json', 'toolpouch-toggle-results.json']:
     (RUN / name).unlink(missing_ok=True)
 command = [str(compiler.parent / 'java'), '-Xmx3G' if 'ServerCameraChoiceTest' in test_names else '-Xmx2G', '-XX:ActiveProcessorCount=4',
            '-Djava.library.path=' + str(META / 'natives/26.3-0.19.5/lwjgl/3.4.3-snapshot/x64'),
@@ -299,7 +302,7 @@ print((RUN / 'console.log').read_text()[-5000:])
 report_names = {'WheelClientTest': 'results.json', 'KeyManagementTest': 'key-management-results.json',
                 'BuildprintMenuTest': 'buildprint-menu-results.json', 'ToolPouchClientTest': 'toolpouch-results.json',
                 'BrbrIntegrationTest': 'brbr-integration-results.json', 'SideMouseEditorTest': 'side-mouse-editor-results.json',
-                'ServerCameraChoiceTest': 'server-camera-results.json'}
+                'ServerCameraChoiceTest': 'server-camera-results.json', 'ToolPouchToggleTest': 'toolpouch-toggle-results.json'}
 reports = [report_names[name] for name in test_names]
 for name in reports:
     path = RUN / name

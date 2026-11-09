@@ -174,6 +174,12 @@ public final class HotkeyWheelClient implements ClientModInitializer {
         if (pending == null) return;
         PendingAction action = pending;
         pending = null;
+        if (ToolPouchToggles.handles(action.entry().control)) {
+            // A slot toggle is a single switch, so Hold actions also toggle once.
+            releaseActive();
+            ToolPouchToggles.activate(client, action.entry().control);
+            return;
+        }
         KeyMapping control = findControl(action.entry().control);
         if (control == null) {
             client.player.sendSystemMessage(Component.literal("Hotkey Wheel: control is unavailable"));

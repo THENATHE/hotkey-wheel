@@ -89,6 +89,7 @@ public final class ToolPouchClientTest implements FabricClientGameTest {
                 paging(context);
                 pouchLookup(context);
                 if (disabledSlotsComponent() != null) disabledSlots(context);
+                slotToggleSupport(context);
                 if (suite) suiteConfiguration(context);
             }
             report.put("passed", true);
@@ -693,5 +694,21 @@ public final class ToolPouchClientTest implements FabricClientGameTest {
         verifyShulker(context, "Enabled last", Items.EMERALD, 3);
         check(onServer(context, player -> player.getInventory().getItem(4).get(disabledSlotsComponent()).equals(List.of(1))),
                 "Choosing from the item wheel leaves the pouch's disabled slots unchanged");
+    }
+    // Slot toggles need Tool Pouch 1.2.0; with older Tool Pouch, saved toggle slots stay but are unavailable.
+    private void slotToggleSupport(ClientGameTestContext context) {
+        context.runOnClient(client -> {
+            String slot = com.thenathe.hotkeywheel.ToolPouchToggles.SLOT_PREFIX + 2;
+            if (disabledSlotsComponent() != null) {
+                check(com.thenathe.hotkeywheel.ToolPouchToggles.supported(), "Tool Pouch 1.2.0 slot toggles are offered");
+                return;
+            }
+            check(!com.thenathe.hotkeywheel.ToolPouchToggles.supported()
+                            && com.thenathe.hotkeywheel.ToolPouchToggles.choices().isEmpty(),
+                    "Older Tool Pouch offers no slot toggles");
+            check(!com.thenathe.hotkeywheel.ToolPouchToggles.handles(slot)
+                            && com.thenathe.hotkeywheel.ToolPouchToggles.label(slot).equals("Toggle pouch slot 3 (needs Tool Pouch 1.2)"),
+                    "A saved slot toggle is shown as needing Tool Pouch 1.2 instead of being dropped");
+        });
     }
 }

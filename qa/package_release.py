@@ -43,9 +43,12 @@ REPORTS = {
     'minimal': ['results.json', 'key-management-results.json'],
     'integrated': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json',
                    'server-camera-results.json'],
-    'toolpouch': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json', 'toolpouch-results.json'],
-    'suite': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json', 'toolpouch-results.json', 'brbr-integration-results.json'],
-    'suite-polymer': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json', 'toolpouch-results.json', 'brbr-integration-results.json'],
+    'toolpouch': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json', 'toolpouch-results.json',
+                  'toolpouch-toggle-results.json'],
+    'suite': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json', 'toolpouch-results.json', 'brbr-integration-results.json',
+                      'toolpouch-toggle-results.json'],
+    'suite-polymer': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json', 'toolpouch-results.json', 'brbr-integration-results.json',
+                      'toolpouch-toggle-results.json'],
 }
 
 
@@ -228,6 +231,8 @@ for mode, names in REPORTS.items():
                 require(result.get('polymer') == provenance.get('polymer_version'), f'{mode}: unexpected Polymer version')
         if name == 'brbr-integration-results.json':
             require(result.get('brbr') == provenance.get('brbr'), f'{mode}: unexpected BRBR version')
+        if name == 'toolpouch-toggle-results.json':
+            require(result.get('suite') is mode.startswith('suite'), f'{mode}: slot toggle run has the wrong suite state')
         if name == 'server-camera-results.json':
             require(len(result.get('scenarios', [])) == 6, f'{mode}: dedicated-server camera scenarios are incomplete')
             require(result.get('server'), f'{mode}: camera-question test did not record its dedicated server')

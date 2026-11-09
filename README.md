@@ -1,14 +1,14 @@
-# Hotkey Wheel 1.0.10+26.3
+# Hotkey Wheel 1.0.11+26.3
 
 <img src="src/main/resources/assets/hotkey_wheel/icon.png" alt="Hotkey Wheel radial icon" width="128">
 
 A client-side Fabric mod for Minecraft Java 26.3. Create up to three radial menus with separate opening keys, assign Minecraft or registered mod controls, and choose floating block/item icons. Hold or toggle a wheel, select by dragging from the center, and cycle wheels without releasing the original opener.
 
-Version 1.0.10 updates the integrations to Buildprint 0.1.38 and Tool Pouch 1.2.0. Buildprint 0.1.38 reserves more keys inside its editor, for example C and E. A wheel bound to one of those keys now closes the editor it opened. Tool Pouch's disabled slots are respected, and an unreadable settings file is now kept as a copy instead of being replaced on the next Save. On a multiplayer server, the editor a wheel opens still closes with the original opener when Buildprint first asks which camera to use. Existing 1.0.8 settings and key bindings load unchanged. Verified with Vanilla++ 1.5.1, Buildprint 0.1.38 and Blocktone 0.1.38. [AUDIT-2026-11-08.md](AUDIT-2026-11-08.md) lists every finding, and [API-MIGRATION.md](API-MIGRATION.md) covers the Buildprint hooks and input ordering.
+Version 1.0.11 adds Tool Pouch slot toggles as wheel actions. Version 1.0.10 updated the integrations to Buildprint 0.1.38 and Tool Pouch 1.2.0. Buildprint 0.1.38 reserves more keys inside its editor, for example C and E. A wheel bound to one of those keys now closes the editor it opened. Tool Pouch's disabled slots are respected, and an unreadable settings file is now kept as a copy instead of being replaced on the next Save. On a multiplayer server, the editor a wheel opens still closes with the original opener when Buildprint first asks which camera to use. Existing 1.0.8 settings and key bindings load unchanged. Verified with Vanilla++ 1.5.1, Buildprint 0.1.38 and Blocktone 0.1.38. [AUDIT-2026-11-08.md](AUDIT-2026-11-08.md) lists every finding, and [API-MIGRATION.md](API-MIGRATION.md) covers the Buildprint hooks and input ordering.
 
 ## Install and configure
 
-Requires **Minecraft 26.3**, **Fabric Loader 0.19.5+**, **Java 25+**, and **Fabric API 0.161.0+26.3 or newer for 26.3**. Replace older Hotkey Wheel JARs with `hotkey-wheel-1.0.10+26.3.jar` in your client's `mods` folder, then restart. Install only one Hotkey Wheel version. Servers do not need Hotkey Wheel.
+Requires **Minecraft 26.3**, **Fabric Loader 0.19.5+**, **Java 25+**, and **Fabric API 0.161.0+26.3 or newer for 26.3**. Replace older Hotkey Wheel JARs with `hotkey-wheel-1.0.11+26.3.jar` in your client's `mods` folder, then restart. Install only one Hotkey Wheel version. Servers do not need Hotkey Wheel.
 
 Open **Options → Controls → Key Binds → Wheels…**, or use Hotkey Wheel's settings in Mod Menu. Controlling can search **hotkey wheel** to find the three opening keys, cycle key, and configuration shortcut. Sorted, Buildprint, Blocktone, Tool Pouch, Vanilla++, Controlling, Searchables, and Mod Menu are optional; Hotkey Wheel runs without them.
 
@@ -44,6 +44,14 @@ With **Tool Pouch contextual wheel: ON**, selecting Tool Pouch's **Contextual Op
 The item radial follows Tool Pouch's actual contextual menu: it shows **shulker boxes** normally, or **compatible ammunition** while holding a supported projectile weapon. Other stored tools/items are filtered exactly as the native contextual menu filters them, including pouch slots disabled in Tool Pouch 1.2.0. Selection uses Tool Pouch's normal networking and inventory behavior, with the original stack names, counts, and item data.
 
 **Always click an item to select it**, including after opening from a Hold wheel. Releasing the original opening key leaves the item radial open. The center cancels; right click or Escape cancels. Larger lists use pages of 12 items, with the cycle key, arrows, or scrolling to change pages. The item radial selects by direction outside its edge. If the pouch contents or held weapon change before selection, reopen the radial.
+
+### Tool Pouch slot toggles
+
+Tool Pouch 1.2.0 can switch single pouch slots on and off, and binds those toggles to keys in its own pouch screen. They are not ordinary Minecraft controls, so the control picker lists them separately under **Tool Pouch slot toggles**. Each entry shows the slot's item, whether it is on or off, and its Tool Pouch key. **Toggle pouch Elytra** switches every elytra-like slot in the active pouch together. Selecting a toggle from a wheel uses Tool Pouch's own slot toggle and server message, so the server and the item tooltips stay in step.
+
+A slot toggle works without a Tool Pouch key. With **Unbind normal key** on, Save removes the slot's Tool Pouch key and remembers it; turning the option off, removing the slot or **Restore keys unbound by Hotkey Wheel** puts it back. The elytra toggle covers several slots, so it has no single key to unbind. As with other controls, a wheel key takes precedence over a Tool Pouch toggle key on the same physical key.
+
+Vanilla++ 1.5.1 and earlier had their own **Toggle Tool Pouch Elytra** control. Wheel slots that use it keep their saved setting. While that control exists, the wheel uses it as before; once a newer Vanilla++ removes it, the same slot toggles the pouch elytra through Tool Pouch, and any key Hotkey Wheel remembered for it is kept. With Tool Pouch before 1.2.0, saved slot toggles stay in the wheel and are shown as needing Tool Pouch 1.2.
 
 Enable **Native contextual key uses wheel** to use the same radial when pressing Tool Pouch's normal Contextual Open hotkey outside Hotkey Wheel. This option starts OFF. The radial requires the server's normal Tool Pouch support; Hotkey Wheel reports unavailable actions or empty contextual choices without inventing new pouch behavior. Disabling the contextual integration restores Tool Pouch's normal menu.
 

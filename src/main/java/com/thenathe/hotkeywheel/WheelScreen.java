@@ -27,6 +27,7 @@ public final class WheelScreen extends Screen {
     // Looked up once per wheel instead of every frame; null marks a control that is not registered.
     private List<ItemStack> icons = List.of();
     private List<KeyMapping> controls = List.of();
+    private List<Boolean> pouchToggles = List.of();
 
     public WheelScreen(int index, InputConstants.Key opener, boolean toggleOpen) {
         super(Component.literal("Hotkey Wheel"));
@@ -60,9 +61,11 @@ public final class WheelScreen extends Screen {
         ring = RadialGeometry.ring(innerRadius, radius, entries.size());
         icons = new ArrayList<>(entries.size());
         controls = new ArrayList<>(entries.size());
+        pouchToggles = new ArrayList<>(entries.size());
         for (WheelConfig.Entry entry : entries) {
             icons.add(icon(entry.icon));
             controls.add(HotkeyWheelClient.findControl(entry.control));
+            pouchToggles.add(ToolPouchToggles.handles(entry.control));
         }
     }
 
@@ -154,7 +157,7 @@ public final class WheelScreen extends Screen {
             graphics.pose().scale(scale, scale);
             graphics.fakeItem(icons.get(slot), -8, -8);
             graphics.pose().popMatrix();
-            if (controls.get(slot) == null) graphics.text(font, "!", x + 5, y - 11, 0xffff9999);
+            if (controls.get(slot) == null && !pouchToggles.get(slot)) graphics.text(font, "!", x + 5, y - 11, 0xffff9999);
         }
         drawLine(graphics, centerX, centerY, mouseX, mouseY, selected < 0 ? 0x998a9199 : 0xfff1c56c);
         graphics.fill(centerX - 2, centerY - 2, centerX + 2, centerY + 2, 0xfff1c56c);
@@ -163,7 +166,9 @@ public final class WheelScreen extends Screen {
         if (selected >= 0) {
             WheelConfig.Entry entry = wheel().entries.get(selected);
             KeyMapping mapping = controls.get(selected);
-            String label = !entry.label.isBlank() ? entry.label : mapping == null ? "Unassigned" : Component.translatable(mapping.getName()).getString();
+            String label = !entry.label.isBlank() ? entry.label
+                    : pouchToggles.get(selected) ? ToolPouchToggles.label(entry.control)
+                    : mapping == null ? "Unassigned" : Component.translatable(mapping.getName()).getString();
             graphics.centeredText(font, font.plainSubstrByWidth(label, width - 24), centerX, centerY + radius + 18, 0xffe6e8ea);
         }
         String cycle = "Cycle wheel: " + HotkeyWheelClient.CYCLE_KEY.getTranslatedKeyMessage().getString();

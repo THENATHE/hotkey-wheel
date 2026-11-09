@@ -1,3 +1,9 @@
+# Hotkey Wheel 1.0.11+26.3 verification
+
+**Status: in progress.** 1.0.11 adds Tool Pouch 1.2.0 slot toggles as wheel actions. Development runs pass with standalone Tool Pouch 1.2.0 and with Vanilla++ 1.5.1, which still registers its own elytra toggle. A run with Vanilla++ 1.4.5 (Tool Pouch 1.1.10) shows clean degradation. The release matrix waits for the Vanilla++ 1.5.2 candidate, which removes the suite's elytra control. The 1.0.10 results below remain the last accepted release.
+
+Development results, not release evidence: `ToolPouchToggleTest` passes 40 checks with standalone Tool Pouch 1.2.0 and 35 with Vanilla++ 1.5.1. With the suite, its elytra mapping is present and the migration checks take the suite's own path. `ToolPouchClientTest` passes 180 with standalone Tool Pouch and 195 with Vanilla++ 1.5.1. The Tool Pouch 1.1.10 run is in `qa/regressions/1.0.11-toolpouch-1.1.10-degrade/`.
+
 # Hotkey Wheel 1.0.10+26.3 verification
 
 **Status: release verified.** The exact release JAR passes every profile with the supported versions of all three integrations: Vanilla++ Quality of Life Suite 1.5.1+26.3, Buildprint 0.1.38+26.3 and Blocktone for Buildprint 0.1.38. It also passes with a dedicated server, standalone Tool Pouch 1.2.0, BRBR 1.11.8 and Polymer 0.18.7. 1.0.9 was packaged locally but never published; its folder and records are kept as they were.

@@ -19,7 +19,9 @@ import org.slf4j.LoggerFactory;
 public final class WheelBindings {
     private WheelBindings() {}
 
-    public record Plan(WheelConfig configuration, Map<KeyMapping, InputConstants.Key> changes) {}
+    /** {@code pouchToggleChanges} maps Tool Pouch slot toggles to their new raw key; UNKNOWN removes it. */
+    public record Plan(WheelConfig configuration, Map<KeyMapping, InputConstants.Key> changes,
+                       Map<String, InputConstants.Key> pouchToggleChanges) {}
 
     public static boolean protectedControl(KeyMapping control) {
         var options = Minecraft.getInstance().options;
@@ -44,8 +46,10 @@ public final class WheelBindings {
         WheelConfig configuration = draft.copy();
         configuration.normalize();
         Set<KeyMapping> wanted = new LinkedHashSet<>();
+        Set<String> wantedPouchToggles = new LinkedHashSet<>();
         for (int index = 0; index < configuration.wheelCount; index++) {
             for (WheelConfig.Entry entry : configuration.wheels.get(index).entries) {
+                if (entry.unbindKey && ToolPouchToggles.canUnbind(entry.control)) wantedPouchToggles.add(entry.control);
                 KeyMapping control = HotkeyWheelClient.findControl(entry.control);
                 if (entry.unbindKey && control != null && !control.getName().startsWith("key.hotkey_wheel.")
                         && (!configuration.safeMode || !protectedControl(control))) {
@@ -55,7 +59,19 @@ public final class WheelBindings {
         }
 
         Map<KeyMapping, InputConstants.Key> changes = new LinkedHashMap<>();
+        Map<String, InputConstants.Key> pouchToggleChanges = new LinkedHashMap<>();
         for (String name : new ArrayList<>(configuration.managedBindings.keySet())) {
+            if (ToolPouchToggles.canUnbind(name)) {
+                // Slot toggle keys are restored the same way as key mappings, in Tool Pouch's settings.
+                if (wantedPouchToggles.contains(name)) continue;
+                String previous = configuration.managedBindings.get(name);
+                if (ToolPouchToggles.boundKey(name) == null && previous != null) {
+                    InputConstants.Key original = InputConstants.getKey(previous);
+                    if (!original.equals(InputConstants.UNKNOWN)) pouchToggleChanges.put(name, original);
+                }
+                configuration.managedBindings.remove(name);
+                continue;
+            }
             KeyMapping control = HotkeyWheelClient.findControl(name);
             if (control == null || wanted.contains(control)) continue;
             String previous = configuration.managedBindings.get(name);
@@ -72,7 +88,13 @@ public final class WheelBindings {
             configuration.managedBindings.put(control.getName(), control.saveString());
             changes.put(control, InputConstants.UNKNOWN);
         }
-        return new Plan(configuration, changes);
+        for (String name : wantedPouchToggles) {
+            InputConstants.Key bound = ToolPouchToggles.boundKey(name);
+            if (bound == null) continue;
+            configuration.managedBindings.put(name, bound.getName());
+            pouchToggleChanges.put(name, InputConstants.UNKNOWN);
+        }
+        return new Plan(configuration, changes, pouchToggleChanges);
     }
 
     public static String save(WheelConfig draft, InputConstants.Key[] wheelKeys) {
@@ -98,6 +120,8 @@ public final class WheelBindings {
         for (int index = 0; index < wheelKeys.length; index++) changes.put(wheelKey(index), wheelKeys[index]);
         Map<KeyMapping, InputConstants.Key> previousKeys = new LinkedHashMap<>();
         for (KeyMapping mapping : changes.keySet()) previousKeys.put(mapping, InputConstants.getKey(mapping.saveString()));
+        Map<String, InputConstants.Key> previousPouchKeys = new LinkedHashMap<>();
+        for (String toggle : plan.pouchToggleChanges().keySet()) previousPouchKeys.put(toggle, ToolPouchToggles.boundKey(toggle));
 
         // Persist recovery bindings before removing ordinary controls from options.txt.
         if (!WheelConfig.save(plan.configuration())) return "Could not save. Your changes are kept here; check the game log.";
@@ -111,10 +135,26 @@ public final class WheelBindings {
                     throw new IOException("Key binding was not saved: " + mapping.getName());
                 }
             }
+            plan.pouchToggleChanges().forEach((toggle, key) ->
+                    ToolPouchToggles.bind(toggle, key.equals(InputConstants.UNKNOWN) ? null : key));
+            for (var change : plan.pouchToggleChanges().entrySet()) {
+                InputConstants.Key bound = ToolPouchToggles.boundKey(change.getKey());
+                boolean removed = change.getValue().equals(InputConstants.UNKNOWN);
+                if (removed ? bound != null : !change.getValue().equals(bound)) {
+                    throw new IOException("Tool Pouch slot toggle key was not saved: " + change.getKey());
+                }
+            }
             return "";
         } catch (Exception failure) {
             previousKeys.forEach(KeyMapping::setKey);
             KeyMapping.resetMapping();
+            previousPouchKeys.forEach((toggle, key) -> {
+                try {
+                    ToolPouchToggles.bind(toggle, key);
+                } catch (RuntimeException restoreFailure) {
+                    LoggerFactory.getLogger("hotkey-wheel").error("Cannot restore Tool Pouch key for {}", toggle, restoreFailure);
+                }
+            });
             boolean restoredConfiguration = WheelConfig.save(previousConfiguration);
             try { restoreOptions(optionsPath, originalOptions); }
             catch (IOException restoreFailure) {

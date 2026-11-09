@@ -170,12 +170,13 @@ public final class WheelEditorScreen extends Screen {
             WheelConfig.Entry entry = wheel().entries.get(selectedSlot);
             caption("Selected slot " + (selectedSlot + 1), offset, WheelUi.GOLD);
             offset += 14;
-            String controlName = entry.control.isBlank() ? "Choose a control" : Component.translatable(entry.control).getString();
+            String controlName = entry.control.isBlank() ? "Choose a control" : ToolPouchToggles.label(entry.control);
             contentButton("Control: " + controlName, offset, panelWidth, left, button -> {
                 minecraft.gui.setScreen(new ControlPickerScreen(this, control -> entry.control = control));
-            }, "Choose a standard Minecraft control or a control registered by an installed mod.");
+            }, "Choose a standard Minecraft control, a control registered by an installed mod, or a Tool Pouch slot toggle.");
             offset += 26;
             KeyMapping control = HotkeyWheelClient.findControl(entry.control);
+            boolean pouchToggle = ToolPouchToggles.handles(entry.control);
             boolean protectedKey = draft.safeMode && control != null && WheelBindings.protectedControl(control);
             String unbindLabel = protectedKey ? "Unbind normal key: Protected by safe mode"
                     : "Unbind normal key: " + (entry.unbindKey ? "ON (on Save)" : "OFF");
@@ -183,7 +184,8 @@ public final class WheelEditorScreen extends Screen {
                 entry.unbindKey = !entry.unbindKey;
                 rebuildWidgets();
             }, "Remove only this control's ordinary key after Save. The wheel still activates it. Its original key is remembered and restored when you turn this off, remove the slot, or disable the wheel. Other controls sharing the key stay bound.");
-            unbind.active = control != null && !protectedKey;
+            // Tool Pouch keeps slot toggle keys in its own settings; the elytra toggle covers several slots.
+            unbind.active = control != null && !protectedKey || pouchToggle && ToolPouchToggles.canUnbind(entry.control);
             offset += 26;
             contentButton("Choose block / item icon…", offset, panelWidth, left, button -> {
                 minecraft.gui.setScreen(new IconPickerScreen(this, entry.icon, icon -> entry.icon = icon));
@@ -266,7 +268,7 @@ public final class WheelEditorScreen extends Screen {
     private static String entryName(WheelConfig.Entry entry) {
         if (!entry.label.isBlank()) return entry.label;
         if (entry.control.isBlank()) return "Choose a control";
-        return Component.translatable(entry.control).getString();
+        return ToolPouchToggles.label(entry.control);
     }
 
     private void moveSlot(int direction) {

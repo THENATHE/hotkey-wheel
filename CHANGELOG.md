@@ -1,5 +1,12 @@
 # Changes
 
+## 1.0.11+26.3
+
+- Tool Pouch 1.2.0 slot toggles can be chosen as wheel actions. Each shows its item, on/off state and Tool Pouch key. **Toggle pouch Elytra** switches all elytra-like pouch slots. Toggles use Tool Pouch's own slot toggle and server message.
+- **Unbind normal key** also works for single-slot toggles: Save removes and remembers the slot's Tool Pouch key, and restoring puts it back.
+- Wheel slots saved with Vanilla++'s **Toggle Tool Pouch Elytra** control keep working. When a newer Vanilla++ removes that control, they toggle the pouch elytra through Tool Pouch. The saved setting and any remembered key are kept unchanged.
+- With Tool Pouch before 1.2.0, saved slot toggles stay in the wheel and are shown as needing Tool Pouch 1.2.
+
 ## 1.0.10+26.3
 
 - Fix: on a multiplayer server where Buildprint first asks whether the editor uses freecam or the player's camera, the editor started from the answer now belongs to the wheel that opened it, so the original opener closes it. Pressing the opener while the question is shown closes the question. Escape still cancels it, and editors opened with Buildprint's own key stay independent.

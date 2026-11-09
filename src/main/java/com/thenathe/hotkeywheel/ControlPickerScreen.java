@@ -2,7 +2,6 @@ package com.thenathe.hotkeywheel;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -21,8 +20,8 @@ public final class ControlPickerScreen extends Screen {
     private final Screen parent;
     private final Consumer<String> accepted;
     private final List<AbstractWidget> resultWidgets = new ArrayList<>();
-    private List<KeyMapping> catalog;
-    private List<KeyMapping> filtered = List.of();
+    private List<Option> catalog;
+    private List<Option> filtered = List.of();
     private String query = "";
     private int page;
     private int left;
@@ -30,6 +29,9 @@ public final class ControlPickerScreen extends Screen {
     private int rows;
     private Button previous;
     private Button next;
+
+    // Key mappings and Tool Pouch slot toggles, which Tool Pouch binds to raw keys instead of key mappings.
+    private record Option(String control, String name, String category, String key) {}
 
     public ControlPickerScreen(Screen parent, Consumer<String> accepted) {
         super(Component.literal("Choose a control"));
@@ -43,10 +45,16 @@ public final class ControlPickerScreen extends Screen {
         panelWidth = Math.min(560, width - 40);
         left = (width - panelWidth) / 2;
         rows = Math.max(1, (height - 126) / 24);
-        catalog = Arrays.stream(minecraft.options.keyMappings)
-                .filter(mapping -> !mapping.getName().contains("hotkey_wheel"))
-                .sorted(Comparator.comparing(mapping -> controlName(mapping).toLowerCase(Locale.ROOT)))
-                .toList();
+        List<Option> options = new ArrayList<>();
+        for (KeyMapping mapping : minecraft.options.keyMappings) {
+            if (mapping.getName().contains("hotkey_wheel")) continue;
+            options.add(new Option(mapping.getName(), controlName(mapping), mapping.getCategory().label().getString(),
+                    mapping.getTranslatedKeyMessage().getString()));
+        }
+        for (ToolPouchToggles.Choice choice : ToolPouchToggles.choices()) {
+            options.add(new Option(choice.control(), choice.name(), "Tool Pouch slot toggles", choice.key()));
+        }
+        catalog = options.stream().sorted(Comparator.comparing(option -> option.name().toLowerCase(Locale.ROOT))).toList();
         EditBox search = new EditBox(font, left, 32, panelWidth, 20, Component.literal("Search controls"));
         search.setHint(Component.literal("Search control, category, or key…"));
         search.setMaxLength(128);
@@ -71,11 +79,10 @@ public final class ControlPickerScreen extends Screen {
         return Component.translatable(mapping.getName()).getString();
     }
 
-    private List<KeyMapping> matches() {
+    private List<Option> matches() {
         String needle = query.strip().toLowerCase(Locale.ROOT);
-        return catalog.stream().filter(mapping -> {
-            String searchable = controlName(mapping) + " " + mapping.getName() + " "
-                    + mapping.getCategory().label().getString() + " " + mapping.getTranslatedKeyMessage().getString();
+        return catalog.stream().filter(option -> {
+            String searchable = option.name() + " " + option.control() + " " + option.category() + " " + option.key();
             return searchable.toLowerCase(Locale.ROOT).contains(needle);
         }).toList();
     }
@@ -95,12 +102,11 @@ public final class ControlPickerScreen extends Screen {
         next.active = page < lastPage;
         int first = page * rows;
         for (int index = first; index < Math.min(filtered.size(), first + rows); index++) {
-            KeyMapping mapping = filtered.get(index);
-            String text = controlName(mapping) + " · " + mapping.getTranslatedKeyMessage().getString();
-            String help = controlName(mapping) + "\n" + mapping.getCategory().label().getString()
-                    + "\n" + mapping.getName();
+            Option option = filtered.get(index);
+            String text = option.name() + " · " + option.key();
+            String help = option.name() + "\n" + option.category() + "\n" + option.control();
             Button button = Button.builder(Component.literal(font.plainSubstrByWidth(text, panelWidth - 12)), selected -> {
-                accepted.accept(mapping.getName());
+                accepted.accept(option.control());
                 onClose();
             }).bounds(left, 72 + (index - first) * 24, panelWidth, 20)
                     .tooltip(Tooltip.create(Component.literal(help))).build();
