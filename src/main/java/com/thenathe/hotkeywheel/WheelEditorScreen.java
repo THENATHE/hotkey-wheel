@@ -185,7 +185,9 @@ public final class WheelEditorScreen extends Screen {
                 rebuildWidgets();
             }, "Remove only this control's ordinary key after Save. The wheel still activates it. Its original key is remembered and restored when you turn this off, remove the slot, or disable the wheel. Other controls sharing the key stay bound.");
             // Tool Pouch keeps slot toggle keys in its own settings; the elytra toggle covers several slots.
-            unbind.active = control != null && !protectedKey || pouchToggle && ToolPouchToggles.canUnbind(entry.control);
+            // An option left on for a removed control can still be turned off, which restores its remembered key.
+            unbind.active = control != null && !protectedKey || pouchToggle && ToolPouchToggles.canUnbind(entry.control)
+                    || control == null && entry.unbindKey;
             offset += 26;
             contentButton("Choose block / item icon…", offset, panelWidth, left, button -> {
                 minecraft.gui.setScreen(new IconPickerScreen(this, entry.icon, icon -> entry.icon = icon));

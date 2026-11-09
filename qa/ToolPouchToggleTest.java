@@ -40,6 +40,7 @@ import net.minecraft.world.item.component.ItemContainerContents;
 public final class ToolPouchToggleTest implements FabricClientGameTest {
     private static final String SLOT_ZERO = ToolPouchToggles.SLOT_PREFIX + 0;
     private static final String SPYGLASS_SLOT = ToolPouchToggles.SLOT_PREFIX + 2;
+    private static final List<String> SUITE_ITEMS = List.of("vpp_mod_suite:pouch_magnet", "vpp_mod_suite:pouch_collector", "mapstitch:atlas");
     private final List<String> checks = new ArrayList<>();
     private final boolean suite = FabricLoader.getInstance().isModLoaded("vpp_mod_suite");
     private int toggleKey;
@@ -65,6 +66,7 @@ public final class ToolPouchToggleTest implements FabricClientGameTest {
                 pickerLists(context);
                 wheelTogglesSlot(context);
                 wheelTogglesElytra(context);
+                if (suite) suitePouchItems(context);
                 savedSuiteElytraSlot(context);
                 rawKeysStillWork(context);
                 unbindAndRestore(context);
@@ -103,12 +105,16 @@ public final class ToolPouchToggleTest implements FabricClientGameTest {
             for (int slot = 0; slot < 27; slot++) SlotToggleKeys.bind(slot, null);
             SlotToggleKeys.bind(2, InputConstants.Type.KEYBOARD.getOrCreate(toggleKey));
             suiteElytraMapping = HotkeyWheelClient.findControl(ToolPouchToggles.SUITE_ELYTRA_MAPPING) != null;
-            check(suiteElytraMapping == suite, "The suite's own elytra mapping is registered only when the suite registers it");
+            if (!suite) check(!suiteElytraMapping, "Without Vanilla++ the suite's elytra mapping is absent");
         });
         ItemStack pouch = new ItemStack(ModItems.TOOL_POUCH);
         ItemStack box = new ItemStack(Items.SHULKER_BOX);
         box.set(DataComponents.CUSTOM_NAME, Component.literal("Toggle box"));
-        pouch.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(List.of(new ItemStack(Items.ELYTRA), box, new ItemStack(Items.SPYGLASS))));
+        List<ItemStack> contents = new ArrayList<>(List.of(new ItemStack(Items.ELYTRA), box, new ItemStack(Items.SPYGLASS)));
+        // The suite's pouch upgrades and MapStitch's atlas work from pouch slots and read Tool Pouch's disabled slots.
+        if (suite) for (String id : SUITE_ITEMS) contents.add(new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM
+                .getValue(net.minecraft.resources.Identifier.parse(id))));
+        pouch.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(contents));
         onServer(context, player -> {
             player.getInventory().clearContent();
             player.getInventory().setItem(4, pouch.copy());
@@ -124,8 +130,9 @@ public final class ToolPouchToggleTest implements FabricClientGameTest {
         context.runOnClient(client -> {
             var choices = ToolPouchToggles.choices();
             var controls = choices.stream().map(ToolPouchToggles.Choice::control).toList();
-            check(controls.equals(List.of(ToolPouchToggles.ELYTRA, SLOT_ZERO, ToolPouchToggles.SLOT_PREFIX + 1, SPYGLASS_SLOT)),
-                    "Slot toggles list the elytra toggle and each filled pouch slot: " + controls);
+            List<String> expected = new ArrayList<>(List.of(ToolPouchToggles.ELYTRA, SLOT_ZERO, ToolPouchToggles.SLOT_PREFIX + 1, SPYGLASS_SLOT));
+            if (suite) for (int slot = 3; slot < 3 + SUITE_ITEMS.size(); slot++) expected.add(ToolPouchToggles.SLOT_PREFIX + slot);
+            check(controls.equals(expected), "Slot toggles list the elytra toggle and each filled pouch slot: " + controls);
             var spyglass = choices.get(3);
             check(spyglass.name().equals("Toggle Spyglass (slot 3) · On"), "Slot toggle is labelled with its item and state: " + spyglass.name());
             check(spyglass.key().equals(InputConstants.Type.KEYBOARD.getOrCreate(toggleKey).getDisplayName().getString()),
@@ -162,6 +169,8 @@ public final class ToolPouchToggleTest implements FabricClientGameTest {
     private void wheelTogglesElytra(ClientGameTestContext context) throws Exception {
         select(context, 1);
         check(disabled(context).equals(List.of(0)), "The elytra toggle disables the elytra slot on the server");
+        check(onServer(context, player -> ToolPouchUtil.getItemsFromToolPouch(player, stack -> stack.get(DataComponents.GLIDER) != null).isEmpty()),
+                "Tool Pouch no longer finds a glider for pouch flight while the elytra slot is off");
         context.runOnClient(client -> check(ToolPouchToggles.label(ToolPouchToggles.ELYTRA).equals("Toggle pouch Elytra · Off"),
                 "The elytra toggle label reports Off"));
         select(context, 1);
@@ -189,20 +198,87 @@ public final class ToolPouchToggleTest implements FabricClientGameTest {
                     "The editor labels the old slot as the pouch elytra toggle"));
             select(context, 2);
             check(disabled(context).isEmpty(), "Selecting the old slot again enables the elytra");
-            context.runOnClient(client -> {
-                // 1.0.10 remembered the mapping's key when its slot had Unbind normal key on.
-                WheelConfig config = WheelConfig.get().copy();
-                config.wheels.get(0).entries.get(2).unbindKey = true;
-                config.managedBindings.put(ToolPouchToggles.SUITE_ELYTRA_MAPPING, "key.keyboard.x");
-                check(WheelBindings.save(config, wheelKeys()).isEmpty(), "A 1.0.10 slot with a remembered suite elytra key saves");
-                check("key.keyboard.x".equals(WheelConfig.get().managedBindings.get(ToolPouchToggles.SUITE_ELYTRA_MAPPING)),
-                        "The removed mapping's remembered key is kept for when the mapping returns");
-                config = WheelConfig.get().copy();
-                config.wheels.get(0).entries.get(2).unbindKey = false;
-                config.managedBindings.remove(ToolPouchToggles.SUITE_ELYTRA_MAPPING);
-                check(WheelConfig.save(config), "Remembered suite key fixture cleared");
-            });
+            rememberedSuiteElytraKey(context);
         }
+    }
+
+    // 1.0.10 remembered the mapping's key when its slot had Unbind normal key on; options.txt then had it unbound,
+    // so the suite has nothing to carry over and the wheel holds the only copy.
+    private void rememberedSuiteElytraKey(ClientGameTestContext context) {
+        InputConstants.Key remembered = InputConstants.Type.KEYBOARD.getOrCreate(InputConstants.KEY_X);
+        context.runOnClient(client -> {
+            SlotToggleKeys.bind(0, null);
+            WheelConfig config = WheelConfig.get().copy();
+            config.wheels.get(0).entries.get(2).unbindKey = true;
+            config.managedBindings.put(ToolPouchToggles.SUITE_ELYTRA_MAPPING, remembered.getName());
+            check(WheelBindings.save(config, wheelKeys()).isEmpty(), "A 1.0.10 slot with a remembered suite elytra key saves");
+            check(remembered.getName().equals(WheelConfig.get().managedBindings.get(ToolPouchToggles.SUITE_ELYTRA_MAPPING))
+                    && SlotToggleKeys.getKey(0) == null, "While its option stays on, the remembered key stays remembered and unbound");
+
+            config = WheelConfig.get().copy();
+            config.wheels.get(0).entries.get(2).unbindKey = false;
+            check(WheelBindings.save(config, wheelKeys()).isEmpty(), "Turning the option off saves");
+            check(remembered.equals(SlotToggleKeys.getKey(0)), "The remembered key returns as the elytra slot's Tool Pouch toggle key");
+            check(!WheelConfig.get().managedBindings.containsKey(ToolPouchToggles.SUITE_ELYTRA_MAPPING), "The restored key is no longer remembered");
+
+            InputConstants.Key existing = InputConstants.Type.KEYBOARD.getOrCreate(InputConstants.KEY_Z);
+            SlotToggleKeys.bind(0, existing);
+            config = WheelConfig.get().copy();
+            config.managedBindings.put(ToolPouchToggles.SUITE_ELYTRA_MAPPING, remembered.getName());
+            check(WheelBindings.save(config, wheelKeys()).isEmpty(), "Restoring onto an already bound elytra slot saves");
+            check(existing.equals(SlotToggleKeys.getKey(0)), "An existing Tool Pouch key on the elytra slot is not replaced");
+            check(remembered.getName().equals(WheelConfig.get().managedBindings.get(ToolPouchToggles.SUITE_ELYTRA_MAPPING)),
+                    "Without a free elytra slot the key stays remembered");
+
+            SlotToggleKeys.bind(0, null);
+            config = WheelConfig.get().copy();
+            config.managedBindings.remove(ToolPouchToggles.SUITE_ELYTRA_MAPPING);
+            check(WheelConfig.save(config), "Remembered suite key fixture cleared");
+        });
+    }
+
+    private void suitePouchItems(ClientGameTestContext context) throws Exception {
+        context.runOnClient(client -> {
+            WheelConfig config = WheelConfig.get().copy();
+            for (int slot = 3; slot < 3 + SUITE_ITEMS.size(); slot++) {
+                WheelConfig.Entry entry = new WheelConfig.Entry();
+                entry.control = ToolPouchToggles.SLOT_PREFIX + slot;
+                config.wheels.get(0).entries.add(entry);
+            }
+            check(WheelConfig.save(config), "Wheel holds toggles for the suite's pouch items");
+        });
+        String[] names = {"Pouch Magnet", "Pouch Collector", "MapStitch atlas"};
+        for (int index = 0; index < SUITE_ITEMS.size(); index++) {
+            int pouchSlot = 3 + index;
+            int wheelSlot = 3 + index;
+            check(suiteSees(context, index), names[index] + " is active in the pouch before toggling");
+            select(context, wheelSlot);
+            check(disabled(context).equals(List.of(pouchSlot)), "The wheel disables the " + names[index] + " slot on the server");
+            check(!suiteSees(context, index), "The suite stops using the " + names[index] + " while its slot is off");
+            select(context, wheelSlot);
+            check(disabled(context).isEmpty() && suiteSees(context, index), "The wheel switches the " + names[index] + " back on");
+        }
+        context.runOnClient(client -> {
+            WheelConfig config = WheelConfig.get().copy();
+            config.wheels.get(0).entries.subList(3, config.wheels.get(0).entries.size()).clear();
+            check(WheelConfig.save(config), "Suite item toggles removed again");
+        });
+    }
+
+    // The suite's own lookups, through reflection so this fixture also compiles without the suite.
+    private static boolean suiteSees(ClientGameTestContext context, int index) throws Exception {
+        return onServer(context, player -> {
+            try {
+                if (index == 0 || index == 1) {
+                    return (boolean) Class.forName("com.thenathe.suite.pickup.PickupUpgrades")
+                            .getMethod(index == 0 ? "hasMagnet" : "hasCollector", net.minecraft.world.entity.player.Player.class).invoke(null, player);
+                }
+                return !((List<?>) Class.forName("com.thenathe.toolpouchcompat.AtlasBridge")
+                        .getMethod("atlases", net.minecraft.world.entity.player.Player.class).invoke(null, player)).isEmpty();
+            } catch (ReflectiveOperationException failure) {
+                throw new IllegalStateException(failure);
+            }
+        });
     }
 
     private void rawKeysStillWork(ClientGameTestContext context) throws Exception {

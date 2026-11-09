@@ -233,6 +233,8 @@ for mode, names in REPORTS.items():
             require(result.get('brbr') == provenance.get('brbr'), f'{mode}: unexpected BRBR version')
         if name == 'toolpouch-toggle-results.json':
             require(result.get('suite') is mode.startswith('suite'), f'{mode}: slot toggle run has the wrong suite state')
+            # The release must show the old suite elytra slots working after the suite removed its own mapping.
+            require(result.get('suite_elytra_mapping') is False, f'{mode}: the suite elytra mapping was still registered')
         if name == 'server-camera-results.json':
             require(len(result.get('scenarios', [])) == 6, f'{mode}: dedicated-server camera scenarios are incomplete')
             require(result.get('server'), f'{mode}: camera-question test did not record its dedicated server')

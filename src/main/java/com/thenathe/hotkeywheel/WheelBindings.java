@@ -47,9 +47,11 @@ public final class WheelBindings {
         configuration.normalize();
         Set<KeyMapping> wanted = new LinkedHashSet<>();
         Set<String> wantedPouchToggles = new LinkedHashSet<>();
+        boolean keepSuiteElytraKey = false;
         for (int index = 0; index < configuration.wheelCount; index++) {
             for (WheelConfig.Entry entry : configuration.wheels.get(index).entries) {
                 if (entry.unbindKey && ToolPouchToggles.canUnbind(entry.control)) wantedPouchToggles.add(entry.control);
+                if (entry.unbindKey && entry.control.equals(ToolPouchToggles.SUITE_ELYTRA_MAPPING)) keepSuiteElytraKey = true;
                 KeyMapping control = HotkeyWheelClient.findControl(entry.control);
                 if (entry.unbindKey && control != null && !control.getName().startsWith("key.hotkey_wheel.")
                         && (!configuration.safeMode || !protectedControl(control))) {
@@ -61,6 +63,22 @@ public final class WheelBindings {
         Map<KeyMapping, InputConstants.Key> changes = new LinkedHashMap<>();
         Map<String, InputConstants.Key> pouchToggleChanges = new LinkedHashMap<>();
         for (String name : new ArrayList<>(configuration.managedBindings.keySet())) {
+            if (name.equals(ToolPouchToggles.SUITE_ELYTRA_MAPPING) && ToolPouchToggles.handles(name)) {
+                // Vanilla++ removed this mapping, so a key it kept here can only come back as Tool Pouch toggle keys
+                // for the pouch elytra. The suite moves keys still bound in options.txt; this one was unbound there.
+                if (keepSuiteElytraKey) continue;
+                String previous = configuration.managedBindings.get(name);
+                InputConstants.Key original = previous == null ? InputConstants.UNKNOWN : InputConstants.getKey(previous);
+                if (!original.equals(InputConstants.UNKNOWN)) {
+                    List<String> slots = new ArrayList<>(ToolPouchToggles.unboundElytraSlots());
+                    slots.removeAll(wantedPouchToggles);
+                    // Without a free elytra slot the key stays remembered rather than replacing another key.
+                    if (slots.isEmpty() && !ToolPouchToggles.elytraSlotsBoundTo(original)) continue;
+                    for (String slot : slots) pouchToggleChanges.put(slot, original);
+                }
+                configuration.managedBindings.remove(name);
+                continue;
+            }
             if (ToolPouchToggles.canUnbind(name)) {
                 // Slot toggle keys are restored the same way as key mappings, in Tool Pouch's settings.
                 if (wantedPouchToggles.contains(name)) continue;

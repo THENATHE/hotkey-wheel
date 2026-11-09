@@ -143,6 +143,27 @@ public final class ToolPouchToggles {
         }
     }
 
+    /** Elytra slots of the active pouch that have no Tool Pouch toggle key yet. */
+    static List<String> unboundElytraSlots() {
+        try {
+            return Native.elytraSlotKeys(Minecraft.getInstance(), true);
+        } catch (RuntimeException | LinkageError failure) {
+            unavailable(failure);
+            return List.of();
+        }
+    }
+
+    /** Whether the active pouch has elytra slots and every one is bound to this key. */
+    static boolean elytraSlotsBoundTo(InputConstants.Key key) {
+        try {
+            List<String> slots = Native.elytraSlotKeys(Minecraft.getInstance(), false);
+            return !slots.isEmpty() && slots.stream().allMatch(slot -> key.equals(boundKey(slot)));
+        } catch (RuntimeException | LinkageError failure) {
+            unavailable(failure);
+            return false;
+        }
+    }
+
     private static void unavailable(Throwable failure) {
         LoggerFactory.getLogger("hotkey-wheel").warn("Tool Pouch slot toggle failed", failure);
     }
@@ -233,6 +254,14 @@ public final class ToolPouchToggles {
         private static void bind(int slot, InputConstants.Key key) {
             // bind() saves Tool Pouch's client config; unlike unbind() it leaves the slot's on/off state alone.
             SlotToggleKeys.bind(slot, key);
+        }
+
+        private static List<String> elytraSlotKeys(Minecraft client, boolean unboundOnly) {
+            List<String> controls = new ArrayList<>();
+            for (int slot : elytraSlots(pouch(client))) {
+                if (!unboundOnly || SlotToggleKeys.getKey(slot) == null) controls.add(SLOT_PREFIX + slot);
+            }
+            return controls;
         }
 
         private static ItemStack pouch(Minecraft client) {
