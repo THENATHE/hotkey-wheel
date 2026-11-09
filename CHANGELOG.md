@@ -3,7 +3,8 @@
 ## 1.0.10+26.3
 
 - Fix: on a multiplayer server where Buildprint first asks whether the editor uses freecam or the player's camera, the editor started from the answer now belongs to the wheel that opened it, so the original opener closes it. Pressing the opener while the question is shown closes the question. Escape still cancels it, and editors opened with Buildprint's own key stay independent.
-- QA joins a real dedicated 26.3 server, started in the test JVM, where the question appears. See [QA.md](QA.md).
+- QA joins a real dedicated 26.3 server, started in the test JVM, where the question appears.
+- Verified with Vanilla++ 1.5.1+26.3, Buildprint 0.1.38+26.3, Blocktone for Buildprint 0.1.38, standalone Tool Pouch 1.2.0, BRBR 1.11.8 and Polymer 0.18.7: 3,051 checks across five profiles. See [QA.md](QA.md).
 
 ## 1.0.9+26.3
 

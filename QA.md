@@ -1,24 +1,26 @@
 # Hotkey Wheel 1.0.10+26.3 verification
 
-**Status: Buildprint and Blocktone verified; Vanilla++ 1.5.1 candidate still to test.** The exact 1.0.10 JAR passes the minimal, integrated (including a dedicated server) and standalone Tool Pouch profiles. The suite and suite-polymer runs wait for the Vanilla++ 1.5.1 candidate, followed by packaging. 1.0.9 was packaged locally but never published; its folder and records are kept as they were.
+**Status: release verified.** The exact release JAR passes every profile with the supported versions of all three integrations: Vanilla++ Quality of Life Suite 1.5.1+26.3, Buildprint 0.1.38+26.3 and Blocktone for Buildprint 0.1.38. It also passes with a dedicated server, standalone Tool Pouch 1.2.0, BRBR 1.11.8 and Polymer 0.18.7. 1.0.9 was packaged locally but never published; its folder and records are kept as they were.
 
-Candidate JAR: `build/libs/hotkey-wheel-1.0.10+26.3.jar`, SHA-256 `88639ec136fac83078680635acc64cf3969d6f1287593ec3d0eda0809747d4c0`. Built with Microsoft OpenJDK 25.0.4.1, Fabric Loom 1.17.20 and Gradle 9.6.0. An independent rebuild from exported commit `1989cbf` (no build cache, all tasks rerun) reproduces the JAR and the sources JAR byte for byte. Compared with 1.0.9, only `BuildprintApiIntegration`, `BuildprintEditorReturn` (with their nested classes) and `fabric.mod.json` changed.
+Release JAR: `hotkey-wheel-1.0.10+26.3.jar`, SHA-256 `88639ec136fac83078680635acc64cf3969d6f1287593ec3d0eda0809747d4c0`. Built with Microsoft OpenJDK 25.0.4.1, Fabric Loom 1.17.20 and Gradle 9.6.0. An independent rebuild from exported commit `1989cbf` (no build cache, all tasks rerun) reproduces the JAR and the sources JAR byte for byte. Compared with 1.0.9, only `BuildprintApiIntegration`, `BuildprintEditorReturn` (with their nested classes) and `fabric.mod.json` changed.
 
 ## What changed in 1.0.10
 
 The first time the Buildprint editor opens on a multiplayer server, Buildprint 0.1.38 asks whether to use freecam or the player's own camera. 1.0.9 dropped the wheel's claim when `open()` returned false for that question, so the editor started from the answer could not be closed with the wheel opener. 1.0.10 keeps the claim while that exact question is shown. The original opener also closes the question itself, and Escape still cancels it. Editors opened with Buildprint's own key are never claimed, and singleplayer, which never asks, behaves as before.
 
-## Results so far, 2026-11-08
+## Results, 2026-11-08
 
-All runs used the exact candidate JAR on Xvfb with Mesa's software renderer. None of them touched the user's profile or display.
+Every profile used the release JAR and the same fixture sources, on Xvfb with Mesa's software renderer. None of them touched the user's profile or display.
 
 | Profile | Inputs beyond the base set | Reports | Checks |
 | --- | --- | --- | --- |
 | minimal | none | wheel 150, key management 88 | 238 passed |
 | integrated | Buildprint 0.1.38+26.3, Blocktone 0.1.38 | wheel 154, key management 88, Buildprint/Blocktone menus 227, Mouse 4 67, dedicated-server camera question 48 | 584 passed |
 | toolpouch | integrated + standalone Tool Pouch 1.2.0+26.3, Fzzy Config 0.7.7+fix3 | wheel, key management, Buildprint/Blocktone, Mouse 4, Tool Pouch 179 | 715 passed |
-| suite | integrated + Vanilla++ 1.5.1 candidate, BRBR 1.11.8 | pending | pending |
-| suite-polymer | suite + Polymer 0.18.7+26.3 | pending | pending |
+| suite | Buildprint, Blocktone + Vanilla++ 1.5.1+26.3 (bundles Tool Pouch 1.2.0), BRBR 1.11.8+26.3 | wheel 154, key management 88, Buildprint/Blocktone 227, Mouse 4 67, Tool Pouch and suite 194, BRBR 27 | 757 passed |
+| suite-polymer | suite + Polymer 0.18.7+26.3 | same as suite | 757 passed |
+
+Total: 3,051 passing checks.
 
 **Dedicated server.** `ServerCameraChoiceTest` starts Minecraft 26.3's dedicated server in the test JVM through the Fabric client gametest API (offline mode, isolated world, `eula=true` in the QA game folder), then joins it as a multiplayer client. Buildprint asks its camera question there. The fixture covers six scenarios:
 1. first wheel opening, answered with free camera, closed with the wheel opener
@@ -30,9 +32,28 @@ All runs used the exact candidate JAR on Xvfb with Mesa's software renderer. Non
 
 Unpublished 1.0.9 fails scenario 1; see `qa/regressions/1.0.9-server-camera-question/`. Singleplayer behavior is covered unchanged by the existing Buildprint fixture.
 
-Exact inputs, SHA-256: Buildprint `97f1d94530a42ea9632d848964d591aa94b7af9df526bb637d767b5fae39ecc8`, Blocktone 0.1.38 `929478a597b1b4ba1bddc5d73877ebf8ed98462dbd443d64b8d81522d1fed33c`, Tool Pouch 1.2.0 `fcc2f984c910c4002f9936bb5dcd2ee4f6a065b0bfee5d814325c425d0a9a1e1`. Base set: Minecraft 26.3, Java 25, Fabric Loader 0.19.5, Fabric API 0.165.2+26.3 and its client gametest module 6.0.12. Integrated profiles add Controlling 26.3.4, Searchables 1.0.3, Sorted 0.1.41, Mod Menu 21.0.0 and YACL 3.9.7. Each profile's `provenance.json` has every mod hash, and `callback-order.json` records the transformed input order.
+Exact inputs, SHA-256:
 
-Earlier 1.0.9 runs with Vanilla++ 1.5.0, BRBR 1.11.8 and Polymer 0.18.7 passed but are not evidence for 1.0.10. 1.0.9's own records are in its release folder.
+| Mod | Version | SHA-256 |
+| --- | --- | --- |
+| Buildprint (original developer release) | 0.1.38+26.3 | `97f1d94530a42ea9632d848964d591aa94b7af9df526bb637d767b5fae39ecc8` |
+| Blocktone for Buildprint | 0.1.38 | `929478a597b1b4ba1bddc5d73877ebf8ed98462dbd443d64b8d81522d1fed33c` |
+| Vanilla++ Quality of Life Suite | 1.5.1+26.3 | `00aa245b80aa62cdca2cee5a7a3cbdf30ec0c7e0df37b71cea8a146ba9f8328c` |
+| Tool Pouch (standalone profile) | 1.2.0+26.3 | `fcc2f984c910c4002f9936bb5dcd2ee4f6a065b0bfee5d814325c425d0a9a1e1` |
+| Better Recipe Book Rebetterered | 1.11.8+26.3 | `f02f61c6b710fc9ae04503dd245bb4283ef323ccfa278408fad58467ecbd9e16` |
+| Polymer | 0.18.7+26.3 | `b18b0bb66fc8455fbf43f8a54e226952c630ab0cfee433e6585520c0e591538b` |
+| Sorted | 0.1.41+26.3 | `bf378221dd17a81dd6985a3c1fb233ac5c465d5a0a32ae6917ae2d4b649368c1` |
+
+**Vanilla++.** The suite profiles cover:
+- the suite's registered controls, including the unbound settings binding opened from a wheel
+- the shared configuration hub and its Tool Pouch settings navigation, with saved wheel settings unchanged
+- the contextual Tool Pouch radial with the bundled Tool Pouch 1.2.0, including disabled slots
+- BRBR pin and settings coexistence
+- every wheel, key-management, Buildprint/Blocktone and Mouse 4 scenario with the suite installed, natively and with Polymer
+
+**Sorted.** Sorted 0.1.41 is loaded in every Buildprint profile, including both suite profiles with 1.5.1's Sorted integration. Buildprint 0.1.38's settings screen opens and closes normally with it. Base set: Minecraft 26.3, Java 25, Fabric Loader 0.19.5, Fabric API 0.165.2+26.3 and its client gametest module 6.0.12. Integrated profiles add Controlling 26.3.4, Searchables 1.0.3, Sorted 0.1.41, Mod Menu 21.0.0 and YACL 3.9.7. Each profile's `provenance.json` has every mod hash, and `callback-order.json` records the transformed input order.
+
+Not covered: the older Buildprint 0.1.16–0.1.19 fallbacks and hardware GPU rendering. The dedicated server runs in the test JVM, not as a separate machine. Earlier 1.0.9 runs are not counted as evidence for 1.0.10; 1.0.9's own records are in its release folder. Hotkey Wheel is an original client mod with no ported counterpart.
 
 # Hotkey Wheel 1.0.8+26.3 verification (previous release)
 
