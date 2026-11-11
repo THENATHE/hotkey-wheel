@@ -25,7 +25,7 @@
     "-Dfabric.client.gametest",
     "-Dfabric.client.gametest.timeout=2400",
     "-Dwheel.qa.root=/tmp/claude-1000/-home-thenathe-SSDC-Plugins-WP-Plugin-Dev/619f5665-f269-40ee-b68c-4a1f73c9ad70/scratchpad/hkw-downgrade-run",
-    "-Dwheel.qa.suite.version=1.5.2+26.3",
+    "-Dwheel.qa.suite.version=1.5.3+26.3",
     "-Dwheel.qa.brbr.version=1.11.8+26.3",
     "-Dwheel.qa.blocktone=false",
     "-Dwheel.qa.toolpouch.version=",
@@ -54,6 +54,6 @@
     "fabric-api-0.165.2+26.3.jar": "2612a078a5daa06d9a14cabad40fe66de36b8cb22ee8cdf346d5d9894478c392",
     "fabric-client-gametest-api-v1-6.0.12+131f8d475d.jar": "6b4911a09e8d965f0b2c13c04db7b63bf8f71df1fa12830c53c319eefdf1c029",
     "hotkey-wheel-1.0.11+26.3.jar": "02ea7a0b77bbf723a348baa42ebbdce2e4f4e394da606cb65cd72a2d0388d28b",
-    "hotkey-wheel-qa.jar": "35ce9b6c8a862f4deab0ddc1f2d390d7309c8e90a4e031e9ac514babd46e31a1"
+    "hotkey-wheel-qa.jar": "82a1d66e94c72c0e6a4b858912d81ee14903320afc39546d604fca2c181d09f7"
   }
 }

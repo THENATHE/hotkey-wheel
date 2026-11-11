@@ -1,4 +1,70 @@
-# Hotkey Wheel 1.0.11+26.3 verification
+# Hotkey Wheel 1.1.0+26.3 verification
+
+**Status: release verified.** The exact release JAR passes every profile with the supported versions of all three integrations: Vanilla++ Quality of Life Suite 1.5.3+26.3, Buildprint 0.1.39+26.3 and Blocktone for Buildprint 0.1.39. The same JAR also passes the whole matrix, count for count, with Buildprint 0.1.38+26.3 and Blocktone 0.1.38. It passes with a dedicated server, standalone Tool Pouch 1.2.0, BRBR 1.11.8, Polymer 0.18.7, Sorted 0.1.41 and Controlling 26.3.4. The 1.0.11 record below is kept for reference.
+
+Release JAR: `hotkey-wheel-1.1.0+26.3.jar`, SHA-256 `9ffff819d3b1e925050ddfeb1230e376c907b0b86cca9a7870a90e6f6dedb899`. Built with Microsoft OpenJDK 25.0.4.1, Fabric Loom 1.17.20 and Gradle 9.6.0. An independent rebuild from exported commit `7669438` (no build cache, all tasks rerun) reproduces the JAR and the sources JAR byte for byte. Compared with 1.0.11, `ControlsMarker`, `KeyBindsEntryMixin` and `ControllingEntryMixin` are new. `HotkeyWheelClient`, `WheelBindings`, `WheelConfig`, `WheelEditorScreen`, `WheelScreen` and `WheelUi.IconButton` changed, along with the language file, `fabric.mod.json` and the mixin list.
+
+## What changed in 1.1.0
+
+Folders:
+- a folder is a slot with a name, an icon and up to 12 slots of its own, three levels deep; ordinary slots inside it have every usual option
+- it opens as its own radial, with its path above it and Back in the center; Escape and right click go up one level and close at the top
+- Hold: a click opens a folder while the key stays held; a release over a folder opens it and switches to clicks; a release in the center always closes
+- the editor adds Add folder, folder names and icons, Open folder, a path back to each level, and a question before removing a folder that holds slots
+- unbinding, recovery keys, Safe mode, Restore keys, Tool Pouch and the original-opener closure of Buildprint and Blocktone menus all count slots inside folders
+
+Key Binds marker:
+- a small gold wheel left of the key button marks every control an active wheel uses
+- its tooltip names each place, such as Wheel 1 › Tools › Bag, and says when Hotkey Wheel removed the key; the text comes from translation keys
+- vanilla's key list gets it through a mixin on its row; Controlling's list through Controlling's public `IKeyEntry` interface, with an optional injection that is skipped if the row changes
+
+## Results, 2026-11-10
+
+Every profile used the release JAR and the same fixture sources, on Xvfb with Mesa's software renderer. Inputs came from an isolated copy of the profile's mods with the same hashes as the 1.0.11 record; no run touched the user's launcher profiles or display.
+
+| Profile | Inputs beyond the base set | Reports | Checks |
+| --- | --- | --- | --- |
+| minimal | none | wheel 150, key management 88, folders 122 | 360 passed |
+| integrated | Buildprint 0.1.39+26.3, Blocktone 0.1.39 | wheel 154, key management 88, Buildprint/Blocktone 227, Mouse 4 67, dedicated-server camera question 48, folders 140 | 724 passed |
+| toolpouch | Buildprint, Blocktone + standalone Tool Pouch 1.2.0+26.3, Fzzy Config 0.7.7+fix3 | wheel 154, key management 88, Buildprint/Blocktone 227, Mouse 4 67, Tool Pouch 191, slot toggles 53, folders 140 | 920 passed |
+| suite | Buildprint, Blocktone + Vanilla++ 1.5.3+26.3 (bundles Tool Pouch 1.2.0), BRBR 1.11.8+26.3 | wheel 154, key management 88, Buildprint/Blocktone 227, Mouse 4 67, Tool Pouch and suite 206, BRBR 27, slot toggles 66, folders 140 | 975 passed |
+| suite-polymer | suite + Polymer 0.18.7+26.3 | same as suite | 975 passed |
+
+Total: 3,954 passing checks. With Buildprint 0.1.38+26.3 and Blocktone 0.1.38 in place of 0.1.39, the same JAR passes the same 3,954 checks in the same reports; those reports are kept in the release folder under `qa/buildprint-0.1.38/`.
+
+| Mod | Version | SHA-256 |
+| --- | --- | --- |
+| Buildprint (original developer release) | 0.1.39+26.3 | `debca39878adab6c8017b89ead5e1c196b609dfec1e925fc5ac957a09589901f` |
+| Blocktone for Buildprint | 0.1.39 | `81f8d793380c340e800c657a418288cc817508c53d2a0c5b87cb09e9e28b8422` |
+| Buildprint (second run) | 0.1.38+26.3 | `97f1d94530a42ea9632d848964d591aa94b7af9df526bb637d767b5fae39ecc8` |
+| Blocktone for Buildprint (second run) | 0.1.38 | `929478a597b1b4ba1bddc5d73877ebf8ed98462dbd443d64b8d81522d1fed33c` |
+| Vanilla++ Quality of Life Suite | 1.5.3+26.3 | `807083d8c7fb232c7616004575f36145562b17b46477c870cf4c5888fe3a2b39` |
+| Tool Pouch (standalone profile) | 1.2.0+26.3 | `fcc2f984c910c4002f9936bb5dcd2ee4f6a065b0bfee5d814325c425d0a9a1e1` |
+| Better Recipe Book Rebetterered | 1.11.8+26.3 | `f02f61c6b710fc9ae04503dd245bb4283ef323ccfa278408fad58467ecbd9e16` |
+| Polymer | 0.18.7+26.3 | `b18b0bb66fc8455fbf43f8a54e226952c630ab0cfee433e6585520c0e591538b` |
+| Sorted | 0.1.41+26.3 | `bf378221dd17a81dd6985a3c1fb233ac5c465d5a0a32ae6917ae2d4b649368c1` |
+
+Base set: Minecraft 26.3, Java 25, Fabric Loader 0.19.5, Fabric API 0.165.2+26.3 and its client gametest module 6.0.12. Integrated profiles add Controlling 26.3.4, Searchables 1.0.3, Sorted 0.1.41, Mod Menu 21.0.0 and YACL 3.9.7. Polymer came from `Minecraft/thenathe-mod-suite/libs/installation/`, which is now the runner's default. Each profile's `provenance.json` has every mod hash, and `callback-order.json` records the transformed input order.
+
+**Folders** (`FolderWheelTest`, last in every profile). The fixture checks:
+- settings: a 1.0.11 file with slot toggles, the old suite elytra mapping and remembered keys loads and saves unchanged, with no folder fields added; 1.0.8 is covered by the key-management fixture as before; three levels of folders round-trip; a hand-edited fourth level keeps the slot but not its contents; a folder keeps at most 12 slots; a malformed folder and runaway nesting are copied aside as unreadable
+- editor: Add folder, rename, icon through the icon picker, controls through the control picker, Unbind normal key on a folder slot, the third-level limit, breadcrumbs back to each level, the remove question with Keep, Escape and Remove folder, Cancel after a removal, and an empty folder removed without a question
+- keys: a folder use two levels deep unbinds; Restore keys reaches folders; a use in a folder keeps a key unbound after the top-level use goes; hiding the wheel that holds the folder restores it; Safe mode protects folder slots and disables their option
+- Hold: click into a folder and release inside; release over a folder, then click; nested folders; Escape and right click go back; Escape at the top closes; the center click goes back; a release in the center closes with no action; outside the ring cancels; a Hold action in a folder stays down until the key is released; after a release, Hold slots tap; the cycle key and another wheel's key switch to that wheel's top level
+- Toggle: click a folder, the opener over the center goes back, the opener over a folder opens it, nesting, right click and Escape go back, Escape at the top closes, and a click activates without leaking into Attack
+- controls with no key: Toggle Perspective (polled through clicks) and Player List as a Hold action, unbound in Controls and unbound by Unbind normal key, from the top level and from folders one and two levels deep; Buildprint's menu control the same way with Buildprint installed
+- Buildprint and Blocktone from a folder: the menu, the selection editor and Blocktone's instant-break settings open from folder slots and close with the original opener
+- Key Binds marker: the tooltip names each place inside folders and says when the wheel removed the key; hidden wheels are not marked; the marker's pixels are read from screenshots beside a used control and absent beside an unused one; the key and Reset buttons keep their positions; hovering shows the tooltip; the conflict stripe and the marker show side by side; Reset still works on a marked row. Controlling replaces the vanilla list whenever Key Binds opens, so the minimal profile checks the vanilla list and the other four check Controlling's, including its search
+
+**Tool Pouch in folders.** `ToolPouchClientTest` opens Contextual Open from inside a folder and chooses a shulker from the item wheel. `ToolPouchToggleTest` toggles a pouch slot from inside a folder, removes its Tool Pouch key with Unbind normal key, and restores it when the folder is removed.
+
+**Downgrade.** `DowngradeTest` loads a 1.1.0 settings file with folders into the published 1.0.11 JAR (11 checks): no error and no unreadable copy, the file on disk unchanged, the folder shown as an unassigned slot that does nothing, other slots working, and no key changed. A Save in 1.0.11 keeps the folder's slot but drops the slots inside it, and gives back keys that only folder slots had removed. See `qa/regressions/1.1.0-downgrade-to-1.0.11/`.
+
+**Vanilla++, Buildprint and Blocktone.** The 1.0.11 coverage repeats unchanged with Vanilla++ 1.5.3 and both Buildprint/Blocktone pairs: the suite's registered controls and configuration hub, the contextual Tool Pouch radial, BRBR coexistence, wheel-opened menus, child screens and the selection editor closed with the original opener, save, cancel and validation, reserved editor keys, the walking camera and the dedicated-server camera question.
+
+Not covered: the older Buildprint 0.1.16–0.1.19 fallbacks, hardware GPU rendering, a server on a separate machine, and Controlling's sort orders and its Show Unbound, Show Conflicts and Toggle Free views; only its default list and search were checked. Hotkey Wheel is an original client mod with no ported counterpart.
+
+# Hotkey Wheel 1.0.11+26.3 verification (previous release)
 
 **Status: release verified.** The exact release JAR passes every profile with the supported versions of all three integrations: Vanilla++ Quality of Life Suite 1.5.2+26.3, Buildprint 0.1.38+26.3 and Blocktone for Buildprint 0.1.38. It also passes with a dedicated server, standalone Tool Pouch 1.2.0, BRBR 1.11.8, Polymer 0.18.7 and Sorted 0.1.41. The 1.0.10 record below is kept for reference.
 
