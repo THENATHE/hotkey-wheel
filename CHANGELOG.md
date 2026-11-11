@@ -1,5 +1,15 @@
 # Changes
 
+## 1.1.0+26.3
+
+- Folders: a slot can be a named folder with its own icon and up to 12 slots, each with the usual control, icon, label, Tap / Hold and Unbind normal key. Folders can hold folders, three levels deep.
+- A folder opens as its own radial with the same look. The path is shown above it, and its center is **Back**. Escape and right click go up one level and close the wheel at the top. In Hold mode, click a folder and release inside it, or release over a folder to keep it open and then click, as in the Tool Pouch item radial.
+- The editor adds **Add folder**, folder names and icons, **Open folder**, and a path back to each level. Removing a folder that holds slots asks first.
+- Unbind normal key, Safe mode, **Restore keys unbound by Hotkey Wheel**, Tool Pouch, and the Buildprint and Blocktone menus closed with the original opener all work for slots inside folders. A use inside a folder counts when deciding whether to restore a key.
+- **Options → Controls → Key Binds** marks each control a wheel uses with a small wheel beside its key button. Its tooltip names each place, such as Wheel 1 › Tools › Pickaxe, and says when Hotkey Wheel removed the key. Controlling's key list shows the same marker.
+- Settings from 1.0.x load and save unchanged. 1.0.11 can still load settings with folders; see the README for what a Save there keeps.
+- QA adds `FolderWheelTest` to every profile and a downgrade check that loads 1.1.0 settings into the 1.0.11 JAR. Activation of controls with no key at all is now covered for a vanilla control, a Buildprint control and Hold actions, at the top level and in folders. See [QA.md](QA.md).
+
 ## 1.0.11+26.3
 
 - Tool Pouch 1.2.0 slot toggles can be chosen as wheel actions. Each shows its item, on/off state and Tool Pouch key. **Toggle pouch Elytra** switches all elytra-like pouch slots. Toggles use Tool Pouch's own slot toggle and server message.

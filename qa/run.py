@@ -22,10 +22,12 @@ TOOLPOUCH = '--toolpouch' in sys.argv
 INTEGRATED = '--integrated' in sys.argv or SUITE or TOOLPOUCH or BASELINE or PREVIOUS or LEGACY
 # Blocktone pins one exact Buildprint release, so a new Buildprint can be checked before its Blocktone build exists.
 BLOCKTONE = INTEGRATED and '--no-blocktone' not in sys.argv
-CURRENT_BUILDPRINT = '0.1.38+26.3'
+# The supported Buildprint release and its matching Blocktone; set both to check a newer pair.
+CURRENT_BUILDPRINT = os.environ.get('HOTKEY_WHEEL_BUILDPRINT_VERSION', '0.1.38+26.3')
+CURRENT_BLOCKTONE = os.environ.get('HOTKEY_WHEEL_BLOCKTONE_VERSION', '0.1.38')
 BUILDPRINT_VERSION = '0.1.16+26.x' if LEGACY else '0.1.17+26.x' if BASELINE else '0.1.18+26.x' if PREVIOUS else CURRENT_BUILDPRINT
-BLOCKTONE_VERSION = '0.1.20' if LEGACY else '0.1.23' if BASELINE or PREVIOUS else '0.1.38'
-SUITE_VERSION = os.environ.get('HOTKEY_WHEEL_SUITE_VERSION', '1.5.2+26.3')
+BLOCKTONE_VERSION = '0.1.20' if LEGACY else '0.1.23' if BASELINE or PREVIOUS else CURRENT_BLOCKTONE
+SUITE_VERSION = os.environ.get('HOTKEY_WHEEL_SUITE_VERSION', '1.5.3+26.3')
 TOOLPOUCH_VERSION = os.environ.get('HOTKEY_WHEEL_TOOLPOUCH_VERSION', '1.2.0+26.3')
 SUITE_TOOLPOUCH_VERSION = None
 BRBR_VERSION = os.environ.get('HOTKEY_WHEEL_BRBR_VERSION', '1.11.8+26.3')
@@ -83,7 +85,8 @@ if SUITE:
             BRBR_VERSION = metadata['version']
         shutil.copy2(source, MODS / source.name)
 if POLYMER:
-    source = Path(os.environ.get('HOTKEY_WHEEL_POLYMER_JAR', str(WORKSPACE / 'Builds/Minecraft/Polymer/Main Plugin' / POLYMER_VERSION / f'polymer-bundled-{POLYMER_VERSION}.jar')))
+    # The suite workspace keeps the Polymer build its installation pack ships.
+    source = Path(os.environ.get('HOTKEY_WHEEL_POLYMER_JAR', str(WORKSPACE / 'Minecraft/thenathe-mod-suite/libs/installation' / f'polymer-bundled-{POLYMER_VERSION}.jar')))
     if not source.is_file():
         raise SystemExit(f'Missing pinned Polymer artifact: {source}')
     with zipfile.ZipFile(source) as archive:
@@ -197,6 +200,8 @@ if TOOLPOUCH:
 # Slot toggles arrived in Tool Pouch 1.2.0; the fixture compiles against its classes.
 if TOOLPOUCH or SUITE and not SUITE_TOOLPOUCH_VERSION.startswith('1.1.'):
     test_names.append('ToolPouchToggleTest')
+# Runs last and restores the keys and settings it changes; it covers whichever integrations the profile has.
+test_names.append('FolderWheelTest')
 if os.environ.get('HOTKEY_WHEEL_QA_TESTS'):
     test_names = os.environ['HOTKEY_WHEEL_QA_TESTS'].split(',')
     if any(not name.isidentifier() or not (ROOT / (name + '.java')).is_file() for name in test_names):
@@ -231,7 +236,8 @@ if 'ServerCameraChoiceTest' in test_names:
 if (GAME / '.mixin.out').exists():
     shutil.rmtree(GAME / '.mixin.out')
 for name in ['key-management-results.json', 'buildprint-menu-results.json', 'toolpouch-results.json', 'brbr-integration-results.json',
-             'side-mouse-editor-results.json', 'server-camera-results.json', 'toolpouch-toggle-results.json']:
+             'side-mouse-editor-results.json', 'server-camera-results.json', 'toolpouch-toggle-results.json', 'folder-results.json',
+             'downgrade-results.json']:
     (RUN / name).unlink(missing_ok=True)
 command = [str(compiler.parent / 'java'), '-Xmx3G' if 'ServerCameraChoiceTest' in test_names else '-Xmx2G', '-XX:ActiveProcessorCount=4',
            '-Djava.library.path=' + str(META / 'natives/26.3-0.19.5/lwjgl/3.4.3-snapshot/x64'),
@@ -302,7 +308,8 @@ print((RUN / 'console.log').read_text()[-5000:])
 report_names = {'WheelClientTest': 'results.json', 'KeyManagementTest': 'key-management-results.json',
                 'BuildprintMenuTest': 'buildprint-menu-results.json', 'ToolPouchClientTest': 'toolpouch-results.json',
                 'BrbrIntegrationTest': 'brbr-integration-results.json', 'SideMouseEditorTest': 'side-mouse-editor-results.json',
-                'ServerCameraChoiceTest': 'server-camera-results.json', 'ToolPouchToggleTest': 'toolpouch-toggle-results.json'}
+                'ServerCameraChoiceTest': 'server-camera-results.json', 'ToolPouchToggleTest': 'toolpouch-toggle-results.json',
+                'FolderWheelTest': 'folder-results.json', 'DowngradeTest': 'downgrade-results.json'}
 reports = [report_names[name] for name in test_names]
 for name in reports:
     path = RUN / name

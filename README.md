@@ -1,20 +1,21 @@
-# Hotkey Wheel 1.0.11+26.3
+# Hotkey Wheel 1.1.0+26.3
 
 <img src="src/main/resources/assets/hotkey_wheel/icon.png" alt="Hotkey Wheel radial icon" width="128">
 
-A client-side Fabric mod for Minecraft Java 26.3. Create up to three radial menus with separate opening keys, assign Minecraft or registered mod controls, and choose floating block/item icons. Hold or toggle a wheel, select by dragging from the center, and cycle wheels without releasing the original opener.
+A client-side Fabric mod for Minecraft Java 26.3. Create up to three radial menus with separate opening keys, assign Minecraft or registered mod controls, and choose floating block/item icons. Group slots into named folders. Hold or toggle a wheel, select by dragging from the center, and cycle wheels without releasing the original opener.
 
-Version 1.0.11 adds Tool Pouch slot toggles as wheel actions. Version 1.0.10 updated the integrations to Buildprint 0.1.38 and Tool Pouch 1.2.0. Buildprint 0.1.38 reserves more keys inside its editor, for example C and E. A wheel bound to one of those keys now closes the editor it opened. Tool Pouch's disabled slots are respected, and an unreadable settings file is now kept as a copy instead of being replaced on the next Save. On a multiplayer server, the editor a wheel opens still closes with the original opener when Buildprint first asks which camera to use. Existing 1.0.8 settings and key bindings load unchanged. Verified with Vanilla++ 1.5.1, Buildprint 0.1.38 and Blocktone 0.1.38. [AUDIT-2026-11-08.md](AUDIT-2026-11-08.md) lists every finding, and [API-MIGRATION.md](API-MIGRATION.md) covers the Buildprint hooks and input ordering.
+Version 1.1.0 adds folders: a slot can be a named folder with its own icon and up to 12 slots, and folders can hold folders. Minecraft's Key Binds screen now marks every control a wheel uses, with a tooltip naming where. Settings from 1.0.x load unchanged. Version 1.0.11 added Tool Pouch slot toggles as wheel actions. Version 1.0.10 updated the integrations to Buildprint 0.1.38 and Tool Pouch 1.2.0. Buildprint 0.1.38 reserves more keys inside its editor, for example C and E. A wheel bound to one of those keys now closes the editor it opened. Tool Pouch's disabled slots are respected, and an unreadable settings file is now kept as a copy instead of being replaced on the next Save. On a multiplayer server, the editor a wheel opens still closes with the original opener when Buildprint first asks which camera to use. Existing 1.0.8 settings and key bindings load unchanged. Verified with Vanilla++ 1.5.1, Buildprint 0.1.38 and Blocktone 0.1.38. [AUDIT-2026-11-08.md](AUDIT-2026-11-08.md) lists every finding, and [API-MIGRATION.md](API-MIGRATION.md) covers the Buildprint hooks and input ordering.
 
 ## Install and configure
 
-Requires **Minecraft 26.3**, **Fabric Loader 0.19.5+**, **Java 25+**, and **Fabric API 0.161.0+26.3 or newer for 26.3**. Replace older Hotkey Wheel JARs with `hotkey-wheel-1.0.11+26.3.jar` in your client's `mods` folder, then restart. Install only one Hotkey Wheel version. Servers do not need Hotkey Wheel.
+Requires **Minecraft 26.3**, **Fabric Loader 0.19.5+**, **Java 25+**, and **Fabric API 0.161.0+26.3 or newer for 26.3**. Replace older Hotkey Wheel JARs with `hotkey-wheel-1.1.0+26.3.jar` in your client's `mods` folder, then restart. Install only one Hotkey Wheel version. Servers do not need Hotkey Wheel.
 
 Open **Options → Controls → Key Binds → Wheels…**, or use Hotkey Wheel's settings in Mod Menu. Controlling can search **hotkey wheel** to find the three opening keys, cycle key, and configuration shortcut. Sorted, Buildprint, Blocktone, Tool Pouch, Vanilla++, Controlling, Searchables, and Mod Menu are optional; Hotkey Wheel runs without them.
 
 - Wheel 1 defaults to **G** with **Hold** opening. Wheel 2 and 3 start unbound. **Cycle** defaults to **Tab**.
 - Choose **Active wheels** to enable up to three. Each wheel keeps its own name, opening mode, outside-edge behavior, and up to **12 slots**. Hidden wheels retain their settings.
 - Each slot has a searchable control picker, searchable icon picker, optional label, and **Tap / Hold** action. Unbound registered controls can still be used through the wheel. Icons do not require inventory items.
+- **Add folder** creates a folder slot. See [Folders](#folders).
 - **Save** applies the draft and key changes. **Cancel** discards the draft. If saving fails, the editor keeps the draft for retry.
 
 ## Using a wheel
@@ -29,13 +30,33 @@ Press the cycle key to advance through enabled wheels. The original opening key 
 
 For continuous controls, choose a slot's **Hold** action, open in Hold mode, and **click the slot while keeping the opening key held**. The action stays pressed until you release that key. Releasing over a slot without clicking still produces a tap. Another screen, focus loss, or disconnection releases held actions. Toggle opening uses Tap actions. Minecraft's own toggle-crouch/sprint/attack/use behavior remains available for Tap actions.
 
+## Folders
+
+A folder is a slot with a name, an icon and up to 12 slots of its own. Those slots have the same options as a wheel's: control, icon, label, Tap / Hold and Unbind normal key. A folder can hold folders, three levels deep below the wheel. Every level costs a selection, and three keep the path above the radial on one line; the editor stops offering **Add folder** at the third level.
+
+In the radial, a folder shows a small **»** beside its icon, and hovering it shows its name and slot count. Selecting a folder opens its slots as a radial with the same look. The path, such as **Wheel 1 › Tools › Picks**, is shown above it, and the center reads **Back**.
+
+- **Hold:** click a folder while keeping the wheel key held, then release over a slot inside it, as at the top level. Hold actions work the same way inside folders. If you release the wheel key over a folder instead, the folder opens and stays open, and from then on a click chooses, like the Tool Pouch item radial. Hold actions chosen after that tap, as in Toggle mode.
+- **Toggle:** click a folder to open it. Pressing the wheel key again also opens the hovered folder, or goes back from the center.
+- **Back:** click the center to go up one level. Escape and right click also go up one level; at the top level they close the wheel. Releasing a held wheel key in the center still closes the wheel without an action, at any level.
+- **Outside wheel** works inside folders as at the top level.
+- The cycle key and the other wheels' keys switch wheels as before, starting at the new wheel's top level.
+
+In the editor, select a folder slot to rename it, choose its icon, or **Open folder** to edit its slots. The path above the slots, such as **Wheel 1 › Tools**, leads back to each level. **Remove** asks before deleting a folder that holds slots; an empty folder is removed at once. Like every edit, nothing changes until **Save**.
+
+Everything else counts slots inside folders: Unbind normal key and its recovery keys, Safe mode, **Restore keys unbound by Hotkey Wheel**, Tool Pouch's Contextual Open and slot toggles, and the Buildprint and Blocktone menus that the original opener closes. Removing a folder whose slots were the last ones unbinding a control restores that control's key when you Save.
+
 ## Unbinding ordinary keys safely
 
 Enable **Unbind normal key** on a slot to remove that control's ordinary keyboard or mouse assignment **when you Save**. The wheel can still activate it. Hotkey Wheel remembers the previous assignment before removing it.
 
 **Safe mode** starts **ON**. It protects Inventory, Attack, Use, movement, Jump, Sneak, Sprint, Pick Block, chat/commands, and hotbar controls from automatic unbinding, including when those controls have custom keys. It also reserves Escape and the primary mouse buttons when assigning wheel, cycle, or configuration keys. Protected controls remain available as wheel entries.
 
-Turn a slot's unbinding option off, remove its last active use with unbinding enabled, or choose **Restore keys unbound by Hotkey Wheel**, then **Save** to restore remembered assignments. Turning Safe mode back on restores essential controls previously unbound by Hotkey Wheel when you Save. Later manual rebindings are preserved. If you Save again with unbinding still enabled, the newly removed binding becomes the recovery key. Controls that were already unbound have no earlier assignment to restore; keys belonging to an absent optional mod remain remembered until that mod returns.
+Turn a slot's unbinding option off, remove its last active use with unbinding enabled (slots inside folders count as uses), or choose **Restore keys unbound by Hotkey Wheel**, then **Save** to restore remembered assignments. Turning Safe mode back on restores essential controls previously unbound by Hotkey Wheel when you Save. Later manual rebindings are preserved. If you Save again with unbinding still enabled, the newly removed binding becomes the recovery key. Controls that were already unbound have no earlier assignment to restore; keys belonging to an absent optional mod remain remembered until that mod returns.
+
+## Marked controls in Key Binds
+
+In **Options → Controls → Key Binds**, a small gold wheel appears left of the key button of every control that an active wheel uses, including slots inside folders. Hover it for a tooltip naming each place, such as **Wheel 1 › Tools › Pickaxe** (the slot's label, or its slot number). If Hotkey Wheel removed the control's key with Unbind normal key, the tooltip says so. The marker leaves the key button, the conflict highlight and the Reset button where they were. Controls only used on hidden wheels are not marked. Controlling's replacement key list shows the same marker; if a future Controlling changes its list, the marker is left out there and the list keeps working.
 
 ## Tool Pouch and Vanilla++
 
@@ -69,7 +90,9 @@ Normal controls use their registered Minecraft `KeyMapping`. Screenshots, fullsc
 
 Registered mod controls that poll keymapping state work through the wheel. Raw keyboard/mouse listeners may require a dedicated integration. Wheel keys take precedence over gameplay controls sharing those keys; selection and closing input do not activate those other controls. The editor rejects conflicting enabled wheel/cycle/configuration keys, and Controlling retains its normal conflict display.
 
-Wheel settings and recovery assignments are stored in `config/hotkey-wheel.json`; ordinary key assignments are stored in Minecraft's `options.txt`. Removing the JAR leaves configuration files intact. Restore automatically unbound keys through the editor before uninstalling if you want their remembered assignments back.
+Wheel settings and recovery assignments are stored in `config/hotkey-wheel.json`; ordinary key assignments are stored in Minecraft's `options.txt`. Removing the JAR leaves configuration files intact.
+
+Folders are stored as slots with an `entries` list of their own; ordinary slots are saved exactly as in 1.0.x, so 1.0.x settings load and save unchanged. If you go back to 1.0.11 after saving folders, it loads the file without errors and leaves it as it is. Each folder shows there as an unassigned slot with its name and icon, and selecting it does nothing. Saving in 1.0.11's editor keeps that slot but drops the slots inside it, and gives back any keys that only folder slots had removed. Keep a copy of `hotkey-wheel.json` if you may go back. An unreadable settings file is still copied to `hotkey-wheel.json.unreadable` before a later Save can replace it. Restore automatically unbound keys through the editor before uninstalling if you want their remembered assignments back.
 
 ## Source, build, and verification
 
@@ -88,12 +111,14 @@ xvfb-run -a -s "-screen 0 1280x800x24" python3 qa/run.py --integrated
 xvfb-run -a -s "-screen 0 1280x800x24" python3 qa/run.py --toolpouch
 xvfb-run -a -s "-screen 0 1280x800x24" python3 qa/run.py --suite
 xvfb-run -a -s "-screen 0 1280x800x24" python3 qa/run.py --polymer
+HOTKEY_WHEEL_JAR=/path/to/hotkey-wheel-1.0.11+26.3.jar HOTKEY_WHEEL_QA_TESTS=DowngradeTest \
+  HOTKEY_WHEEL_QA_RUN_ROOT=/tmp/hotkey-wheel-downgrade xvfb-run -a -s "-screen 0 1280x800x24" python3 qa/run.py
 python3 qa/run.py --api-previous
 python3 qa/run.py --api-baseline
 python3 qa/run.py --legacy
 ```
 
-The metadata directory must contain Minecraft 26.3, Fabric Loader 0.19.5 launcher metadata, libraries, natives, and assets. The Gradle cache supplies the Fabric client gametest API that matches the profile's Fabric API, so build once first. Run the clients on a virtual display such as Xvfb rather than your desktop. The runner sets `SDL_VIDEO_FORCE_EGL=1`, which Mesa needs on Xvfb. Each run starts from an empty mod `config/` folder in its isolated game directory. The integrated profile adds Controlling, Searchables, Sorted, Buildprint, Blocktone, Mod Menu, and YACL. The Tool Pouch profile adds standalone Tool Pouch 1.2.0 with Fzzy Config to the integrated set. The suite profile adds Vanilla++ 1.5.1, BRBR 1.11.8, and installed dependencies for actual Tool Pouch interactions, suite configuration navigation, and BRBR pin/settings coexistence. The runner reads the Tool Pouch version bundled in the tested suite JAR. The Polymer profile includes the same four-mod combination with the suite's supported Polymer 0.18.7+26.3 installation. `--no-blocktone` leaves Blocktone out and skips its checks; use it only to check a Buildprint release before its Blocktone build exists, because release packaging requires Blocktone.
+The metadata directory must contain Minecraft 26.3, Fabric Loader 0.19.5 launcher metadata, libraries, natives, and assets. The Gradle cache supplies the Fabric client gametest API that matches the profile's Fabric API, so build once first. Run the clients on a virtual display such as Xvfb rather than your desktop. The runner sets `SDL_VIDEO_FORCE_EGL=1`, which Mesa needs on Xvfb. Each run starts from an empty mod `config/` folder in its isolated game directory. The integrated profile adds Controlling, Searchables, Sorted, Buildprint, Blocktone, Mod Menu, and YACL. The Tool Pouch profile adds standalone Tool Pouch 1.2.0 with Fzzy Config to the integrated set. The suite profile adds Vanilla++ 1.5.3, BRBR 1.11.8, and installed dependencies for actual Tool Pouch interactions, suite configuration navigation, and BRBR pin/settings coexistence. The runner reads the Tool Pouch version bundled in the tested suite JAR. The Polymer profile includes the same four-mod combination with the suite's supported Polymer 0.18.7+26.3 installation; the runner reads it from the suite workspace's `libs/installation/polymer-bundled-0.18.7+26.3.jar`, and `HOTKEY_WHEEL_POLYMER_JAR` selects another copy. `FolderWheelTest` runs last in every profile and covers folders, the editor, settings compatibility, controls with no key and the Key Binds marker, with Buildprint, Blocktone and Controlling when the profile has them. `DowngradeTest` runs alone against the 1.0.11 JAR, as above. Set `HOTKEY_WHEEL_BUILDPRINT_VERSION` and `HOTKEY_WHEEL_BLOCKTONE_VERSION` together with their JAR variables to check a newer Buildprint and Blocktone pair. `--no-blocktone` leaves Blocktone out and skips its checks; use it only to check a Buildprint release before its Blocktone build exists, because release packaging requires Blocktone.
 
 Set `HOTKEY_WHEEL_SUITE_JAR`, `HOTKEY_WHEEL_BRBR_JAR`, `HOTKEY_WHEEL_BUILDPRINT_JAR`, `HOTKEY_WHEEL_BLOCKTONE_JAR`, `HOTKEY_WHEEL_TOOLPOUCH_JAR`, or `HOTKEY_WHEEL_POLYMER_JAR` to test an exact candidate artifact; runtime reports and provenance record its declared version and SHA-256. `--prepare-only` builds the isolated QA profile and test JAR without launching a rendered client. The ten-area Buildprint API audit in [API-MIGRATION.md](API-MIGRATION.md) links the official documentation and records the relevant hooks and unused areas.
 
@@ -101,7 +126,7 @@ See [QA.md](QA.md) for current results, exact versions, and verification boundar
 
 For a standalone checkout, set `HOTKEY_WHEEL_RELEASE_DIR=/path/to/release-folder` when running the packager. Private local crash evidence is copied only when present and is excluded from the public source archive.
 
-The earlier 1.0.7 and 1.0.8 releases keep their own release folders, exact inputs and results. Version 1.0.9 was packaged locally but never published; its folder is kept as it was. Version 1.0.10 has a separate release folder and repeats the acceptance matrix against its own JAR; [QA.md](QA.md) records the current release's verification.
+The earlier 1.0.7 and 1.0.8 releases keep their own release folders, exact inputs and results. Version 1.0.9 was packaged locally but never published; its folder is kept as it was. Versions 1.0.10 and 1.0.11 have separate release folders and repeat the acceptance matrix against their own JARs; [QA.md](QA.md) records the current release's verification.
 
 For future documentation-only reviews of an unchanged release, `HOTKEY_WHEEL_REVIEW_DATE` and optional `HOTKEY_WHEEL_REVIEW_QUALIFIER` create a separate review subfolder and explicitly require the original production binary to remain identical. A production fix such as 1.0.8 uses ordinary release packaging instead.
 

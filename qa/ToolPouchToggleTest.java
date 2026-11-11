@@ -70,6 +70,7 @@ public final class ToolPouchToggleTest implements FabricClientGameTest {
                 savedSuiteElytraSlot(context);
                 rawKeysStillWork(context);
                 unbindAndRestore(context);
+                toggleInFolder(context);
             }
             report.put("passed", true);
         } catch (Throwable failure) {
@@ -363,17 +364,58 @@ public final class ToolPouchToggleTest implements FabricClientGameTest {
     private void select(ClientGameTestContext context, int slot) {
         context.getInput().holdKey(InputConstants.KEY_G);
         context.waitTicks(2);
+        point(context, slot);
+        context.getInput().releaseKey(InputConstants.KEY_G);
+        context.waitTicks(6);
+    }
+
+    /** Opens a folder of the wheel with a click while G is held, then releases G over a slot inside it. */
+    private void selectInFolder(ClientGameTestContext context, int folder, int slot) {
+        context.getInput().holdKey(InputConstants.KEY_G);
+        context.waitTicks(2);
+        point(context, folder);
+        context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
+        context.waitTicks(2);
+        point(context, slot);
+        context.getInput().releaseKey(InputConstants.KEY_G);
+        context.waitTicks(6);
+    }
+
+    private static void point(ClientGameTestContext context, int slot) {
         double[] position = context.computeOnClient(client -> {
             WheelScreen wheel = (WheelScreen) client.gui.screen();
-            int count = WheelConfig.get().wheels.get(wheel.wheelIndex()).entries.size();
-            double angle = RadialGeometry.angle(slot, count);
+            double angle = RadialGeometry.angle(slot, wheel.slotCount());
             return new double[] {
                     (wheel.centerX() + Math.cos(angle) * wheel.radius() * 0.76) * client.getWindow().getScreenWidth() / wheel.width,
                     (wheel.centerY() + Math.sin(angle) * wheel.radius() * 0.76) * client.getWindow().getScreenHeight() / wheel.height};
         });
         context.getInput().setCursorPos(position[0], position[1]);
-        context.getInput().releaseKey(InputConstants.KEY_G);
-        context.waitTicks(6);
+    }
+
+    private void toggleInFolder(ClientGameTestContext context) throws Exception {
+        InputConstants.Key original = InputConstants.Type.KEYBOARD.getOrCreate(toggleKey);
+        context.runOnClient(client -> {
+            WheelConfig config = WheelConfig.get().copy();
+            WheelConfig.Entry toggle = config.wheels.get(0).entries.remove(0);
+            toggle.unbindKey = true;
+            WheelConfig.Entry folder = WheelConfig.Entry.folder("Pouch toggles");
+            folder.entries.add(toggle);
+            config.wheels.get(0).entries.add(0, folder);
+            check(WheelBindings.save(config, wheelKeys()).isEmpty(), "A slot toggle moves into a folder with Unbind normal key on");
+            check(SlotToggleKeys.getKey(2) == null && original.getName().equals(WheelConfig.get().managedBindings.get(SPYGLASS_SLOT)),
+                    "Unbind normal key on a folder slot removes and remembers the slot's Tool Pouch key");
+        });
+        selectInFolder(context, 0, 0);
+        check(disabled(context).equals(List.of(2)), "A slot toggle inside a folder disables pouch slot 3");
+        selectInFolder(context, 0, 0);
+        check(disabled(context).isEmpty(), "Selecting it again inside the folder enables slot 3");
+        context.runOnClient(client -> {
+            WheelConfig config = WheelConfig.get().copy();
+            config.wheels.get(0).entries.remove(0);
+            check(WheelBindings.save(config, wheelKeys()).isEmpty(), "Removing the folder saves");
+            check(original.equals(SlotToggleKeys.getKey(2)) && !WheelConfig.get().managedBindings.containsKey(SPYGLASS_SLOT),
+                    "Removing the folder that held the toggle's last use restores its Tool Pouch key");
+        });
     }
 
     private static List<Integer> disabled(ClientGameTestContext context) throws Exception {

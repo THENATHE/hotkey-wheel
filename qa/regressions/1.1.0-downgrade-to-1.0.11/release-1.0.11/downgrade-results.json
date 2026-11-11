@@ -1,0 +1,67 @@
+{
+  "checks": [
+    "The older release reads a 1.1.0 file with folders without calling it unreadable",
+    "Loading leaves the 1.1.0 file on disk untouched",
+    "A folder appears as an unassigned slot with the folder\u0027s name and icon",
+    "Top-level slots after the folder load unchanged",
+    "Loading keeps the key the folder slot removed, and its remembered copy",
+    "The wheel opens",
+    "Selecting the folder\u0027s slot closes the wheel and does nothing",
+    "Ordinary top-level slots still work",
+    "Saving in the older editor succeeds",
+    "A Save in the older release keeps the folder\u0027s slot but drops the slots inside it",
+    "That Save gives back the keys only folder slots had removed, so no key is lost"
+  ],
+  "wheel_version": "1.0.11+26.3",
+  "saved_after_downgrade": {
+    "wheelCount": 1,
+    "safeMode": true,
+    "toolPouchWheel": true,
+    "replaceToolPouchContextualKey": false,
+    "closeBuildprintWithWheelKey": true,
+    "managedBindings": {},
+    "wheels": [
+      {
+        "name": "Wheel 1",
+        "toggleOpen": false,
+        "selectOutside": false,
+        "entries": [
+          {
+            "control": "",
+            "icon": "minecraft:iron_pickaxe",
+            "label": "Tools",
+            "holdAction": false,
+            "unbindKey": false
+          },
+          {
+            "control": "key.inventory",
+            "icon": "minecraft:chest",
+            "label": "",
+            "holdAction": false,
+            "unbindKey": false
+          },
+          {
+            "control": "key.drop",
+            "icon": "minecraft:dropper",
+            "label": "",
+            "holdAction": false,
+            "unbindKey": false
+          }
+        ]
+      },
+      {
+        "name": "Wheel 2",
+        "toggleOpen": false,
+        "selectOutside": false,
+        "entries": []
+      },
+      {
+        "name": "Wheel 3",
+        "toggleOpen": false,
+        "selectOutside": false,
+        "entries": []
+      }
+    ]
+  },
+  "passed": true
+}

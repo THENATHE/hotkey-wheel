@@ -82,6 +82,7 @@ public final class ToolPouchClientTest implements FabricClientGameTest {
                 initialize(context);
                 registeredBindings(context);
                 nestedWheels(context);
+                contextualInFolder(context);
                 nativeReplacement(context);
                 nativeUnchanged(context);
                 ammunition(context);
@@ -376,7 +377,7 @@ public final class ToolPouchClientTest implements FabricClientGameTest {
                 centerX = screen.centerX();
                 centerY = screen.centerY();
                 radius = screen.radius();
-                count = WheelConfig.get().wheels.get(screen.wheelIndex()).entries.size();
+                count = screen.slotCount();
             } else {
                 ToolPouchRadialScreen screen = radial(client);
                 centerX = screen.centerX();
@@ -474,6 +475,44 @@ public final class ToolPouchClientTest implements FabricClientGameTest {
         context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
         context.waitTicks(4);
         check(onServer(context, player -> player.containerMenu == player.inventoryMenu), "Clicking center Cancel sends no shulker open packet");
+    }
+
+    private void contextualInFolder(ClientGameTestContext context) throws Exception {
+        fixture(context, sparseShulkers(), false, true, ItemStack.EMPTY);
+        settings(context, true, false, false, true);
+        context.runOnClient(client -> {
+            WheelConfig config = WheelConfig.get().copy();
+            WheelConfig.Entry folder = WheelConfig.Entry.folder("Pouch");
+            folder.entries.add(config.wheels.get(0).entries.remove(0));
+            config.wheels.get(0).entries.add(0, folder);
+            check(WheelConfig.save(config), "Contextual Open moves into a folder");
+        });
+        context.getInput().holdKey(InputConstants.KEY_G);
+        context.waitTicks(2);
+        point(context, true, 0);
+        context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
+        context.waitTicks(2);
+        context.runOnClient(client -> check(client.gui.screen() instanceof WheelScreen wheel && wheel.folderDepth() == 1,
+                "Clicking the folder opens it while G stays held"));
+        point(context, true, 0);
+        context.getInput().releaseKey(InputConstants.KEY_G);
+        context.waitTicks(4);
+        context.runOnClient(client -> {
+            check(client.gui.screen() instanceof ToolPouchRadialScreen && radial(client).snapshot().choices().size() == 2,
+                    "Contextual Open inside a folder opens the item wheel");
+            checkNaturalCenter(client, "Item wheel opened from a folder");
+        });
+        context.takeScreenshot("toolpouch-from-folder");
+        point(context, false, 1);
+        context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
+        verifyShulker(context, "Second duplicate", Items.EMERALD, 7);
+        context.runOnClient(client -> {
+            client.player.closeContainer();
+            WheelConfig config = WheelConfig.get().copy();
+            config.wheels.get(0).entries.set(0, config.wheels.get(0).entries.get(0).entries.get(0));
+            check(WheelConfig.save(config), "Contextual Open returns to the top level for the remaining scenarios");
+        });
+        context.waitTicks(3);
     }
 
     private void nativeReplacement(ClientGameTestContext context) throws Exception {

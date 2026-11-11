@@ -38,17 +38,18 @@ SOURCE_REBUILD = os.environ.get('HOTKEY_WHEEL_SOURCE_REBUILD')
 SIDE_MOUSE_REGRESSION = SOURCE / 'qa/regressions/1.0.7-side-mouse-editor-close'
 UPSTREAM_REGRESSION = SOURCE / 'qa/regressions/1.0.8-upstream-2026-11'
 SERVER_REGRESSION = SOURCE / 'qa/regressions/1.0.9-server-camera-question'
-BUILDPRINT_VERSION = '0.1.38+26.3'
+DOWNGRADE_REGRESSION = SOURCE / 'qa/regressions/1.1.0-downgrade-to-1.0.11'
+BUILDPRINT_VERSION = os.environ.get('HOTKEY_WHEEL_BUILDPRINT_VERSION', '0.1.38+26.3')
 REPORTS = {
-    'minimal': ['results.json', 'key-management-results.json'],
+    'minimal': ['results.json', 'key-management-results.json', 'folder-results.json'],
     'integrated': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json',
-                   'server-camera-results.json'],
+                   'server-camera-results.json', 'folder-results.json'],
     'toolpouch': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json', 'toolpouch-results.json',
-                  'toolpouch-toggle-results.json'],
+                  'toolpouch-toggle-results.json', 'folder-results.json'],
     'suite': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json', 'toolpouch-results.json', 'brbr-integration-results.json',
-                      'toolpouch-toggle-results.json'],
+                      'toolpouch-toggle-results.json', 'folder-results.json'],
     'suite-polymer': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json', 'toolpouch-results.json', 'brbr-integration-results.json',
-                      'toolpouch-toggle-results.json'],
+                      'toolpouch-toggle-results.json', 'folder-results.json'],
 }
 
 
@@ -116,6 +117,12 @@ provenance = json.loads((SERVER_REGRESSION / 'shipping-1.0.9/provenance.json').r
 require(result.get('passed') is False and 'closes the editor started from the camera question' in result.get('failure', '')
         and provenance['mods'].get('hotkey-wheel-1.0.9+26.3.jar') == UNPUBLISHED_1_0_9,
         'Unpublished 1.0.9 baseline does not show the server camera-question failure')
+# The published 1.0.11 JAR must load 1.1.0 folder settings without losing the file or any key.
+RELEASED_1_0_11 = '02ea7a0b77bbf723a348baa42ebbdce2e4f4e394da606cb65cd72a2d0388d28b'
+result = json.loads((DOWNGRADE_REGRESSION / 'release-1.0.11/downgrade-results.json').read_text())
+provenance = json.loads((DOWNGRADE_REGRESSION / 'release-1.0.11/provenance.json').read_text())
+require(result.get('passed') is True and provenance['mods'].get('hotkey-wheel-1.0.11+26.3.jar') == RELEASED_1_0_11,
+        'Downgrade evidence does not show the published 1.0.11 JAR loading 1.1.0 settings')
 if SOURCE_REBUILD:
     rebuild = json.loads(Path(SOURCE_REBUILD).read_text())
     require(rebuild.get('passed') is True and rebuild.get('compile_from_exported_source') is True,
@@ -235,6 +242,12 @@ for mode, names in REPORTS.items():
             require(result.get('suite') is mode.startswith('suite'), f'{mode}: slot toggle run has the wrong suite state')
             # The release must show the old suite elytra slots working after the suite removed its own mapping.
             require(result.get('suite_elytra_mapping') is False, f'{mode}: the suite elytra mapping was still registered')
+        if name == 'folder-results.json':
+            # Controlling replaces the vanilla key list, so the minimal profile checks vanilla and the others Controlling.
+            require(result.get('buildprint') is (mode != 'minimal') and result.get('controlling') is (mode != 'minimal'),
+                    f'{mode}: folder fixture ran with the wrong integrations')
+            marker = 'vanilla_marker_pixels' if mode == 'minimal' else 'controlling_marker_pixels'
+            require(isinstance(result.get(marker), int), f'{mode}: the Controls marker was not checked on its key list')
         if name == 'server-camera-results.json':
             require(len(result.get('scenarios', [])) == 6, f'{mode}: dedicated-server camera scenarios are incomplete')
             require(result.get('server'), f'{mode}: camera-question test did not record its dedicated server')
@@ -302,7 +315,7 @@ source_files = [SOURCE / name for name in [
 source_files += list((SOURCE / 'qa').glob('*Test.java'))
 # Console logs stay local; they are ignored by Git and not part of the public archives.
 regression_files = sorted(path for path in [*SIDE_MOUSE_REGRESSION.rglob('*'), *UPSTREAM_REGRESSION.rglob('*'),
-                                            *SERVER_REGRESSION.rglob('*')]
+                                            *SERVER_REGRESSION.rglob('*'), *DOWNGRADE_REGRESSION.rglob('*')]
                           if path.is_file() and path.suffix != '.log')
 require(not any(path.suffix in ('.class', '.jar') for path in regression_files),
         'Regression source/evidence must not redistribute exported classes or mod JARs')
@@ -363,6 +376,7 @@ report = {
     'sideMouseRegression': 'qa/regressions/1.0.7-side-mouse-editor-close',
     'upstreamRegression': 'qa/regressions/1.0.8-upstream-2026-11', 'audit': 'AUDIT-2026-11-08.md',
     'serverCameraRegression': 'qa/regressions/1.0.9-server-camera-question',
+    'downgradeRegression': 'qa/regressions/1.1.0-downgrade-to-1.0.11',
     'apiAudit': 'buildprint-api-audit.json',
     'sourceFiles': {str(path.relative_to(SOURCE)): sha256(path) for path in sorted(source_files)},
     'verification': 'QA.md', 'published': False, 'installedIntoUserProfile': False,
