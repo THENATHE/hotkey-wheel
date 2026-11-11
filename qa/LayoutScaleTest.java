@@ -5,6 +5,8 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.thenathe.hotkeywheel.HotkeyWheelClient;
 import com.thenathe.hotkeywheel.MoveSlotScreen;
 import com.thenathe.hotkeywheel.RadialGeometry;
+import com.thenathe.hotkeywheel.ToolPouchIntegration;
+import com.thenathe.hotkeywheel.ToolPouchRadialScreen;
 import com.thenathe.hotkeywheel.WheelBindings;
 import com.thenathe.hotkeywheel.WheelConfig;
 import com.thenathe.hotkeywheel.WheelEditorScreen;
@@ -18,15 +20,19 @@ import java.util.List;
 import java.util.Map;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 /**
- * GUI scale 3 at 1280×800: the Move to… subtitle fits the screen and says "go" for a folder, and the wheel's hovered
- * name and key line stay above the hearts and hotbar. At GUI scale 2 both look exactly as in 1.1.1.
+ * Layout at GUI scales 2, 3 and 4 and in small windows: the Move to… subtitle fits the screen and says "go" for a
+ * folder; under the wheel, its folders and the Tool Pouch item radial, the hovered name, the key line and the hint
+ * stay together above the hearts and hotbar, and the title stays clear of the radial.
  */
 public final class LayoutScaleTest implements FabricClientGameTest {
     // The hotbar is 22 GUI pixels tall and the hearts row sits 17 above it.
@@ -76,11 +82,31 @@ public final class LayoutScaleTest implements FabricClientGameTest {
             try (var world = context.worldBuilder().create()) {
                 world.getConnection().waitForChunksDownload();
                 context.waitTicks(20);
-                for (int scale : new int[] {2, 3}) {
-                    context.runOnClient(client -> client.options.guiScale().set(scale));
+                if (FabricLoader.getInstance().isModLoaded("buildprint")) {
+                    // A new game shows Buildprint's welcome screen once; mark it seen, as the other fixtures do.
+                    context.runOnClient(client -> {
+                        Object onboarding = Class.forName("com.buildprint.client.onboarding.BuildprintOnboarding")
+                                .getConstructor().newInstance();
+                        onboarding.getClass().getMethod("markDone").invoke(onboarding);
+                        client.gui.setScreen(null);
+                    });
                     context.waitTicks(2);
-                    wheel(context, scale);
                 }
+                // Window width, height and GUI scale; 0 is Minecraft's automatic scale, 1 for these small windows.
+                // Minecraft caps the scale by window size, so GUI scale 4 is checked at 1920×1080.
+                // 640×480 at scale 2 is 320×240, the smallest GUI Minecraft allows; every hint still fits on one line there.
+                int[][] screens = {{1280, 800, 2}, {1280, 800, 3}, {1920, 1080, 4}, {640, 360, 0}, {683, 384, 0}, {640, 480, 2}};
+                for (int[] screen : screens) {
+                    context.getInput().resizeWindow(screen[0], screen[1]);
+                    context.runOnClient(client -> client.options.guiScale().set(screen[2]));
+                    context.waitTicks(3);
+                    String name = screen[2] == 0 || screen[0] == 640 ? "window-" + screen[0] + "x" + screen[1] : "scale-" + screen[2];
+                    int expectedScale = screen[2] == 0 ? 1 : screen[2];
+                    context.runOnClient(client -> check(client.getWindow().getGuiScale() == expectedScale,
+                            name + " renders at GUI scale " + expectedScale + " (" + client.getWindow().getGuiScale() + ")"));
+                    wheel(context, name);
+                }
+                context.getInput().resizeWindow(1280, 800);
             }
             report.put("passed", true);
         } catch (Throwable failure) {
@@ -103,13 +129,13 @@ public final class LayoutScaleTest implements FabricClientGameTest {
         }
     }
 
-    /** 1.1.1's radial placement, for the sizes where its text already cleared the HUD. */
+    /** 1.1.1's radial placement, for the sizes where the name, key line and hint still fit above the hearts. */
     private void unchangedGeometry() {
-        int[][] sizes = {{640, 400}, {640, 360}, {683, 384}, {960, 540}, {720, 450}};
+        int[][] sizes = {{640, 400}, {683, 384}, {720, 450}, {960, 540}};
         for (int[] size : sizes) {
             int centerY = (size[1] - 32) / 2;
             int radius = Math.max(36, Math.min(110, Math.min(size[0] / 2 - 22, (size[1] - 90) / 2)));
-            RadialGeometry.Layout layout = RadialGeometry.layout(size[0], size[1]);
+            RadialGeometry.Layout layout = RadialGeometry.layout(size[0], size[1], 1);
             check(layout.centerY() == centerY && layout.radius() == radius,
                     "A " + size[0] + "×" + size[1] + " GUI keeps 1.1.1's wheel geometry");
         }
@@ -176,35 +202,93 @@ public final class LayoutScaleTest implements FabricClientGameTest {
         }
     }
 
-    private void wheel(ClientGameTestContext context, int scale) {
+    private static double[] towards(Minecraft client, Screen screen, int centerY, int radius, int slot, int count) {
+        double angle = RadialGeometry.angle(slot, count);
+        return new double[] {(screen.width / 2 + Math.cos(angle) * radius * 0.76) * client.getWindow().getScreenWidth() / screen.width,
+                (centerY + Math.sin(angle) * radius * 0.76) * client.getWindow().getScreenHeight() / screen.height};
+    }
+
+    /** The text block under a radial ends above the hearts, its lines fit, and the title clears a popped-out top sector. */
+    private void textClear(Minecraft client, Screen screen, int centerY, int radius, int hintLines, String keyLine, String where) {
+        RadialGeometry.Layout layout = new RadialGeometry.Layout(centerY, radius);
+        int heartsTop = screen.height - HEARTS_TOP_FROM_BOTTOM;
+        int textBottom = layout.textBottom(hintLines);
+        int titleBottom = Math.max(8, centerY - radius - 24) + client.font.lineHeight;
+        report.put(where, Map.of("gui", screen.width + "x" + screen.height, "centerY", centerY, "radius", radius,
+                "hint_lines", hintLines, "hint_top", centerY + radius + RadialGeometry.HINT_OFFSET, "text_bottom", textBottom,
+                "hearts_top", heartsTop, "title_bottom", titleBottom));
+        check(textBottom + 2 <= heartsTop, where + ": the name, key line and hint end at least 2 pixels above the hearts (" + textBottom + " ≤ " + heartsTop + ")");
+        check(RadialGeometry.HINT_OFFSET >= RadialGeometry.KEY_LINE_OFFSET + client.font.lineHeight + 4,
+                where + ": the hint sits just under the key line");
+        check(client.font.width(keyLine) <= screen.width - 8, where + ": the key line fits the screen");
+        check(titleBottom <= centerY - radius - 7, where + ": the title stays clear of a hovered top sector");
+    }
+
+    private void wheel(ClientGameTestContext context, String name) {
         context.getInput().holdKey(InputConstants.KEY_G);
         context.waitTicks(3);
         double[] position = context.computeOnClient(client -> {
             WheelScreen screen = (WheelScreen) client.gui.screen();
-            double angle = RadialGeometry.angle(1, screen.slotCount());
-            return new double[] {(screen.centerX() + Math.cos(angle) * screen.radius() * 0.76) * client.getWindow().getScreenWidth() / screen.width,
-                    (screen.centerY() + Math.sin(angle) * screen.radius() * 0.76) * client.getWindow().getScreenHeight() / screen.height};
+            return towards(client, screen, screen.centerY(), screen.radius(), 1, screen.slotCount());
         });
         context.getInput().setCursorPos(position[0], position[1]);
         context.waitTicks(2);
-        context.takeScreenshot("wheel-hover-scale-" + scale);
-        context.runOnClient(client -> {
+        context.takeScreenshot("hint-wheel-" + name);
+        int[] topLevel = context.computeOnClient(client -> {
             WheelScreen screen = (WheelScreen) client.gui.screen();
             check(screen.selection(client.mouseHandler.getScaledXPos(client.getWindow()), client.mouseHandler.getScaledYPos(client.getWindow())) == 1,
-                    "A slot is hovered at GUI scale " + scale);
-            int keyLineBottom = screen.centerY() + screen.radius() + 31 + client.font.lineHeight;
-            int heartsTop = screen.height - HEARTS_TOP_FROM_BOTTOM;
-            report.put("wheel_scale_" + scale, Map.of("gui", screen.width + "x" + screen.height, "centerY", screen.centerY(),
-                    "radius", screen.radius(), "key_line_bottom", keyLineBottom, "hearts_top", heartsTop));
-            check(keyLineBottom <= heartsTop, "At GUI scale " + scale + " the hovered name and key line end above the hearts ("
-                    + keyLineBottom + " ≤ " + heartsTop + ")");
-            check(screen.centerY() - screen.radius() - 24 >= 4, "At GUI scale " + scale + " the title above the wheel stays on screen");
-            if (scale == 2) {
+                    name + ": a slot is hovered");
+            String keys = "Cycle wheel: " + HotkeyWheelClient.CYCLE_KEY.getTranslatedKeyMessage().getString()
+                    + " · Settings: " + HotkeyWheelClient.SETTINGS_KEY.getTranslatedKeyMessage().getString();
+            textClear(client, screen, screen.centerY(), screen.radius(), screen.hintLines(), keys, "wheel " + name);
+            if (name.equals("window-640x480")) check(screen.hintLines() == 1, name + ": at the narrowest GUI the hint still fits on one line");
+            if (name.equals("scale-2")) {
                 check(screen.centerY() == (screen.height - 32) / 2 && screen.radius() == 110, "At GUI scale 2 the wheel is placed as before");
             }
+            return new int[] {screen.centerY(), screen.radius()};
+        });
+        // Open the Tools folder with a click while the key is held; the folder radial uses the same placement.
+        double[] folder = context.computeOnClient(client -> {
+            WheelScreen screen = (WheelScreen) client.gui.screen();
+            return towards(client, screen, screen.centerY(), screen.radius(), 7, screen.slotCount());
+        });
+        context.getInput().setCursorPos(folder[0], folder[1]);
+        context.waitTicks(1);
+        context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
+        context.waitTicks(3);
+        context.takeScreenshot("hint-folder-" + name);
+        context.runOnClient(client -> {
+            WheelScreen screen = (WheelScreen) client.gui.screen();
+            check(screen.folderDepth() == 1, name + ": the folder opens");
+            check(screen.centerY() == topLevel[0] && screen.radius() == topLevel[1], name + ": the folder radial sits where the wheel does");
+            textClear(client, screen, screen.centerY(), screen.radius(), screen.hintLines(), "Cycle wheel: Tab · Settings: U", "folder " + name);
         });
         context.getInput().releaseKey(InputConstants.KEY_G);
         context.waitTicks(3);
         context.runOnClient(client -> client.gui.setScreen(null));
+        if (!FabricLoader.getInstance().isModLoaded("toolpouch")) return;
+        // The Tool Pouch item radial, with two pages of arrows so its page line is the longer one.
+        context.runOnClient(client -> {
+            List<ToolPouchIntegration.ItemChoice> arrows = new ArrayList<>();
+            for (int index = 0; index < 14; index++) arrows.add(new ToolPouchIntegration.ItemChoice(index, new ItemStack(Items.ARROW, index + 1)));
+            client.gui.setScreen(new ToolPouchRadialScreen(new ToolPouchIntegration.Snapshot(ToolPouchIntegration.Context.AMMO, arrows)));
+        });
+        context.waitTicks(2);
+        double[] item = context.computeOnClient(client -> {
+            ToolPouchRadialScreen screen = (ToolPouchRadialScreen) client.gui.screen();
+            return towards(client, screen, screen.centerY(), screen.radius(), 2, 12);
+        });
+        context.getInput().setCursorPos(item[0], item[1]);
+        context.waitTicks(2);
+        context.takeScreenshot("hint-toolpouch-" + name);
+        context.runOnClient(client -> {
+            ToolPouchRadialScreen screen = (ToolPouchRadialScreen) client.gui.screen();
+            RadialGeometry.Layout expected = RadialGeometry.layout(screen.width, screen.height, screen.hintLines());
+            check(screen.centerY() == expected.centerY() && screen.radius() == expected.radius(),
+                    name + ": the Tool Pouch radial follows the same placement rule as the wheel");
+            String pages = "Cycle page: " + HotkeyWheelClient.CYCLE_KEY.getTranslatedKeyMessage().getString() + " · arrows or scroll";
+            textClear(client, screen, screen.centerY(), screen.radius(), screen.hintLines(), pages, "toolpouch " + name);
+            client.gui.setScreen(null);
+        });
     }
 }

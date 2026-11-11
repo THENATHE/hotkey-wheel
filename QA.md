@@ -1,4 +1,49 @@
-# Hotkey Wheel 1.1.2+26.3 verification
+# Hotkey Wheel 1.1.3+26.3 verification
+
+**Status: release verified.** The exact release JAR passes every profile of the full matrix with the supported versions of all three integrations: Vanilla++ Quality of Life Suite 1.5.3+26.3, Buildprint 0.1.39+26.3 and Blocktone for Buildprint 0.1.39.1. Each profile is followed by a restart, a second game that loads the settings the first one saved, and every profile loads settings written by the published 1.0.11 and 1.1.1 JARs. It passes with a dedicated server, standalone Tool Pouch 1.2.0, BRBR 1.11.8, Polymer 0.18.7, Sorted 0.1.41, Controlling 26.3.4 and Mod Menu 21.0.0. This also covers 1.1.2's features in the integrated, standalone Tool Pouch and Polymer profiles, which 1.1.2 did not run. The 1.1.2 record below is kept for reference.
+
+Release JAR: `hotkey-wheel-1.1.3+26.3.jar`, SHA-256 `bff89476f8717774197ff3bfc524af577edbd3126b661136c99f591371c70de6`. Built with Microsoft OpenJDK 25.0.4.1, Fabric Loom 1.17.20 and Gradle 9.6.0; a second clean build with every task rerun gave the same bytes. Compared with 1.1.2, `RadialGeometry`, `WheelScreen`, `ToolPouchRadialScreen` and `WheelUi` changed, along with the description in `fabric.mod.json`.
+
+## What changed in 1.1.3
+
+- the hint under the wheel, its folders and the Tool Pouch item radial sits with the hovered name and the key line, just under the radial, instead of over the hotbar; the three lines stay at least 2 pixels above the hearts at every GUI scale and window size, the radial moves up and if needed shrinks to make room, and a hint too wide for the screen wraps
+- `fabric.mod.json` describes the new icon choices
+
+## Results, 2026-11-11
+
+Every run used the release JAR and the same fixture sources, on a 1920×1080 Xvfb screen with Mesa's software renderer; the game window is 1280×800 unless a fixture resizes it. Inputs came from an isolated copy of the 1.1.1 record's mods with the same hashes; no run touched the user's launcher profiles or display.
+
+| Profile | Inputs beyond the base set | Reports | Checks |
+| --- | --- | --- | --- |
+| minimal | none (no Mod Menu) | wheel 150, key management 88, moving slots 24, mod settings 7, icons 94, control folders 22, editor layout 60, layout 98, upgrade 22, folders 122 | 687 passed |
+| integrated | Buildprint 0.1.39+26.3, Blocktone 0.1.39.1 | wheel 154, key management 88, Buildprint/Blocktone 233, Mouse 4 67, dedicated-server camera question 48, moving slots 24, mod settings 20, icons 94, control folders 42, editor layout 60, layout 98, upgrade 22, folders 140 | 1,090 passed |
+| toolpouch | Buildprint, Blocktone + standalone Tool Pouch 1.2.0+26.3, Fzzy Config 0.7.7+fix3 | wheel 154, key management 88, Buildprint/Blocktone 233, Mouse 4 67, Tool Pouch 191, slot toggles 53, moving slots 24, mod settings 20, icons 94, control folders 49, editor layout 60, layout 128, upgrade 22, folders 140 | 1,323 passed |
+| suite | Buildprint, Blocktone + Vanilla++ 1.5.3+26.3 (bundles Tool Pouch 1.2.0), BRBR 1.11.8+26.3 | wheel 154, key management 88, Buildprint/Blocktone 233, Mouse 4 67, Tool Pouch and suite 206, BRBR 27, slot toggles 66, moving slots 24, mod settings 23, icons 96, control folders 49, editor layout 60, layout 128, upgrade 22, folders 140 | 1,383 passed |
+| suite-polymer | suite + Polymer 0.18.7+26.3 | same as suite | 1,383 passed |
+| each profile, restart | the settings that profile saved | restart 8 | 5 × 8 passed |
+
+Total: 5,906 passing checks. The input hashes are those of the 1.1.1 record (Buildprint `debca398…`, Blocktone 0.1.39.1 `75b40792…`, Vanilla++ `807083d8…`, standalone Tool Pouch `fcc2f984…`, BRBR `f02f61c6…`, Polymer `b18b0bb6…`, Mod Menu `837812c6…`, Sorted `bf378221…`); each run's `provenance.json` lists every mod hash, including the five small icon fixture mods.
+
+**Layout** (`LayoutScaleTest`, every profile). The wheel, a folder opened from it and, with Tool Pouch, the Tool Pouch item radial are opened with a slot hovered at GUI scale 2 and 3 in a 1280×800 window, GUI scale 4 in a 1920×1080 window, 640×360 and 683×384 windows at Minecraft's automatic scale, and a 640×480 window at scale 2, which is the smallest GUI Minecraft allows (320×240). Each case checks the scale actually used, then that the hovered name, the key line and the hint end at least 2 pixels above the hearts, that the hint sits under the key line, that the key line fits the screen, and that the title stays clear of a hovered top sector. The folder radial sits exactly where the wheel does, and the Tool Pouch radial follows the same placement rule. Measured, in GUI pixels:
+
+| Screen | GUI | Radius | Centre | Text ends | Hearts start |
+| --- | --- | --- | --- | --- | --- |
+| 1280×800, scale 2 | 640×400 | 110 | 184 | 347 | 361 |
+| 1280×800, scale 3 | 427×267 | 74 | 99 | 226 | 228 |
+| 1920×1080, scale 4 | 480×270 | 76 | 100 | 229 | 231 |
+| 640×360 window | 640×360 | 110 | 156 | 319 | 321 |
+| 683×384 window | 683×384 | 110 | 176 | 339 | 345 |
+| 640×480, scale 2 | 320×240 | 61 | 85 | 199 | 201 |
+
+At 640×400, 683×384, 720×450 and 960×540 the wheel keeps 1.1.1's geometry; only the hint moved. Every current hint fits on one line even at 320 GUI pixels, so the wrapping path is not exercised. The Move to… checks from 1.1.2 repeat unchanged.
+
+**1.1.2 features in every profile.** The icons, the control chooser's folders, the editor's General and wheel tabs with the settings key, the restart and the upgrade from 1.0.11 and 1.1.1 settings pass in all five profiles, as recorded for 1.1.2 below. In the integrated profile the control folders are Minecraft controls, Mod settings, Buildprint, Mod Menu and Sorted; the standalone Tool Pouch is its own folder in the toolpouch profile, with its slot toggles. U, the settings key's default, is shared with no other control in any profile.
+
+**Vanilla++, Buildprint and Blocktone.** The 1.1.1 coverage repeats with Vanilla++ 1.5.3, Buildprint 0.1.39 and Blocktone 0.1.39.1, natively and with Polymer: the suite's registered controls and configuration hub, the contextual Tool Pouch radial, BRBR coexistence, wheel-opened menus, child screens and the selection editor closed with the original opener, save, cancel and validation, reserved editor keys, the walking camera and the dedicated-server camera question.
+
+Not covered: Blocktone 0.1.39, the older Buildprint 0.1.16–0.1.19 fallbacks, the hint's wrapping (no current hint needs it), key bindings surviving a restart without the harness's option reset (read back with `Options.load`), hardware GPU rendering, a server on a separate machine, and Controlling's other views. Hotkey Wheel is an original client mod with no ported counterpart.
+
+# Hotkey Wheel 1.1.2+26.3 verification (previous release)
 
 **Status: smoke-tested and targeted-tested, at the user's request.** The full five-profile matrix was not run for this release. The exact release JAR passes every report in the minimal profile and in the Vanilla++ suite profile with Vanilla++ Quality of Life Suite 1.5.3+26.3, Buildprint 0.1.39+26.3 and Blocktone for Buildprint 0.1.39.1, and each profile then passes a restart: a second game that loads the settings the first one saved. The integrated, standalone Tool Pouch and Polymer profiles were not run, and neither was the dedicated-server camera question, which only runs in the integrated profile. The 1.1.1 record below is kept for reference.
 

@@ -1,5 +1,11 @@
 # Changes
 
+## 1.1.3+26.3
+
+- The hint under the wheel, its folders and the Tool Pouch item radial ("Release to select · …") now sits with the hovered name and the key line, just under the radial, instead of over the hotbar at the bottom of the screen. All three lines stay above the hearts and hotbar at every GUI scale and window size; on short screens the radial moves up, and if needed shrinks, to make room, and on narrow screens the hint wraps.
+- `fabric.mod.json` describes the new icon choices.
+- Verified again across all five profiles with Vanilla++ 1.5.3, Buildprint 0.1.39 and Blocktone 0.1.39.1, each with a restart, which also covers 1.1.2's features in the profiles 1.1.2 skipped. See [QA.md](QA.md).
+
 ## 1.1.2+26.3
 
 - **Icons:** the icon picker adds 39 icons of Hotkey Wheel's own, such as a cog, check mark, X, bulleted and numbered lists, arrows, a lock and a map pin, and the icon of every installed mod that has one. With no search, Hotkey Wheel's icons come first, then mods' icons, then blocks and items. A search looks through all three, best matches first: an exact name or alias, then names starting with the search, then words starting with it. Each of Hotkey Wheel's icons has aliases, so **settings** and **gear** find the cog. Slots and folders save them in the usual icon field as `hotkey_wheel:icon/<name>` or `hotkey_wheel:mod/<modid>`. A slot whose mod has been removed keeps its setting and shows a puzzle piece.

@@ -41,18 +41,25 @@ SERVER_REGRESSION = SOURCE / 'qa/regressions/1.0.9-server-camera-question'
 DOWNGRADE_REGRESSION = SOURCE / 'qa/regressions/1.1.0-downgrade-to-1.0.11'
 UPGRADE_REGRESSION = SOURCE / 'qa/regressions/1.1.2-upgrade-from-1.0.11-and-1.1.1'
 BUILDPRINT_VERSION = os.environ.get('HOTKEY_WHEEL_BUILDPRINT_VERSION', '0.1.39+26.3')
-# At the user's request 1.1.2 was smoke-tested and targeted-tested in two profiles rather than the full matrix.
-# Each profile also has a restart run: a second game that loads the settings the first one saved.
+# Every profile also has a restart run: a second game that loads the settings the first one saved.
 NEW_REPORTS = ['icon-results.json', 'control-folder-results.json', 'editor-layout-results.json', 'layout-scale-results.json',
                'upgrade-results.json']
+SUITE_REPORTS = ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json',
+                 'toolpouch-results.json', 'brbr-integration-results.json', 'toolpouch-toggle-results.json', 'move-slot-results.json',
+                 'mod-settings-results.json', *NEW_REPORTS, 'folder-results.json']
 REPORTS = {
     'minimal': ['results.json', 'key-management-results.json', 'move-slot-results.json', 'mod-settings-results.json',
                 *NEW_REPORTS, 'folder-results.json'],
-    'minimal-restart': ['restart-results.json'],
-    'suite': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json', 'toolpouch-results.json', 'brbr-integration-results.json',
-              'toolpouch-toggle-results.json', 'move-slot-results.json', 'mod-settings-results.json', *NEW_REPORTS, 'folder-results.json'],
-    'suite-restart': ['restart-results.json'],
+    'integrated': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json',
+                   'server-camera-results.json', 'move-slot-results.json', 'mod-settings-results.json', *NEW_REPORTS, 'folder-results.json'],
+    'toolpouch': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json',
+                  'toolpouch-results.json', 'toolpouch-toggle-results.json', 'move-slot-results.json', 'mod-settings-results.json',
+                  *NEW_REPORTS, 'folder-results.json'],
+    'suite': SUITE_REPORTS,
+    'suite-polymer': SUITE_REPORTS,
 }
+for profile in list(REPORTS):
+    REPORTS[profile + '-restart'] = ['restart-results.json']
 
 
 def require(condition, message):
@@ -389,7 +396,6 @@ report = {
     'serverCameraRegression': 'qa/regressions/1.0.9-server-camera-question',
     'downgradeRegression': 'qa/regressions/1.1.0-downgrade-to-1.0.11',
     'upgradeRegression': 'qa/regressions/1.1.2-upgrade-from-1.0.11-and-1.1.1',
-    'testScope': 'smoke and targeted tests in the minimal and suite profiles, at the user\'s request; the full five-profile matrix was not run',
     'apiAudit': 'buildprint-api-audit.json',
     'sourceFiles': {str(path.relative_to(SOURCE)): sha256(path) for path in sorted(source_files)},
     'verification': 'QA.md', 'published': False, 'installedIntoUserProfile': False,

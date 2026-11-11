@@ -9,8 +9,13 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 
 public final class WheelScreen extends Screen {
+    private static final String TOGGLE_HINT = "Click to select · wheel key again to select · Esc to cancel";
+    private static final String TOGGLE_FOLDER_HINT = "Click to select · center, right click or Esc goes back";
+    private static final String HOLD_HINT = "Release to select · click to hold an action · Esc to cancel";
+    private static final String HOLD_FOLDER_HINT = "Release to select · click to hold or go back · Esc goes back";
     private final InputConstants.Key opener;
     private final boolean toggleOpen;
     private int wheelIndex;
@@ -45,6 +50,8 @@ public final class WheelScreen extends Screen {
     public int centerX() { return centerX; }
     public int centerY() { return centerY; }
     public int radius() { return radius; }
+    /** How many lines the hint under this wheel takes at the current screen width. */
+    public int hintLines() { return WheelUi.hintLines(font, currentHint(), width).size(); }
 
     private WheelConfig.Wheel wheel() { return WheelConfig.get().wheels.get(wheelIndex); }
 
@@ -73,7 +80,8 @@ public final class WheelScreen extends Screen {
     @Override
     protected void init() {
         centerX = width / 2;
-        RadialGeometry.Layout layout = RadialGeometry.layout(width, height);
+        RadialGeometry.Layout layout = RadialGeometry.layout(width, height,
+                WheelUi.hintLineCount(font, width, TOGGLE_HINT, TOGGLE_FOLDER_HINT, HOLD_HINT, HOLD_FOLDER_HINT));
         centerY = layout.centerY();
         radius = layout.radius();
         innerRadius = (int) (radius * 0.42);
@@ -237,19 +245,25 @@ public final class WheelScreen extends Screen {
                     : !entry.label.isBlank() ? entry.label
                     : entry.control.isBlank() ? "Unassigned"
                     : HotkeyWheelClient.controlLabel(entry.control);
-            graphics.centeredText(font, font.plainSubstrByWidth(label, width - 24), centerX, centerY + radius + 18, 0xffe6e8ea);
+            graphics.centeredText(font, font.plainSubstrByWidth(label, width - 24), centerX, centerY + radius + RadialGeometry.NAME_OFFSET, 0xffe6e8ea);
         }
         String keys = "Cycle wheel: " + HotkeyWheelClient.CYCLE_KEY.getTranslatedKeyMessage().getString();
         if (!HotkeyWheelClient.SETTINGS_KEY.isUnbound()) {
             keys += " · Settings: " + HotkeyWheelClient.SETTINGS_KEY.getTranslatedKeyMessage().getString();
         }
-        graphics.centeredText(font, keys, centerX, centerY + radius + 31, 0xfff1c56c);
-        String hint;
-        if (toggleOpen()) hint = inFolder ? "Click to select · center, right click or Esc goes back"
-                : "Click to select · wheel key again to select · Esc to cancel";
-        else hint = inFolder ? "Release to select · click to hold or go back · Esc goes back"
-                : "Release to select · click to hold an action · Esc to cancel";
-        graphics.centeredText(font, hint, centerX, height - 12, 0xff8a9199);
+        graphics.centeredText(font, keys, centerX, centerY + radius + RadialGeometry.KEY_LINE_OFFSET, 0xfff1c56c);
+        String hint = currentHint();
+        // Grouped with the key line above the hearts and hotbar, which used to cover it at the bottom of the screen.
+        int hintY = centerY + radius + RadialGeometry.HINT_OFFSET;
+        for (FormattedCharSequence line : WheelUi.hintLines(font, hint, width)) {
+            graphics.centeredText(font, line, centerX, hintY, 0xff8a9199);
+            hintY += RadialGeometry.HINT_LINE_HEIGHT;
+        }
+    }
+
+    private String currentHint() {
+        boolean inFolder = !openFolders.isEmpty();
+        return toggleOpen() ? (inFolder ? TOGGLE_FOLDER_HINT : TOGGLE_HINT) : (inFolder ? HOLD_FOLDER_HINT : HOLD_HINT);
     }
 
     private static void drawLine(GuiGraphicsExtractor graphics, int startX, int startY, int endX, int endY, int color) {

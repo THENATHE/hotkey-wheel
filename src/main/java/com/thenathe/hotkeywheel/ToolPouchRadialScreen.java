@@ -7,9 +7,11 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 
 public final class ToolPouchRadialScreen extends Screen {
     private static final int PAGE_SIZE = 12;
+    private static final String HINT = "Click to select · right click or Esc to cancel";
     private final ToolPouchIntegration.Snapshot snapshot;
     private int page;
     private int centerX;
@@ -30,11 +32,12 @@ public final class ToolPouchRadialScreen extends Screen {
     public int centerX() { return centerX; }
     public int centerY() { return centerY; }
     public int radius() { return radius; }
+    public int hintLines() { return WheelUi.hintLines(font, HINT, width).size(); }
 
     @Override
     protected void init() {
         centerX = width / 2;
-        RadialGeometry.Layout layout = RadialGeometry.layout(width, height);
+        RadialGeometry.Layout layout = RadialGeometry.layout(width, height, WheelUi.hintLineCount(font, width, HINT));
         centerY = layout.centerY();
         radius = layout.radius();
         innerRadius = (int) (radius * 0.42);
@@ -160,12 +163,16 @@ public final class ToolPouchRadialScreen extends Screen {
         graphics.fill(0, centerY + radius + 13, width, height, 0x99000000);
         if (selected >= 0) {
             String label = snapshot.choices().get(page * PAGE_SIZE + selected).stack().getHoverName().getString();
-            graphics.centeredText(font, font.plainSubstrByWidth(label, width - 24), centerX, centerY + radius + 18, 0xffe6e8ea);
+            graphics.centeredText(font, font.plainSubstrByWidth(label, width - 24), centerX, centerY + radius + RadialGeometry.NAME_OFFSET, 0xffe6e8ea);
         }
         String cycle = HotkeyWheelClient.CYCLE_KEY.getTranslatedKeyMessage().getString();
         String pages = pageCount() > 1 ? "Cycle page: " + cycle + " · arrows or scroll" : "All available items · cycle key: " + cycle;
-        graphics.centeredText(font, pages, centerX, centerY + radius + 31, 0xfff1c56c);
-        graphics.centeredText(font, "Click to select · right click or Esc to cancel", centerX, height - 12, 0xff8a9199);
+        graphics.centeredText(font, pages, centerX, centerY + radius + RadialGeometry.KEY_LINE_OFFSET, 0xfff1c56c);
+        int hintY = centerY + radius + RadialGeometry.HINT_OFFSET;
+        for (FormattedCharSequence line : WheelUi.hintLines(font, HINT, width)) {
+            graphics.centeredText(font, line, centerX, hintY, 0xff8a9199);
+            hintY += RadialGeometry.HINT_LINE_HEIGHT;
+        }
     }
 
     private static void drawLine(GuiGraphicsExtractor graphics, int startX, int startY, int endX, int endY, int color) {

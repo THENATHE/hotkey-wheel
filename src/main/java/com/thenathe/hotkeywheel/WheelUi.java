@@ -1,13 +1,16 @@
 package com.thenathe.hotkeywheel;
 
+import java.util.List;
 import java.util.function.BooleanSupplier;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -19,6 +22,18 @@ final class WheelUi {
     static final int ERROR = 0xFFE08A8A;
 
     private WheelUi() {}
+
+    /** The hint under a radial, wrapped to the screen with a margin on each side. */
+    static List<FormattedCharSequence> hintLines(Font font, String hint, int screenWidth) {
+        return font.split(Component.literal(hint), screenWidth - 16);
+    }
+
+    /** The most lines any of a radial's hints needs, so the radial is placed once for all of them. */
+    static int hintLineCount(Font font, int screenWidth, String... hints) {
+        int lines = 1;
+        for (String hint : hints) lines = Math.max(lines, hintLines(font, hint, screenWidth).size());
+        return lines;
+    }
 
     static Component itemName(Item item) {
         if (Minecraft.getInstance().level != null) return new ItemStack(item).getHoverName();

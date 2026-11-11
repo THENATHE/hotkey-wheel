@@ -22,3 +22,6 @@ qa/focus-*/
 qa/upgrade-source-*/
 art/preview.png
 qa/upgrade-inputs/
+qa/integrated-restart/
+qa/toolpouch-restart/
+qa/suite-polymer-restart/
