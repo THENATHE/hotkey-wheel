@@ -37,6 +37,7 @@ final class WheelUi {
     static final class IconButton extends Button {
         private final Item item;
         private final BooleanSupplier selected;
+        private boolean folderMark;
 
         IconButton(int x, int y, int size, Item item, Component description,
                    BooleanSupplier selected, OnPress action) {
@@ -45,6 +46,9 @@ final class WheelUi {
             this.selected = selected;
             setTooltip(Tooltip.create(description));
         }
+
+        /** Marks a folder tile, which opens slots of its own, the same way the radial does. */
+        void showFolderMark() { folderMark = true; }
 
         @Override
         protected void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
@@ -65,6 +69,10 @@ final class WheelUi {
                 String label = font.plainSubstrByWidth(itemName(item).getString(), getWidth() - 6);
                 graphics.centeredText(font, label, getX() + getWidth() / 2,
                         getY() + (getHeight() - 9) / 2, TEXT);
+            }
+            if (folderMark) {
+                var font = Minecraft.getInstance().font;
+                graphics.text(font, "»", getX() + getWidth() - font.width("»") - 2, getY() + getHeight() - 10, GOLD);
             }
         }
     }

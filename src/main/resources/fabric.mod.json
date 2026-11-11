@@ -3,7 +3,7 @@
   "id": "hotkey_wheel",
   "version": "${version}",
   "name": "Hotkey Wheel",
-  "description": "Three customizable radial menus for Minecraft controls, with block icons and hold or toggle opening.",
+  "description": "Three customizable radial menus for Minecraft controls, with named folders, block icons and hold or toggle opening.",
   "authors": [
     "Thenathe"
   ],

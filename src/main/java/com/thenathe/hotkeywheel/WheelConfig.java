@@ -14,6 +14,9 @@ import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.LoggerFactory;
 
 public final class WheelConfig {
+    public static final int MAX_SLOTS = 12;
+    // A wheel, three folder levels below it and no deeper: each level costs a selection, and three keep the path on one line.
+    public static final int MAX_FOLDER_DEPTH = 3;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static WheelConfig current = new WheelConfig();
     public int wheelCount = 1;
@@ -58,6 +61,50 @@ public final class WheelConfig {
         public String label = "";
         public boolean holdAction;
         public boolean unbindKey;
+        // Only folders have slots of their own. Gson leaves out the null list, so ordinary slots save as in 1.0.x.
+        public List<Entry> entries;
+
+        public static Entry folder(String name) {
+            Entry folder = new Entry();
+            folder.label = name;
+            folder.icon = "minecraft:chest";
+            folder.entries = new ArrayList<>();
+            return folder;
+        }
+
+        public boolean isFolder() { return entries != null; }
+
+        public String folderName() { return label.isBlank() ? "Folder" : label; }
+
+        /** Slots inside this folder and its subfolders, folders included. */
+        public int nestedSlotCount() {
+            if (!isFolder()) return 0;
+            int count = entries.size();
+            for (Entry entry : entries) count += entry.nestedSlotCount();
+            return count;
+        }
+    }
+
+    /** Control slots of the active wheels, including those inside folders. */
+    public List<Entry> activeControls() {
+        List<Entry> slots = new ArrayList<>();
+        for (int index = 0; index < Math.min(wheelCount, wheels.size()); index++) collectEntries(wheels.get(index).entries, slots);
+        slots.removeIf(Entry::isFolder);
+        return slots;
+    }
+
+    /** Every slot of every wheel, hidden wheels included, folders and their contents included. */
+    public List<Entry> allEntries() {
+        List<Entry> all = new ArrayList<>();
+        for (Wheel wheel : wheels) collectEntries(wheel.entries, all);
+        return all;
+    }
+
+    private static void collectEntries(List<Entry> entries, List<Entry> all) {
+        for (Entry entry : entries) {
+            all.add(entry);
+            if (entry.isFolder()) collectEntries(entry.entries, all);
+        }
     }
 
     public static WheelConfig get() { return current; }
@@ -120,14 +167,28 @@ public final class WheelConfig {
             if (wheel.name == null || wheel.name.isBlank()) wheel.name = "Wheel " + (index + 1);
             wheel.name = wheel.name.substring(0, Math.min(wheel.name.length(), 32));
             if (wheel.entries == null) wheel.entries = new ArrayList<>();
-            if (wheel.entries.size() > 12) wheel.entries = new ArrayList<>(wheel.entries.subList(0, 12));
-            for (int slot = 0; slot < wheel.entries.size(); slot++) {
-                if (wheel.entries.get(slot) == null) wheel.entries.set(slot, new Entry());
-                Entry entry = wheel.entries.get(slot);
-                if (entry.control == null) entry.control = "";
-                if (entry.icon == null) entry.icon = "minecraft:stone";
-                if (entry.label == null) entry.label = "";
-            }
+            wheel.entries = normalizeEntries(wheel.entries, 0);
         }
+    }
+
+    private static List<Entry> normalizeEntries(List<Entry> entries, int depth) {
+        List<Entry> normalized = new ArrayList<>(entries.subList(0, Math.min(entries.size(), MAX_SLOTS)));
+        for (int slot = 0; slot < normalized.size(); slot++) {
+            if (normalized.get(slot) == null) normalized.set(slot, new Entry());
+            Entry entry = normalized.get(slot);
+            if (entry.control == null) entry.control = "";
+            if (entry.icon == null) entry.icon = "minecraft:stone";
+            if (entry.label == null) entry.label = "";
+            if (!entry.isFolder()) continue;
+            if (depth >= MAX_FOLDER_DEPTH) {
+                // The editor never nests this deep, so only a hand-edited file reaches here; keep the slot itself.
+                LoggerFactory.getLogger("hotkey-wheel").warn("Folder \"{}\" is nested more than {} levels deep; its slots are ignored",
+                        entry.label, MAX_FOLDER_DEPTH);
+                entry.entries = null;
+                continue;
+            }
+            entry.entries = normalizeEntries(entry.entries, depth + 1);
+        }
+        return normalized;
     }
 }

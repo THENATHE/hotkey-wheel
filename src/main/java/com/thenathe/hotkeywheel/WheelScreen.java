@@ -23,6 +23,9 @@ public final class WheelScreen extends Screen {
     private int radius;
     private int innerRadius;
     private boolean closing;
+    // Releasing a Hold opener over a folder keeps the folder open, and clicks then choose, as in the Tool Pouch radial.
+    private boolean clickToSelect;
+    private final List<WheelConfig.Entry> openFolders = new ArrayList<>();
     private List<RadialGeometry.Run> ring = List.of();
     // Looked up once per wheel instead of every frame; null marks a control that is not registered.
     private List<ItemStack> icons = List.of();
@@ -37,13 +40,28 @@ public final class WheelScreen extends Screen {
     }
 
     public InputConstants.Key opener() { return opener; }
-    public boolean toggleOpen() { return toggleOpen; }
+    /** Whether the opener confirms on press rather than release: Toggle wheels, and Hold wheels after a release opened a folder. */
+    public boolean toggleOpen() { return toggleOpen || clickToSelect; }
     public int wheelIndex() { return wheelIndex; }
+    /** How many folders deep the radial is; 0 is the wheel itself. */
+    public int folderDepth() { return openFolders.size(); }
+    public int slotCount() { return entries().size(); }
     public int centerX() { return centerX; }
     public int centerY() { return centerY; }
     public int radius() { return radius; }
 
     private WheelConfig.Wheel wheel() { return WheelConfig.get().wheels.get(wheelIndex); }
+
+    private List<WheelConfig.Entry> entries() {
+        return openFolders.isEmpty() ? wheel().entries : openFolders.getLast().entries;
+    }
+
+    /** The wheel name followed by each open folder, as shown above the radial. */
+    public String location() {
+        StringBuilder location = new StringBuilder(wheel().name);
+        for (WheelConfig.Entry folder : openFolders) location.append(" › ").append(folder.folderName());
+        return location.toString();
+    }
 
     @Override
     protected void init() {
@@ -57,7 +75,7 @@ public final class WheelScreen extends Screen {
     }
 
     private void rebuildWheel() {
-        List<WheelConfig.Entry> entries = wheel().entries;
+        List<WheelConfig.Entry> entries = entries();
         ring = RadialGeometry.ring(innerRadius, radius, entries.size());
         icons = new ArrayList<>(entries.size());
         controls = new ArrayList<>(entries.size());
@@ -71,6 +89,8 @@ public final class WheelScreen extends Screen {
 
     public void switchWheel(int index) {
         wheelIndex = Math.floorMod(index, WheelConfig.get().wheelCount);
+        // Another wheel starts at its own top level; a released Hold opener stays released.
+        openFolders.clear();
         rebuildWheel();
     }
 
@@ -78,18 +98,53 @@ public final class WheelScreen extends Screen {
 
     public int selection(double x, double y) {
         double outerRadius = wheel().selectOutside ? Double.POSITIVE_INFINITY : radius + 16;
-        return RadialGeometry.selection(x - centerX, y - centerY, innerRadius, outerRadius, wheel().entries.size());
+        return RadialGeometry.selection(x - centerX, y - centerY, innerRadius, outerRadius, entries().size());
     }
 
+    private boolean overCenter(double x, double y) {
+        return Math.hypot(x - centerX, y - centerY) < innerRadius;
+    }
+
+    /** Uses the hovered slot. {@code clicked} is false for the opener's release (Hold) or press (Toggle). */
     public void confirm(boolean clicked) {
-        int slot = selection(minecraft.mouseHandler.getScaledXPos(minecraft.getWindow()),
-                minecraft.mouseHandler.getScaledYPos(minecraft.getWindow()));
-        WheelConfig.Entry entry = slot < 0 ? null : wheel().entries.get(slot);
+        double x = minecraft.mouseHandler.getScaledXPos(minecraft.getWindow());
+        double y = minecraft.mouseHandler.getScaledYPos(minecraft.getWindow());
+        int slot = selection(x, y);
+        WheelConfig.Entry entry = slot < 0 ? null : entries().get(slot);
+        if (entry != null && entry.isFolder()) {
+            // A click keeps a held opener in charge; a release leaves nothing held, so clicks choose from here on.
+            if (!clicked && !toggleOpen()) clickToSelect = true;
+            openFolder(entry);
+            return;
+        }
+        // The center is Back for clicks and Toggle presses; releasing a Hold opener there always closes, as before.
+        boolean released = !clicked && !toggleOpen();
+        if (entry == null && !released && !openFolders.isEmpty() && overCenter(x, y)) {
+            goBack();
+            return;
+        }
         closing = true;
         minecraft.gui.setScreen(null);
         if (entry != null && !entry.control.isBlank()) {
             HotkeyWheelClient.queueAction(entry, opener, clicked && entry.holdAction && !toggleOpen);
         }
+    }
+
+    private void openFolder(WheelConfig.Entry folder) {
+        openFolders.add(folder);
+        rebuildWheel();
+        RadialCursor.center(this);
+    }
+
+    /** Escape and right click: up one folder, or close the wheel at its top level. */
+    public void goBack() {
+        if (openFolders.isEmpty()) {
+            onClose();
+            return;
+        }
+        openFolders.removeLast();
+        rebuildWheel();
+        RadialCursor.center(this);
     }
 
     @Override
@@ -99,7 +154,7 @@ public final class WheelScreen extends Screen {
             return true;
         }
         if (event.button() == InputConstants.MOUSE_BUTTON_RIGHT) {
-            onClose();
+            goBack();
             return true;
         }
         return true;
@@ -107,7 +162,7 @@ public final class WheelScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
-        if (event.key() == InputConstants.KEY_ESCAPE) onClose();
+        if (event.key() == InputConstants.KEY_ESCAPE) goBack();
         return true;
     }
 
@@ -135,19 +190,22 @@ public final class WheelScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         if (closing) return;
         int selected = selection(mouseX, mouseY);
+        List<WheelConfig.Entry> entries = entries();
         for (RadialGeometry.Run run : ring) {
             boolean highlighted = run.sector() == selected;
-            double angle = RadialGeometry.angle(run.sector(), wheel().entries.size());
+            double angle = RadialGeometry.angle(run.sector(), entries.size());
             int offsetX = highlighted ? (int) Math.round(Math.cos(angle) * 7) : 0;
             int offsetY = highlighted ? (int) Math.round(Math.sin(angle) * 7) : 0;
             int x = centerX + run.x() + offsetX;
             int y = centerY + run.y() + offsetY;
             graphics.fill(x, y, x + run.length(), y + 1, highlighted ? 0xee53616c : 0xdc263038);
         }
-        graphics.centeredText(font, wheel().name + "  " + (wheelIndex + 1) + "/" + WheelConfig.get().wheelCount,
-                centerX, Math.max(8, centerY - radius - 24), 0xfff1c56c);
-        for (int slot = 0; slot < wheel().entries.size(); slot++) {
-            double angle = RadialGeometry.angle(slot, wheel().entries.size());
+        String count = "  " + (wheelIndex + 1) + "/" + WheelConfig.get().wheelCount;
+        // A deep path keeps its end, where the open folder is named.
+        String title = font.plainSubstrByWidth(location(), width - 24 - font.width(count), true) + count;
+        graphics.centeredText(font, title, centerX, Math.max(8, centerY - radius - 24), 0xfff1c56c);
+        for (int slot = 0; slot < entries.size(); slot++) {
+            double angle = RadialGeometry.angle(slot, entries.size());
             double distance = radius * 0.73 + (selected == slot ? 10 : 0);
             int x = centerX + (int) Math.round(Math.cos(angle) * distance);
             int y = centerY + (int) Math.round(Math.sin(angle) * distance);
@@ -157,24 +215,31 @@ public final class WheelScreen extends Screen {
             graphics.pose().scale(scale, scale);
             graphics.fakeItem(icons.get(slot), -8, -8);
             graphics.pose().popMatrix();
-            if (controls.get(slot) == null && !pouchToggles.get(slot)) graphics.text(font, "!", x + 5, y - 11, 0xffff9999);
+            if (entries.get(slot).isFolder()) graphics.text(font, "»", x + 5, y + 2, 0xfff1c56c);
+            else if (controls.get(slot) == null && !pouchToggles.get(slot)) graphics.text(font, "!", x + 5, y - 11, 0xffff9999);
         }
         drawLine(graphics, centerX, centerY, mouseX, mouseY, selected < 0 ? 0x998a9199 : 0xfff1c56c);
         graphics.fill(centerX - 2, centerY - 2, centerX + 2, centerY + 2, 0xfff1c56c);
-        graphics.centeredText(font, "Cancel", centerX, centerY + 7, selected < 0 ? 0xfff1c56c : 0xff8a9199);
+        boolean inFolder = !openFolders.isEmpty();
+        graphics.centeredText(font, inFolder ? "Back" : "Cancel", centerX, centerY + 7, selected < 0 ? 0xfff1c56c : 0xff8a9199);
         graphics.fill(0, centerY + radius + 13, width, height, 0x99000000);
         if (selected >= 0) {
-            WheelConfig.Entry entry = wheel().entries.get(selected);
+            WheelConfig.Entry entry = entries.get(selected);
             KeyMapping mapping = controls.get(selected);
-            String label = !entry.label.isBlank() ? entry.label
+            String label = entry.isFolder() ? entry.folderName() + " » " + entry.entries.size() + (entry.entries.size() == 1 ? " slot" : " slots")
+                    : !entry.label.isBlank() ? entry.label
                     : pouchToggles.get(selected) ? ToolPouchToggles.label(entry.control)
                     : mapping == null ? "Unassigned" : Component.translatable(mapping.getName()).getString();
             graphics.centeredText(font, font.plainSubstrByWidth(label, width - 24), centerX, centerY + radius + 18, 0xffe6e8ea);
         }
         String cycle = "Cycle wheel: " + HotkeyWheelClient.CYCLE_KEY.getTranslatedKeyMessage().getString();
         graphics.centeredText(font, cycle, centerX, centerY + radius + 31, 0xfff1c56c);
-        graphics.centeredText(font, toggleOpen ? "Click to select · wheel key again to select · Esc to cancel"
-                : "Release to select · click to hold an action · Esc to cancel", centerX, height - 12, 0xff8a9199);
+        String hint;
+        if (toggleOpen()) hint = inFolder ? "Click to select · center, right click or Esc goes back"
+                : "Click to select · wheel key again to select · Esc to cancel";
+        else hint = inFolder ? "Release to select · click to hold or go back · Esc goes back"
+                : "Release to select · click to hold an action · Esc to cancel";
+        graphics.centeredText(font, hint, centerX, height - 12, 0xff8a9199);
     }
 
     public static ItemStack icon(String id) {

@@ -114,7 +114,7 @@ public final class HotkeyWheelClient implements ClientModInitializer {
             }
             if (press && key.getType() == InputConstants.Type.MOUSE) {
                 if (key.getValue() == InputConstants.MOUSE_BUTTON_LEFT) wheel.confirm(true);
-                else if (key.getValue() == InputConstants.MOUSE_BUTTON_RIGHT) wheel.onClose();
+                else if (key.getValue() == InputConstants.MOUSE_BUTTON_RIGHT) wheel.goBack();
                 consumedKeys.add(key);
                 return true;
             }

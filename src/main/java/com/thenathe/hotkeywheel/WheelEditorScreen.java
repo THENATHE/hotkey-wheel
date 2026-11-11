@@ -10,6 +10,7 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -23,6 +24,8 @@ public final class WheelEditorScreen extends Screen {
     private final List<ContentWidget> contentWidgets = new ArrayList<>();
     private final List<Caption> captions = new ArrayList<>();
     private final List<AbstractWidget> fixedWidgets = new ArrayList<>();
+    // The folders opened for editing inside the active wheel, outermost first.
+    private final List<WheelConfig.Entry> openFolders = new ArrayList<>();
     private int activeWheel;
     private int selectedSlot;
     private int capturingKey = -1;
@@ -52,6 +55,11 @@ public final class WheelEditorScreen extends Screen {
 
     private WheelConfig.Wheel wheel() { return draft.wheels.get(activeWheel); }
 
+    /** The slots being edited: the active wheel's, or those of the innermost open folder. */
+    private List<WheelConfig.Entry> entries() {
+        return openFolders.isEmpty() ? wheel().entries : openFolders.getLast().entries;
+    }
+
     @Override
     protected void init() {
         contentWidgets.clear();
@@ -66,6 +74,7 @@ public final class WheelEditorScreen extends Screen {
             int target = index;
             Button tab = Button.builder(Component.literal((index == activeWheel ? "● " : "") + "Wheel " + (index + 1)), button -> {
                 activeWheel = target;
+                openFolders.clear();
                 selectedSlot = 0;
                 scroll = 0;
                 rebuildWidgets();
@@ -85,6 +94,7 @@ public final class WheelEditorScreen extends Screen {
         int offset = 0;
         contentButton("Active wheels: " + draft.wheelCount, offset, panelWidth, left, button -> {
             draft.wheelCount = draft.wheelCount % 3 + 1;
+            if (activeWheel >= draft.wheelCount) openFolders.clear();
             activeWheel = Math.min(activeWheel, draft.wheelCount - 1);
             rebuildWidgets();
         }, "Choose 1–3 wheels. Hidden wheels keep their settings.");
@@ -95,11 +105,9 @@ public final class WheelEditorScreen extends Screen {
         }, "Protect Inventory, Attack/Use, movement, Jump, Sneak, Sprint, Pick Block, chat/commands, and hotbar keys from automatic unbinding. Escape and primary mouse buttons are reserved for normal menu input. Turning this on restores essential keys previously unbound by this mod when you Save.");
         offset += 26;
         Button restore = contentButton("Restore keys unbound by Hotkey Wheel", offset, panelWidth, left, button -> {
-            for (WheelConfig.Wheel configured : draft.wheels) {
-                for (WheelConfig.Entry entry : configured.entries) entry.unbindKey = false;
-            }
+            for (WheelConfig.Entry entry : draft.allEntries()) entry.unbindKey = false;
             rebuildWidgets();
-        }, "Turn off automatic unbinding for all slots. Save restores remembered keys that are still unbound, preserving later manual bindings. Cancel discards this request.");
+        }, "Turn off automatic unbinding for all slots, including slots in folders. Save restores remembered keys that are still unbound, preserving later manual bindings. Cancel discards this request.");
         restore.active = !draft.managedBindings.isEmpty();
         offset += 30;
         caption("Wheel name", offset, WheelUi.DIM);
@@ -130,44 +138,48 @@ public final class WheelEditorScreen extends Screen {
         offset += 24;
         addKeyButton(4, "Configure wheels", offset);
         offset += 33;
-        caption("Slots · " + wheel().entries.size() + "/12", offset, WheelUi.GOLD);
+        List<WheelConfig.Entry> entries = entries();
+        String level = openFolders.isEmpty() ? "Slots" : "Slots in " + openFolders.getLast().folderName();
+        caption(level + " · " + entries.size() + "/" + WheelConfig.MAX_SLOTS, offset, WheelUi.GOLD);
         offset += 16;
-        selectedSlot = Math.clamp(selectedSlot, 0, Math.max(0, wheel().entries.size() - 1));
+        if (!openFolders.isEmpty()) offset = addBreadcrumbs(offset);
+        selectedSlot = Math.clamp(selectedSlot, 0, Math.max(0, entries.size() - 1));
         int columns = Math.min(12, Math.max(1, panelWidth / 32));
-        for (int index = 0; index < wheel().entries.size(); index++) {
+        for (int index = 0; index < entries.size(); index++) {
             int slot = index;
-            WheelConfig.Entry entry = wheel().entries.get(index);
+            WheelConfig.Entry entry = entries.get(index);
             Component description = Component.literal("Slot " + (slot + 1) + ": " + entryName(entry));
             WheelUi.IconButton icon = new WheelUi.IconButton(left + index % columns * 32, 0, 28,
                     WheelUi.item(entry.icon), description, () -> selectedSlot == slot, button -> {
                 selectedSlot = slot;
                 rebuildWidgets();
             });
+            if (entry.isFolder()) icon.showFolderMark();
             content(icon, offset + index / columns * 32);
         }
-        offset += Math.max(1, (wheel().entries.size() + columns - 1) / columns) * 32 + 4;
-        int quarter = (panelWidth - 18) / 4;
-        Button add = contentButton("Add", offset, quarter, left, button -> {
-            wheel().entries.add(new WheelConfig.Entry());
-            selectedSlot = wheel().entries.size() - 1;
-            rebuildWidgets();
-        }, "Add another slot, up to 12 per wheel.");
-        add.active = wheel().entries.size() < 12;
-        Button remove = contentButton("Remove", offset, quarter, left + quarter + 6, button -> {
-            wheel().entries.remove(selectedSlot);
-            selectedSlot = Math.max(0, selectedSlot - 1);
-            rebuildWidgets();
-        }, "Remove the selected slot.");
-        remove.active = !wheel().entries.isEmpty();
-        Button earlier = contentButton("← Move", offset, quarter, left + 2 * (quarter + 6), button -> moveSlot(-1),
+        offset += Math.max(1, (entries.size() + columns - 1) / columns) * 32 + 4;
+        int fifth = (panelWidth - 24) / 5;
+        Button add = contentButton("Add", offset, fifth, left, button -> addSlot(new WheelConfig.Entry()),
+                "Add another slot, up to 12 per wheel or folder.");
+        add.active = entries.size() < WheelConfig.MAX_SLOTS;
+        Button addFolder = contentButton("Add folder", offset, fifth, left + fifth + 6,
+                button -> addSlot(WheelConfig.Entry.folder("Folder")),
+                "Add a named folder with up to 12 slots of its own. Folders can hold folders, three levels deep.");
+        addFolder.active = entries.size() < WheelConfig.MAX_SLOTS && openFolders.size() < WheelConfig.MAX_FOLDER_DEPTH;
+        Button remove = contentButton("Remove", offset, fifth, left + 2 * (fifth + 6), button -> removeSlot(),
+                "Remove the selected slot. Removing a folder that holds slots asks first.");
+        remove.active = !entries.isEmpty();
+        Button earlier = contentButton("← Move", offset, fifth, left + 3 * (fifth + 6), button -> moveSlot(-1),
                 "Move the selected slot one position earlier around the wheel.");
-        earlier.active = !wheel().entries.isEmpty() && selectedSlot > 0;
-        Button later = contentButton("Move →", offset, quarter, left + 3 * (quarter + 6), button -> moveSlot(1),
+        earlier.active = !entries.isEmpty() && selectedSlot > 0;
+        Button later = contentButton("Move →", offset, fifth, left + 4 * (fifth + 6), button -> moveSlot(1),
                 "Move the selected slot one position later around the wheel.");
-        later.active = !wheel().entries.isEmpty() && selectedSlot < wheel().entries.size() - 1;
+        later.active = !entries.isEmpty() && selectedSlot < entries.size() - 1;
         offset += 33;
-        if (!wheel().entries.isEmpty()) {
-            WheelConfig.Entry entry = wheel().entries.get(selectedSlot);
+        if (!entries.isEmpty() && entries.get(selectedSlot).isFolder()) {
+            offset = addFolderSettings(entries.get(selectedSlot), offset);
+        } else if (!entries.isEmpty()) {
+            WheelConfig.Entry entry = entries.get(selectedSlot);
             caption("Selected slot " + (selectedSlot + 1), offset, WheelUi.GOLD);
             offset += 14;
             String controlName = entry.control.isBlank() ? "Choose a control" : ToolPouchToggles.label(entry.control);
@@ -212,6 +224,8 @@ public final class WheelEditorScreen extends Screen {
         }
         offset = wrappedCaption("Hold open: release the wheel key to tap the hovered control. For a Hold action, click its slot, then keep the wheel key held until finished.", offset);
         offset += 5;
+        offset = wrappedCaption("Folders open as their own radial. Click a folder, or release over it, to open it. Its center goes back; Escape and right click go up one level.", offset);
+        offset += 5;
         offset = wrappedCaption("Cycle changes wheels while the opener remains held. Keys also appear in Controls → Key Binds → Hotkey Wheel and are searchable with Controlling.", offset);
         offset += 14;
         caption("Integrations", offset, WheelUi.GOLD);
@@ -235,6 +249,89 @@ public final class WheelEditorScreen extends Screen {
         buildprint.active = FabricLoader.getInstance().isModLoaded("buildprint");
         offset += 26;
         contentHeight = offset + 12;
+    }
+
+    private int addBreadcrumbs(int offset) {
+        // The wheel, then each open folder; the last one is the level being edited.
+        int count = openFolders.size() + 1;
+        int crumbWidth = (panelWidth - 6 * (count - 1)) / count;
+        for (int depth = 0; depth < count; depth++) {
+            int target = depth;
+            String name = depth == 0 ? wheel().name : openFolders.get(depth - 1).folderName();
+            boolean current = depth == count - 1;
+            Button crumb = contentButton((current ? "● " : depth == 0 ? "" : "› ") + name, offset, crumbWidth,
+                    left + depth * (crumbWidth + 6), button -> {
+                WheelConfig.Entry reopened = target < openFolders.size() ? openFolders.get(target) : null;
+                openFolders.subList(target, openFolders.size()).clear();
+                // Return with the folder just left selected, so the way back in is one click.
+                selectedSlot = reopened == null ? 0 : Math.max(0, entries().indexOf(reopened));
+                scroll = 0;
+                rebuildWidgets();
+            }, current ? "The level you are editing." : "Go back to this level. Changes stay in the draft until Save.");
+            crumb.active = !current;
+        }
+        return offset + 26;
+    }
+
+    private int addFolderSettings(WheelConfig.Entry folder, int offset) {
+        caption("Selected folder " + (selectedSlot + 1), offset, WheelUi.GOLD);
+        offset += 14;
+        Button open = contentButton(openFolderLabel(folder), offset, panelWidth, left, button -> {
+            openFolders.add(folder);
+            selectedSlot = 0;
+            scroll = 0;
+            rebuildWidgets();
+        }, "Edit the slots inside this folder. The path above the slots leads back.");
+        offset += 29;
+        caption("Folder name", offset, WheelUi.DIM);
+        offset += 12;
+        EditBox name = new EditBox(font, left, 0, panelWidth, 20, Component.literal("Folder name"));
+        name.setMaxLength(32);
+        name.setHint(Component.literal("Folder"));
+        name.setValue(folder.label);
+        name.setResponder(value -> {
+            folder.label = value;
+            open.setMessage(Component.literal(font.plainSubstrByWidth(openFolderLabel(folder), panelWidth - 10)));
+        });
+        content(name, offset);
+        offset += 26;
+        contentButton("Choose block / item icon…", offset, panelWidth, left, button -> {
+            minecraft.gui.setScreen(new IconPickerScreen(this, folder.icon, icon -> folder.icon = icon));
+        }, "Icons are visual labels. You do not need to carry the block or item.");
+        return offset + 31;
+    }
+
+    private static String openFolderLabel(WheelConfig.Entry folder) {
+        int slots = folder.entries.size();
+        return "Open folder: " + folder.folderName() + " · " + slots + (slots == 1 ? " slot" : " slots") + " →";
+    }
+
+    private void addSlot(WheelConfig.Entry entry) {
+        entries().add(entry);
+        selectedSlot = entries().size() - 1;
+        rebuildWidgets();
+    }
+
+    private void removeSlot() {
+        WheelConfig.Entry entry = entries().get(selectedSlot);
+        if (!entry.isFolder() || entry.entries.isEmpty()) {
+            removeSelectedSlot();
+            return;
+        }
+        int slots = entry.nestedSlotCount();
+        Component title = Component.literal("Remove the folder \"" + entry.folderName() + "\"?");
+        Component message = Component.literal("It holds " + slots + (slots == 1 ? " slot" : " slots")
+                + ", counting folders inside it. Save applies the removal; Cancel in the editor keeps everything.");
+        minecraft.gui.setScreen(new ConfirmScreen(confirmed -> {
+            if (confirmed) removeSelectedSlot();
+            minecraft.gui.setScreen(this);
+        }, title, message, Component.literal("Remove folder"), Component.literal("Keep")));
+    }
+
+    private void removeSelectedSlot() {
+        entries().remove(selectedSlot);
+        selectedSlot = Math.max(0, selectedSlot - 1);
+        rebuildWidgets();
     }
 
     private void addKeyButton(int index, String label, int offset) {
@@ -268,13 +365,14 @@ public final class WheelEditorScreen extends Screen {
     }
 
     private static String entryName(WheelConfig.Entry entry) {
+        if (entry.isFolder()) return "Folder " + entry.folderName() + " · " + entry.entries.size() + "/" + WheelConfig.MAX_SLOTS;
         if (!entry.label.isBlank()) return entry.label;
         if (entry.control.isBlank()) return "Choose a control";
         return ToolPouchToggles.label(entry.control);
     }
 
     private void moveSlot(int direction) {
-        Collections.swap(wheel().entries, selectedSlot, selectedSlot + direction);
+        Collections.swap(entries(), selectedSlot, selectedSlot + direction);
         selectedSlot += direction;
         rebuildWidgets();
     }

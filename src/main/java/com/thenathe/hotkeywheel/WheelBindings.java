@@ -48,15 +48,14 @@ public final class WheelBindings {
         Set<KeyMapping> wanted = new LinkedHashSet<>();
         Set<String> wantedPouchToggles = new LinkedHashSet<>();
         boolean keepSuiteElytraKey = false;
-        for (int index = 0; index < configuration.wheelCount; index++) {
-            for (WheelConfig.Entry entry : configuration.wheels.get(index).entries) {
-                if (entry.unbindKey && ToolPouchToggles.canUnbind(entry.control)) wantedPouchToggles.add(entry.control);
-                if (entry.unbindKey && entry.control.equals(ToolPouchToggles.SUITE_ELYTRA_MAPPING)) keepSuiteElytraKey = true;
-                KeyMapping control = HotkeyWheelClient.findControl(entry.control);
-                if (entry.unbindKey && control != null && !control.getName().startsWith("key.hotkey_wheel.")
-                        && (!configuration.safeMode || !protectedControl(control))) {
-                    wanted.add(control);
-                }
+        // Slots inside folders count as uses too, so removing a folder can be the last use that restores a key.
+        for (WheelConfig.Entry entry : configuration.activeControls()) {
+            if (entry.unbindKey && ToolPouchToggles.canUnbind(entry.control)) wantedPouchToggles.add(entry.control);
+            if (entry.unbindKey && entry.control.equals(ToolPouchToggles.SUITE_ELYTRA_MAPPING)) keepSuiteElytraKey = true;
+            KeyMapping control = HotkeyWheelClient.findControl(entry.control);
+            if (entry.unbindKey && control != null && !control.getName().startsWith("key.hotkey_wheel.")
+                    && (!configuration.safeMode || !protectedControl(control))) {
+                wanted.add(control);
             }
         }
 
