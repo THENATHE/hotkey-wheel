@@ -23,8 +23,8 @@ INTEGRATED = '--integrated' in sys.argv or SUITE or TOOLPOUCH or BASELINE or PRE
 # Blocktone pins one exact Buildprint release, so a new Buildprint can be checked before its Blocktone build exists.
 BLOCKTONE = INTEGRATED and '--no-blocktone' not in sys.argv
 # The supported Buildprint release and its matching Blocktone; set both to check a newer pair.
-CURRENT_BUILDPRINT = os.environ.get('HOTKEY_WHEEL_BUILDPRINT_VERSION', '0.1.38+26.3')
-CURRENT_BLOCKTONE = os.environ.get('HOTKEY_WHEEL_BLOCKTONE_VERSION', '0.1.38')
+CURRENT_BUILDPRINT = os.environ.get('HOTKEY_WHEEL_BUILDPRINT_VERSION', '0.1.39+26.3')
+CURRENT_BLOCKTONE = os.environ.get('HOTKEY_WHEEL_BLOCKTONE_VERSION', '0.1.39.1')
 BUILDPRINT_VERSION = '0.1.16+26.x' if LEGACY else '0.1.17+26.x' if BASELINE else '0.1.18+26.x' if PREVIOUS else CURRENT_BUILDPRINT
 BLOCKTONE_VERSION = '0.1.20' if LEGACY else '0.1.23' if BASELINE or PREVIOUS else CURRENT_BLOCKTONE
 SUITE_VERSION = os.environ.get('HOTKEY_WHEEL_SUITE_VERSION', '1.5.3+26.3')
@@ -200,6 +200,8 @@ if TOOLPOUCH:
 # Slot toggles arrived in Tool Pouch 1.2.0; the fixture compiles against its classes.
 if TOOLPOUCH or SUITE and not SUITE_TOOLPOUCH_VERSION.startswith('1.1.'):
     test_names.append('ToolPouchToggleTest')
+# Every profile moves slots and opens mod settings; without Mod Menu the latter checks the unavailable slot.
+test_names += ['MoveSlotTest', 'ModSettingsTest']
 # Runs last and restores the keys and settings it changes; it covers whichever integrations the profile has.
 test_names.append('FolderWheelTest')
 if os.environ.get('HOTKEY_WHEEL_QA_TESTS'):
@@ -237,7 +239,7 @@ if (GAME / '.mixin.out').exists():
     shutil.rmtree(GAME / '.mixin.out')
 for name in ['key-management-results.json', 'buildprint-menu-results.json', 'toolpouch-results.json', 'brbr-integration-results.json',
              'side-mouse-editor-results.json', 'server-camera-results.json', 'toolpouch-toggle-results.json', 'folder-results.json',
-             'downgrade-results.json']:
+             'downgrade-results.json', 'move-slot-results.json', 'mod-settings-results.json']:
     (RUN / name).unlink(missing_ok=True)
 command = [str(compiler.parent / 'java'), '-Xmx3G' if 'ServerCameraChoiceTest' in test_names else '-Xmx2G', '-XX:ActiveProcessorCount=4',
            '-Djava.library.path=' + str(META / 'natives/26.3-0.19.5/lwjgl/3.4.3-snapshot/x64'),
@@ -309,7 +311,8 @@ report_names = {'WheelClientTest': 'results.json', 'KeyManagementTest': 'key-man
                 'BuildprintMenuTest': 'buildprint-menu-results.json', 'ToolPouchClientTest': 'toolpouch-results.json',
                 'BrbrIntegrationTest': 'brbr-integration-results.json', 'SideMouseEditorTest': 'side-mouse-editor-results.json',
                 'ServerCameraChoiceTest': 'server-camera-results.json', 'ToolPouchToggleTest': 'toolpouch-toggle-results.json',
-                'FolderWheelTest': 'folder-results.json', 'DowngradeTest': 'downgrade-results.json'}
+                'FolderWheelTest': 'folder-results.json', 'DowngradeTest': 'downgrade-results.json',
+                'MoveSlotTest': 'move-slot-results.json', 'ModSettingsTest': 'mod-settings-results.json'}
 reports = [report_names[name] for name in test_names]
 for name in reports:
     path = RUN / name

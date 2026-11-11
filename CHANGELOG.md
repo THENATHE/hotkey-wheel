@@ -1,5 +1,13 @@
 # Changes
 
+## 1.1.1+26.3
+
+- **Move to…** in the editor moves the selected slot, or a folder with everything in it, into a folder, up to the level above, or into another folder of the same wheel. A small picker shows the wheel and its folders as a tree with their slot counts. Full levels, places too deep for the three-level limit, and a folder's own insides are greyed out and say why. The slot keeps all its settings and Hotkey Wheel's remembered keys; as with every edit, nothing changes until Save.
+- **Mod settings** in the control picker: a slot can open any installed mod's settings screen, the one Mod Menu opens, with no key needed. The searchable group lists each mod that has a settings screen, with its icon. Slots save the action as `modmenu:config/<modid>`. The screen returns to the game when it closes, and the original wheel opener closes it, like the Buildprint menus, through the screen's own save and cancel. Without Mod Menu the slots stay saved and show as needing Mod Menu.
+- The option for that is now called **Wheel key closes menus it opened**; its saved setting is unchanged.
+- Blocktone for Buildprint 0.1.39.1 replaced instant-break with Buildprint's excavator. Wheel slots saved with **Toggle instant-break** keep their saved setting and act as Buildprint's **Toggle Excavator** once Blocktone no longer registers the old control. Unbind normal key then applies to the excavator's key; a key Hotkey Wheel had removed from instant-break is given to Toggle Excavator on recovery, never over a key it already has. Blocktone 0.1.39 and 0.1.38 keep working as before, including their instant-break settings.
+- QA adds `MoveSlotTest` and `ModSettingsTest` to every profile and checks the instant-break slots with the new Blocktone and the old one. See [QA.md](QA.md).
+
 ## 1.1.0+26.3
 
 - Folders: a slot can be a named folder with its own icon and up to 12 slots, each with the usual control, icon, label, Tap / Hold and Unbind normal key. Folders can hold folders, three levels deep.

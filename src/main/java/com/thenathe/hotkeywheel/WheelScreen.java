@@ -83,7 +83,7 @@ public final class WheelScreen extends Screen {
         for (WheelConfig.Entry entry : entries) {
             icons.add(icon(entry.icon));
             controls.add(HotkeyWheelClient.findControl(entry.control));
-            pouchToggles.add(ToolPouchToggles.handles(entry.control));
+            pouchToggles.add(ToolPouchToggles.handles(entry.control) || ModSettingsActions.available(entry.control));
         }
     }
 
@@ -225,11 +225,10 @@ public final class WheelScreen extends Screen {
         graphics.fill(0, centerY + radius + 13, width, height, 0x99000000);
         if (selected >= 0) {
             WheelConfig.Entry entry = entries.get(selected);
-            KeyMapping mapping = controls.get(selected);
             String label = entry.isFolder() ? entry.folderName() + " » " + entry.entries.size() + (entry.entries.size() == 1 ? " slot" : " slots")
                     : !entry.label.isBlank() ? entry.label
-                    : pouchToggles.get(selected) ? ToolPouchToggles.label(entry.control)
-                    : mapping == null ? "Unassigned" : Component.translatable(mapping.getName()).getString();
+                    : entry.control.isBlank() ? "Unassigned"
+                    : HotkeyWheelClient.controlLabel(entry.control);
             graphics.centeredText(font, font.plainSubstrByWidth(label, width - 24), centerX, centerY + radius + 18, 0xffe6e8ea);
         }
         String cycle = "Cycle wheel: " + HotkeyWheelClient.CYCLE_KEY.getTranslatedKeyMessage().getString();

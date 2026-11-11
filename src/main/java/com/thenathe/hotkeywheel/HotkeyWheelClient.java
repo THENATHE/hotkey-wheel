@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.thenathe.hotkeywheel.mixin.KeyMappingAccess;
 import com.thenathe.hotkeywheel.mixin.ToggleKeyMappingAccess;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -22,6 +23,11 @@ public final class HotkeyWheelClient implements ClientModInitializer {
     public static final KeyMapping[] WHEEL_KEYS = new KeyMapping[3];
     public static KeyMapping CYCLE_KEY;
     public static KeyMapping CONFIGURE_KEY;
+    // Controls whose mod replaced them with another mod's control. A slot keeps the saved name and uses
+    // the replacement only once the original is no longer registered.
+    private static final Map<String, String> REPLACED_CONTROLS = Map.of(
+            // Blocktone 0.1.39.1 removed instant-break in favour of Buildprint's own excavator.
+            "key.buildprint_toning.instamine", "key.buildprint.excavator");
     private static final Set<InputConstants.Key> physicalKeys = new HashSet<>();
     private static final Set<InputConstants.Key> consumedKeys = new HashSet<>();
     private static PendingAction pending;
@@ -174,6 +180,12 @@ public final class HotkeyWheelClient implements ClientModInitializer {
         if (pending == null) return;
         PendingAction action = pending;
         pending = null;
+        if (ModSettingsActions.handles(action.entry().control)) {
+            // Opening a screen is a single action, so Hold actions also open it once.
+            releaseActive();
+            ModSettingsActions.open(client, action.entry().control, action.opener());
+            return;
+        }
         if (ToolPouchToggles.handles(action.entry().control)) {
             // A slot toggle is a single switch, so Hold actions also toggle once.
             releaseActive();
@@ -200,10 +212,29 @@ public final class HotkeyWheelClient implements ClientModInitializer {
     }
 
     public static KeyMapping findControl(String name) {
+        KeyMapping mapping = registeredControl(name);
+        if (mapping == null && REPLACED_CONTROLS.containsKey(name)) mapping = registeredControl(REPLACED_CONTROLS.get(name));
+        return mapping;
+    }
+
+    private static KeyMapping registeredControl(String name) {
         for (KeyMapping mapping : Minecraft.getInstance().options.keyMappings) {
             if (mapping.getName().equals(name) && !name.startsWith("key.hotkey_wheel.")) return mapping;
         }
         return null;
+    }
+
+    /** The name a slot's control shows in the editor and the radial. */
+    public static String controlLabel(String control) {
+        if (ModSettingsActions.handles(control)) return ModSettingsActions.label(control);
+        KeyMapping mapping = findControl(control);
+        if (mapping != null && !ToolPouchToggles.handles(control)) return Component.translatable(mapping.getName()).getString();
+        return ToolPouchToggles.label(control);
+    }
+
+    /** Whether a slot's control can be used now: a key mapping, a pouch toggle or a mod's settings. */
+    public static boolean controlAvailable(String control) {
+        return findControl(control) != null || ToolPouchToggles.handles(control) || ModSettingsActions.available(control);
     }
 
     private static void releaseActive() {

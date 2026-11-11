@@ -1,4 +1,54 @@
-# Hotkey Wheel 1.1.0+26.3 verification
+# Hotkey Wheel 1.1.1+26.3 verification
+
+**Status: release verified.** The exact release JAR passes every profile with the supported versions of all three integrations: Vanilla++ Quality of Life Suite 1.5.3+26.3, Buildprint 0.1.39+26.3 and Blocktone for Buildprint 0.1.39.1. It also passes the integrated profile with the previous Blocktone 0.1.39, whose instant-break is still there. It passes with a dedicated server, standalone Tool Pouch 1.2.0, BRBR 1.11.8, Polymer 0.18.7, Sorted 0.1.41, Controlling 26.3.4 and Mod Menu 21.0.0. The 1.1.0 record below is kept for reference.
+
+Release JAR: `hotkey-wheel-1.1.1+26.3.jar`, SHA-256 `dd45d3f106071f61e48f0dd723bf9cd59caa2275514d5c9fca16dc63a4d686f2`. Built with Microsoft OpenJDK 25.0.4.1, Fabric Loom 1.17.20 and Gradle 9.6.0; a second clean build gave the same bytes. Compared with 1.1.0, `ModSettingsActions` and `MoveSlotScreen` are new; `ControlPickerScreen`, `ControlsMarker`, `HotkeyWheelClient`, `WheelEditorScreen`, `WheelMenuReturn` and `WheelScreen` changed.
+
+## What changed in 1.1.1
+
+- **Move to…** moves a slot, or a folder with its contents, to another level of the wheel, refusing full levels, places too deep and a folder's own insides
+- **Mod settings** wheel actions open a mod's settings screen through Mod Menu's public entrypoints, saved as `modmenu:config/<modid>`, and close with the original opener
+- slots saved with Blocktone's removed Toggle instant-break act as Buildprint's Toggle Excavator, including Unbind normal key and recovery
+
+## Results, 2026-11-10
+
+Every profile used the release JAR and the same fixture sources, on Xvfb with Mesa's software renderer. Inputs came from an isolated copy of the 1.1.0 record's mods with the same hashes; no run touched the user's launcher profiles or display.
+
+| Profile | Inputs beyond the base set | Reports | Checks |
+| --- | --- | --- | --- |
+| minimal | none (no Mod Menu) | wheel 150, key management 88, moving slots 24, mod settings 7, folders 122 | 391 passed |
+| integrated | Buildprint 0.1.39+26.3, Blocktone 0.1.39.1 | wheel 154, key management 88, Buildprint/Blocktone 233, Mouse 4 67, dedicated-server camera question 48, moving slots 24, mod settings 20, folders 140 | 774 passed |
+| toolpouch | Buildprint, Blocktone + standalone Tool Pouch 1.2.0+26.3, Fzzy Config 0.7.7+fix3 | wheel 154, key management 88, Buildprint/Blocktone 233, Mouse 4 67, Tool Pouch 191, slot toggles 53, moving slots 24, mod settings 20, folders 140 | 970 passed |
+| suite | Buildprint, Blocktone + Vanilla++ 1.5.3+26.3 (bundles Tool Pouch 1.2.0), BRBR 1.11.8+26.3 | wheel 154, key management 88, Buildprint/Blocktone 233, Mouse 4 67, Tool Pouch and suite 206, BRBR 27, slot toggles 66, moving slots 24, mod settings 23, folders 140 | 1,028 passed |
+| suite-polymer | suite + Polymer 0.18.7+26.3 | same as suite | 1,028 passed |
+
+Total: 4,191 passing checks. With Blocktone 0.1.39 in place of 0.1.39.1, the integrated profile passes 768 checks (Buildprint/Blocktone 227, the 1.1.0 instant-break checks; the rest as above); those reports are kept in the release folder under `qa/blocktone-0.1.39/`.
+
+| Mod | Version | SHA-256 |
+| --- | --- | --- |
+| Buildprint (original developer release) | 0.1.39+26.3 | `debca39878adab6c8017b89ead5e1c196b609dfec1e925fc5ac957a09589901f` |
+| Blocktone for Buildprint | 0.1.39.1 | `75b40792c5d998995ebf17a6907e549c9d73971ba03af89d92ba890da7c919d0` |
+| Blocktone for Buildprint (second run) | 0.1.39 | `81f8d793380c340e800c657a418288cc817508c53d2a0c5b87cb09e9e28b8422` |
+| Vanilla++ Quality of Life Suite | 1.5.3+26.3 | `807083d8c7fb232c7616004575f36145562b17b46477c870cf4c5888fe3a2b39` |
+| Tool Pouch (standalone profile) | 1.2.0+26.3 | `fcc2f984c910c4002f9936bb5dcd2ee4f6a065b0bfee5d814325c425d0a9a1e1` |
+| Better Recipe Book Rebetterered | 1.11.8+26.3 | `f02f61c6b710fc9ae04503dd245bb4283ef323ccfa278408fad58467ecbd9e16` |
+| Polymer | 0.18.7+26.3 | `b18b0bb66fc8455fbf43f8a54e226952c630ab0cfee433e6585520c0e591538b` |
+| Mod Menu | 21.0.0 | `837812c6c98d66141db7b5dcae668f27fb78d557e8f4c0c89912985fc26a5e6f` |
+| Sorted | 0.1.41+26.3 | `bf378221dd17a81dd6985a3c1fb233ac5c465d5a0a32ae6917ae2d4b649368c1` |
+
+Base set as for 1.1.0: Minecraft 26.3, Java 25, Fabric Loader 0.19.5, Fabric API 0.165.2+26.3 and its client gametest module 6.0.12; integrated profiles add Controlling 26.3.4, Searchables 1.0.3, Sorted 0.1.41, Mod Menu 21.0.0 and YACL 3.9.7. Each profile's `provenance.json` has every mod hash.
+
+**Moving slots** (`MoveSlotTest`, every profile, 24 checks). On a wheel with a slot that unbinds its key, folders three levels deep and a full folder: the picker lists the wheel and all six folders; the current level, the full folder, a place where a folder would end up four levels deep, a folder's own insides and a full top level are refused and say why,, and choosing a refused level does nothing; a slot may go into a folder three levels deep. A move changes nothing until Save, and Cancel discards it. Saved moves into a folder, out to the top level and of a folder with its contents into another folder keep the slot's control, icon, label, Hold action and Unbind normal key byte for byte, keep the removed key removed and its recovery key remembered, and leave the old level.
+
+**Mod settings** (`ModSettingsTest`, every profile). With Mod Menu: the picker lists Hotkey Wheel, Buildprint (provided by its VoxelSprout hooks), Vanilla++ in the suite profiles and Minecraft (offered by Mod Menu itself), and not Fabric Loader, Fabric API, Searchables or Controlling; choosing Hotkey Wheel's entry saves `modmenu:config/hotkey_wheel`, which round-trips through the file. From a wheel, Hotkey Wheel's editor, Buildprint's VoxelSprout settings and Vanilla++'s Fzzy Config screen open, and the original opener closes each back to the game; a Hold action in a folder opens Hotkey Wheel's settings the same way. A slot for a missing mod says so. Without Mod Menu (minimal, 7 checks): nothing is listed, the saved slot shows "Hotkey Wheel settings (needs Mod Menu)", selecting it opens nothing, and the setting stays saved.
+
+**Blocktone 0.1.39.1** (`BuildprintMenuTest`, `FolderWheelTest`). A slot saved with `key.buildprint_toning.instamine` resolves to Buildprint's Toggle Excavator and is shown under its name; selecting it from the wheel, and from a folder, turns the excavator on and off, and the saved name is not rewritten. Unbind normal key removes and remembers the excavator's key and gives it back. A key remembered for instant-break stays remembered while the slot unbinds, goes to an unbound Toggle Excavator on recovery, and never replaces a key it already has. A slot saved with the removed Instant-break settings opens nothing. The rest of the Buildprint and Blocktone coverage repeats unchanged, including validated closing of Blocktone's spline settings. With Blocktone 0.1.39 the 1.1.0 instant-break checks pass unchanged: its settings open from a wheel and a folder, refuse an invalid value and close with the original opener.
+
+**Vanilla++, Buildprint and Blocktone.** The 1.1.0 coverage repeats with Vanilla++ 1.5.3, Buildprint 0.1.39 and both Blocktone versions: the suite's registered controls and configuration hub, the contextual Tool Pouch radial, BRBR coexistence, wheel-opened menus, child screens and the selection editor closed with the original opener, save, cancel and validation, reserved editor keys, the walking camera and the dedicated-server camera question. Buildprint's default J for its materials list does not collide with the fixtures' wheel keys.
+
+Not covered: Move to… across wheels (it moves within the wheel being edited), every installed mod's settings screen (four were opened), mod icons beyond a screenshot of the picker, the older Buildprint 0.1.16–0.1.19 fallbacks, hardware GPU rendering, a server on a separate machine, and Controlling's other views. Hotkey Wheel is an original client mod with no ported counterpart.
+
+# Hotkey Wheel 1.1.0+26.3 verification (previous release)
 
 **Status: release verified.** The exact release JAR passes every profile with the supported versions of all three integrations: Vanilla++ Quality of Life Suite 1.5.3+26.3, Buildprint 0.1.39+26.3 and Blocktone for Buildprint 0.1.39. The same JAR also passes the whole matrix, count for count, with Buildprint 0.1.38+26.3 and Blocktone 0.1.38. It passes with a dedicated server, standalone Tool Pouch 1.2.0, BRBR 1.11.8, Polymer 0.18.7, Sorted 0.1.41 and Controlling 26.3.4. The 1.0.11 record below is kept for reference.
 

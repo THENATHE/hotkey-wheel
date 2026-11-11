@@ -39,17 +39,17 @@ SIDE_MOUSE_REGRESSION = SOURCE / 'qa/regressions/1.0.7-side-mouse-editor-close'
 UPSTREAM_REGRESSION = SOURCE / 'qa/regressions/1.0.8-upstream-2026-11'
 SERVER_REGRESSION = SOURCE / 'qa/regressions/1.0.9-server-camera-question'
 DOWNGRADE_REGRESSION = SOURCE / 'qa/regressions/1.1.0-downgrade-to-1.0.11'
-BUILDPRINT_VERSION = os.environ.get('HOTKEY_WHEEL_BUILDPRINT_VERSION', '0.1.38+26.3')
+BUILDPRINT_VERSION = os.environ.get('HOTKEY_WHEEL_BUILDPRINT_VERSION', '0.1.39+26.3')
 REPORTS = {
-    'minimal': ['results.json', 'key-management-results.json', 'folder-results.json'],
+    'minimal': ['results.json', 'key-management-results.json', 'move-slot-results.json', 'mod-settings-results.json', 'folder-results.json'],
     'integrated': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json',
-                   'server-camera-results.json', 'folder-results.json'],
+                   'server-camera-results.json', 'move-slot-results.json', 'mod-settings-results.json', 'folder-results.json'],
     'toolpouch': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json', 'toolpouch-results.json',
-                  'toolpouch-toggle-results.json', 'folder-results.json'],
+                  'toolpouch-toggle-results.json', 'move-slot-results.json', 'mod-settings-results.json', 'folder-results.json'],
     'suite': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json', 'toolpouch-results.json', 'brbr-integration-results.json',
-                      'toolpouch-toggle-results.json', 'folder-results.json'],
+                      'toolpouch-toggle-results.json', 'move-slot-results.json', 'mod-settings-results.json', 'folder-results.json'],
     'suite-polymer': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json', 'toolpouch-results.json', 'brbr-integration-results.json',
-                      'toolpouch-toggle-results.json', 'folder-results.json'],
+                      'toolpouch-toggle-results.json', 'move-slot-results.json', 'mod-settings-results.json', 'folder-results.json'],
 }
 
 

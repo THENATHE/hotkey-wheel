@@ -63,7 +63,9 @@ public final class ControlsMarker {
             } else if (!entry.control.isBlank()) {
                 Component name = entry.label.isBlank() ? Component.translatable("hotkey_wheel.controls.slot", slot + 1)
                         : Component.literal(entry.label);
-                found.computeIfAbsent(entry.control, control -> new ArrayList<>())
+                // A slot saved with a replaced control marks the control it now uses.
+                KeyMapping mapping = HotkeyWheelClient.findControl(entry.control);
+                found.computeIfAbsent(mapping == null ? entry.control : mapping.getName(), control -> new ArrayList<>())
                         .add(Component.literal(path + SEPARATOR).append(name));
             }
         }

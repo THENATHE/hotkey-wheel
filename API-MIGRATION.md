@@ -46,6 +46,8 @@ Buildprint 0.1.17/0.1.18 retain public lifecycle/HUD tracking but use private na
 
 The editor API recognizes registered classes and subclasses, not arbitrary screen ancestry. Buildprint's main menu, Migration and settings screens and directly wheel-opened Blocktone instant-break settings therefore retain their separate screen-parent ownership path. Unrelated replacement screens relinquish wheel ownership. Buildprint's raw reserved editor shortcuts remain native behavior, except that the original opener of a wheel-owned session closes it.
 
+Blocktone 0.1.39.1 removed instant-break and its settings screen in favour of Buildprint's excavator, so its two controls are gone. The instant-break screen match above stays for Blocktone 0.1.39 and 0.1.38. A slot saved with `key.buildprint_toning.instamine` resolves to Buildprint's `key.buildprint.excavator` through `HotkeyWheelClient.findControl` once the old control is no longer registered. Mod settings screens that a wheel opens through Mod Menu's `modmenu` entrypoints are owned directly by `WheelMenuReturn.own`, since the wheel creates them itself, and close the same way.
+
 See `QA.md` for exact artifacts and results. The 1.0.9 release targets Buildprint 0.1.38. The 1.0.8 release targeted Buildprint 0.1.19 with the installable Blocktone 0.1.24 JAR built from its source targeting 0.1.19. The retained 1.0.7 review and older compatibility paths have separately identified historical evidence; their counts are not accepted as current release verification.
 
 Official references: [API overview](https://voxelsprout.com/buildprint/wiki/api), [Editor API](https://voxelsprout.com/buildprint/wiki/editor-api).

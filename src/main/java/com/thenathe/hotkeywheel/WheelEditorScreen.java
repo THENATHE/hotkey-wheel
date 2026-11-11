@@ -35,6 +35,7 @@ public final class WheelEditorScreen extends Screen {
     private int contentHeight;
     private int scroll;
     private String error = "";
+    private String notice = "";
 
     private record ContentWidget(AbstractWidget widget, int offset) {}
     private record Caption(Component text, int offset, int color) {}
@@ -182,10 +183,11 @@ public final class WheelEditorScreen extends Screen {
             WheelConfig.Entry entry = entries.get(selectedSlot);
             caption("Selected slot " + (selectedSlot + 1), offset, WheelUi.GOLD);
             offset += 14;
-            String controlName = entry.control.isBlank() ? "Choose a control" : ToolPouchToggles.label(entry.control);
+            offset = addMoveButton(entry, offset);
+            String controlName = entry.control.isBlank() ? "Choose a control" : HotkeyWheelClient.controlLabel(entry.control);
             contentButton("Control: " + controlName, offset, panelWidth, left, button -> {
                 minecraft.gui.setScreen(new ControlPickerScreen(this, control -> entry.control = control));
-            }, "Choose a standard Minecraft control, a control registered by an installed mod, or a Tool Pouch slot toggle.");
+            }, "Choose a standard Minecraft control, a control registered by an installed mod, a Tool Pouch slot toggle, or a mod's settings screen.");
             offset += 26;
             KeyMapping control = HotkeyWheelClient.findControl(entry.control);
             boolean pouchToggle = ToolPouchToggles.handles(entry.control);
@@ -242,11 +244,11 @@ public final class WheelEditorScreen extends Screen {
         }, "Use the radial for Tool Pouch's normal Contextual Open key outside Hotkey Wheel as well. Item selection requires a click; releasing the key does not choose an item.");
         nativeKey.active = ToolPouchIntegration.available() && draft.toolPouchWheel;
         offset += 26;
-        Button buildprint = contentButton("Wheel key closes Buildprint menus: " + (draft.closeBuildprintWithWheelKey ? "ON" : "OFF"), offset, panelWidth, left, button -> {
+        Button buildprint = contentButton("Wheel key closes menus it opened: " + (draft.closeBuildprintWithWheelKey ? "ON" : "OFF"), offset, panelWidth, left, button -> {
             draft.closeBuildprintWithWheelKey = !draft.closeBuildprintWithWheelKey;
             rebuildWidgets();
-        }, "When a wheel opens a Buildprint or Blocktone menu, its original opening key closes that menu and its children using their normal save/cancel behavior. Other routes and unrelated menus keep their normal behavior.");
-        buildprint.active = FabricLoader.getInstance().isModLoaded("buildprint");
+        }, "When a wheel opens a Buildprint or Blocktone menu, or a mod's settings, its original opening key closes that menu and its children using their normal save/cancel behavior. Other routes and unrelated menus keep their normal behavior.");
+        buildprint.active = FabricLoader.getInstance().isModLoaded("buildprint") || ModSettingsActions.modMenuPresent();
         offset += 26;
         contentHeight = offset + 12;
     }
@@ -276,6 +278,7 @@ public final class WheelEditorScreen extends Screen {
     private int addFolderSettings(WheelConfig.Entry folder, int offset) {
         caption("Selected folder " + (selectedSlot + 1), offset, WheelUi.GOLD);
         offset += 14;
+        offset = addMoveButton(folder, offset);
         Button open = contentButton(openFolderLabel(folder), offset, panelWidth, left, button -> {
             openFolders.add(folder);
             selectedSlot = 0;
@@ -299,6 +302,26 @@ public final class WheelEditorScreen extends Screen {
             minecraft.gui.setScreen(new IconPickerScreen(this, folder.icon, icon -> folder.icon = icon));
         }, "Icons are visual labels. You do not need to carry the block or item.");
         return offset + 31;
+    }
+
+    private int addMoveButton(WheelConfig.Entry entry, int offset) {
+        String what = entry.isFolder() ? "this folder, with everything in it," : "this slot";
+        contentButton("Move to…", offset, panelWidth, left, button -> {
+            minecraft.gui.setScreen(new MoveSlotScreen(this, wheel(), entries(), entry, this::moveTo));
+        }, "Move " + what + " into a folder, out to the level above, or into another folder of this wheel. Its settings and remembered keys stay as they are. Nothing changes until Save.");
+        return offset + 26;
+    }
+
+    /** Moves the selected slot to the end of another level of this wheel; called by MoveSlotScreen. */
+    private void moveTo(WheelConfig.Entry entry, List<WheelConfig.Entry> destination, String destinationName) {
+        List<WheelConfig.Entry> current = entries();
+        int index = current.indexOf(entry);
+        if (index < 0 || destination == current) return;
+        current.remove(index);
+        destination.add(entry);
+        selectedSlot = Math.max(0, Math.min(index, current.size() - 1));
+        notice = "Moved " + entryName(entry) + " to " + destinationName + ". Save to keep it.";
+        rebuildWidgets();
     }
 
     private static String openFolderLabel(WheelConfig.Entry folder) {
@@ -368,7 +391,7 @@ public final class WheelEditorScreen extends Screen {
         if (entry.isFolder()) return "Folder " + entry.folderName() + " · " + entry.entries.size() + "/" + WheelConfig.MAX_SLOTS;
         if (!entry.label.isBlank()) return entry.label;
         if (entry.control.isBlank()) return "Choose a control";
-        return ToolPouchToggles.label(entry.control);
+        return HotkeyWheelClient.controlLabel(entry.control);
     }
 
     private void moveSlot(int direction) {
@@ -467,6 +490,7 @@ public final class WheelEditorScreen extends Screen {
         for (AbstractWidget widget : fixedWidgets) widget.extractRenderState(graphics, mouseX, mouseY, delta);
         String status = capturingKey >= 0 ? "Press a key or mouse button; Escape clears it."
                 : !error.isEmpty() ? error
+                : !notice.isEmpty() ? notice
                 : minecraft.level == null ? "Icon previews load in a world · Scroll to edit settings"
                 : "Scroll / Page Up / Page Down · Save applies all changes";
         graphics.text(font, font.plainSubstrByWidth(status, panelWidth), left, height - 44,

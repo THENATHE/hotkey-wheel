@@ -14,12 +14,14 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 
 public final class ControlPickerScreen extends Screen {
     private final Screen parent;
     private final Consumer<String> accepted;
     private final List<AbstractWidget> resultWidgets = new ArrayList<>();
+    private final List<ShownIcon> shownIcons = new ArrayList<>();
     private List<Option> catalog;
     private List<Option> filtered = List.of();
     private String query = "";
@@ -30,8 +32,13 @@ public final class ControlPickerScreen extends Screen {
     private Button previous;
     private Button next;
 
-    // Key mappings and Tool Pouch slot toggles, which Tool Pouch binds to raw keys instead of key mappings.
-    private record Option(String control, String name, String category, String key) {}
+    // Key mappings, Tool Pouch slot toggles, which Tool Pouch binds to raw keys instead of key mappings, and
+    // mod settings screens, which need no key. Only mod settings carry the mod whose icon they show.
+    private record Option(String control, String name, String category, String key, String iconMod) {
+        Option(String control, String name, String category, String key) { this(control, name, category, key, null); }
+    }
+
+    private record ShownIcon(String modId, int x, int y) {}
 
     public ControlPickerScreen(Screen parent, Consumer<String> accepted) {
         super(Component.literal("Choose a control"));
@@ -53,6 +60,9 @@ public final class ControlPickerScreen extends Screen {
         }
         for (ToolPouchToggles.Choice choice : ToolPouchToggles.choices()) {
             options.add(new Option(choice.control(), choice.name(), "Tool Pouch slot toggles", choice.key()));
+        }
+        for (ModSettingsActions.Choice choice : ModSettingsActions.choices()) {
+            options.add(new Option(choice.control(), choice.name() + " settings", "Mod settings", "no key needed", choice.modId()));
         }
         catalog = options.stream().sorted(Comparator.comparing(option -> option.name().toLowerCase(Locale.ROOT))).toList();
         EditBox search = new EditBox(font, left, 32, panelWidth, 20, Component.literal("Search controls"));
@@ -95,6 +105,7 @@ public final class ControlPickerScreen extends Screen {
     private void refreshResults() {
         for (AbstractWidget widget : resultWidgets) removeWidget(widget);
         resultWidgets.clear();
+        shownIcons.clear();
         filtered = matches();
         int lastPage = Math.max(0, (filtered.size() - 1) / rows);
         page = Math.clamp(page, 0, lastPage);
@@ -105,7 +116,10 @@ public final class ControlPickerScreen extends Screen {
             Option option = filtered.get(index);
             String text = option.name() + " · " + option.key();
             String help = option.name() + "\n" + option.category() + "\n" + option.control();
-            Button button = Button.builder(Component.literal(font.plainSubstrByWidth(text, panelWidth - 12)), selected -> {
+            // Labels are centred; leaving room on both sides keeps a long one clear of the icon.
+            int textWidth = option.iconMod() == null ? panelWidth - 12 : panelWidth - 48;
+            if (option.iconMod() != null) shownIcons.add(new ShownIcon(option.iconMod(), left + 2, 72 + (index - first) * 24 + 2));
+            Button button = Button.builder(Component.literal(font.plainSubstrByWidth(text, textWidth)), selected -> {
                 accepted.accept(option.control());
                 onClose();
             }).bounds(left, 72 + (index - first) * 24, panelWidth, 20)
@@ -141,6 +155,12 @@ public final class ControlPickerScreen extends Screen {
         graphics.centeredText(font, "Page " + (page + 1) + "/" + Math.max(1, (count + rows - 1) / rows),
                 width / 2, height - 43, WheelUi.DIM);
         if (count == 0) graphics.centeredText(font, "No matching controls", width / 2, 80, WheelUi.DIM);
+        for (ShownIcon shown : shownIcons) {
+            ModSettingsActions.icon(shown.modId()).ifPresent(icon -> {
+                int[] size = ModSettingsActions.iconSize(icon);
+                graphics.blit(RenderPipelines.GUI_TEXTURED, icon, shown.x(), shown.y(), 0, 0, 16, 16, size[0], size[1], size[0], size[1]);
+            });
+        }
     }
 
     @Override

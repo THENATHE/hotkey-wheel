@@ -6,6 +6,7 @@ import com.thenathe.hotkeywheel.HotkeyWheelClient;
 import com.thenathe.hotkeywheel.RadialGeometry;
 import com.thenathe.hotkeywheel.ToolPouchIntegration;
 import com.thenathe.hotkeywheel.ToolPouchRadialScreen;
+import com.thenathe.hotkeywheel.WheelBindings;
 import com.thenathe.hotkeywheel.WheelConfig;
 import com.thenathe.hotkeywheel.WheelEditorScreen;
 import com.thenathe.hotkeywheel.WheelMenuReturn;
@@ -26,6 +27,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
@@ -35,6 +37,8 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
     private final List<String> checks = new ArrayList<>();
     // Blocktone pins one Buildprint release; a newer Buildprint can be checked before its Blocktone build exists.
     private final boolean blocktone = Boolean.parseBoolean(System.getProperty("wheel.qa.blocktone", "true"));
+    // Blocktone 0.1.39 and earlier have instant-break; 0.1.39.1 replaced it with Buildprint's excavator.
+    private final boolean instantBreak = blocktone && classExists(INSTAMINE_SCREEN);
     private Object schematic;
     private Object loaded;
     private InputConstants.Key forwardKey;
@@ -54,6 +58,7 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
         var report = new LinkedHashMap<String, Object>();
         report.put("checks", checks);
         report.put("blocktone", blocktone);
+        report.put("blocktone_instant_break", instantBreak);
         try {
             check(FabricLoader.getInstance().isModLoaded("buildprint_toning") == blocktone,
                     "Blocktone presence matches the requested profile");
@@ -76,7 +81,8 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
                 childClose(context);
                 originalCycleOpener(context);
                 nativeOpeningStaysIndependent(context);
-                if (blocktone) validatedAddonClose(context);
+                if (instantBreak) validatedAddonClose(context);
+                else if (blocktone) instantBreakSlotsUseExcavator(context);
                 disabledIntegration(context);
                 unrelatedReplacement(context);
                 nonMenuActionDoesNotClaimScreen(context);
@@ -952,6 +958,126 @@ public final class BuildprintMenuTest implements FabricClientGameTest {
             check(client.gui.screen() == null, "Independently opened Blocktone settings retain their normal validated closure");
             control("key.buildprint_toning.instamine_settings").setKey(originalKey);
             KeyMapping.resetMapping();
+        });
+    }
+
+    private static boolean classExists(String name) {
+        try {
+            Class.forName(name, false, BuildprintMenuTest.class.getClassLoader());
+            return true;
+        } catch (ClassNotFoundException absent) {
+            return false;
+        }
+    }
+
+    private static boolean excavatorOn() throws Exception {
+        Object config = Class.forName("com.buildprint.config.ConfigManager").getMethod("get").invoke(null);
+        return config.getClass().getField("excavatorMode").getBoolean(config);
+    }
+
+    private static InputConstants.Key[] wheelKeys() {
+        InputConstants.Key[] keys = new InputConstants.Key[5];
+        for (int index = 0; index < 3; index++) keys[index] = InputConstants.getKey(HotkeyWheelClient.WHEEL_KEYS[index].saveString());
+        keys[3] = InputConstants.getKey(HotkeyWheelClient.CYCLE_KEY.saveString());
+        keys[4] = InputConstants.getKey(HotkeyWheelClient.CONFIGURE_KEY.saveString());
+        return keys;
+    }
+
+    private void selectFirstSlot(ClientGameTestContext context) {
+        context.getInput().holdKey(InputConstants.KEY_G);
+        context.waitTicks(2);
+        pointTop(context);
+        context.getInput().releaseKey(InputConstants.KEY_G);
+        context.waitTicks(4);
+    }
+
+    /** Blocktone 0.1.39.1: slots saved with the removed instant-break toggle act as Toggle Excavator. */
+    private void instantBreakSlotsUseExcavator(ClientGameTestContext context) throws Exception {
+        String oldToggle = "key.buildprint_toning.instamine";
+        String excavatorName = "key.buildprint.excavator";
+        InputConstants.Key[] originalKey = new InputConstants.Key[1];
+        context.runOnClient(client -> {
+            KeyMapping excavator = control(excavatorName);
+            originalKey[0] = InputConstants.getKey(excavator.saveString());
+            check(HotkeyWheelClient.findControl("key.buildprint_toning.instamine_settings") == null,
+                    "Blocktone no longer registers its instant-break settings control");
+            check(HotkeyWheelClient.findControl(oldToggle) == excavator,
+                    "A slot saved with Toggle instant-break uses Buildprint's Toggle Excavator");
+            check(HotkeyWheelClient.controlLabel(oldToggle).equals(Component.translatable(excavatorName).getString()),
+                    "That slot is shown as Toggle Excavator");
+            check(!excavatorOn(), "The excavator starts off");
+            WheelConfig config = WheelConfig.get().copy();
+            config.wheels.get(0).entries.get(0).control = oldToggle;
+            check(WheelConfig.save(config), "A wheel slot saved with Toggle instant-break loads");
+        });
+        selectFirstSlot(context);
+        context.runOnClient(client -> {
+            check(client.gui.screen() == null && excavatorOn(), "Selecting the old instant-break slot turns Buildprint's excavator on");
+            check(WheelConfig.get().wheels.get(0).entries.get(0).control.equals(oldToggle), "The saved control name is not rewritten");
+        });
+        selectFirstSlot(context);
+        context.runOnClient(client -> check(!excavatorOn(), "Selecting it again turns the excavator off"));
+
+        context.runOnClient(client -> {
+            KeyMapping excavator = control(excavatorName);
+            InputConstants.Key own = InputConstants.Type.KEYBOARD.getOrCreate(unusedKey(client));
+            excavator.setKey(own);
+            KeyMapping.resetMapping();
+            WheelConfig config = WheelConfig.get().copy();
+            config.wheels.get(0).entries.get(0).unbindKey = true;
+            check(WheelBindings.save(config, wheelKeys()).isEmpty(), "Unbind normal key on the old slot saves");
+            check(excavator.isUnbound() && own.getName().equals(WheelConfig.get().managedBindings.get(excavatorName)),
+                    "Unbind normal key removes and remembers Toggle Excavator's key");
+            config = WheelConfig.get().copy();
+            config.wheels.get(0).entries.get(0).unbindKey = false;
+            check(WheelBindings.save(config, wheelKeys()).isEmpty() && excavator.saveString().equals(own.getName())
+                            && !WheelConfig.get().managedBindings.containsKey(excavatorName),
+                    "Turning it off gives Toggle Excavator its key back");
+
+            // A key Hotkey Wheel removed from instant-break itself, so Blocktone found nothing to carry over.
+            InputConstants.Key remembered = InputConstants.Type.KEYBOARD.getOrCreate(unusedKey(client));
+            excavator.setKey(InputConstants.UNKNOWN);
+            KeyMapping.resetMapping();
+            config = WheelConfig.get().copy();
+            config.managedBindings.put(oldToggle, remembered.getName());
+            config.wheels.get(0).entries.get(0).unbindKey = true;
+            check(WheelConfig.save(config), "Settings remembering an instant-break key load");
+            check(WheelBindings.save(WheelConfig.get().copy(), wheelKeys()).isEmpty()
+                            && remembered.getName().equals(WheelConfig.get().managedBindings.get(oldToggle)) && excavator.isUnbound(),
+                    "While the slot still unbinds, the remembered instant-break key stays remembered");
+            config = WheelConfig.get().copy();
+            config.wheels.get(0).entries.get(0).unbindKey = false;
+            check(WheelBindings.save(config, wheelKeys()).isEmpty() && excavator.saveString().equals(remembered.getName())
+                            && !WheelConfig.get().managedBindings.containsKey(oldToggle),
+                    "Recovery gives the remembered instant-break key to an unbound Toggle Excavator");
+
+            excavator.setKey(own);
+            KeyMapping.resetMapping();
+            config = WheelConfig.get().copy();
+            config.managedBindings.put(oldToggle, remembered.getName());
+            config.wheels.get(0).entries.get(0).unbindKey = true;
+            check(WheelConfig.save(config), "Settings remembering an instant-break key load again");
+            config = WheelConfig.get().copy();
+            config.wheels.get(0).entries.get(0).unbindKey = false;
+            check(WheelBindings.save(config, wheelKeys()).isEmpty() && excavator.saveString().equals(own.getName())
+                            && !WheelConfig.get().managedBindings.containsKey(oldToggle),
+                    "Recovery never replaces a key Toggle Excavator already has");
+
+            config = WheelConfig.get().copy();
+            config.wheels.get(0).entries.get(0).control = "key.buildprint_toning.instamine_settings";
+            check(WheelConfig.save(config), "A slot saved with the removed instant-break settings loads");
+        });
+        selectFirstSlot(context);
+        context.runOnClient(client -> {
+            check(client.gui.screen() == null && !excavatorOn(), "The removed settings slot opens nothing and leaves the excavator alone");
+            control(excavatorName).setKey(originalKey[0]);
+            KeyMapping.resetMapping();
+            WheelConfig config = WheelConfig.get().copy();
+            config.wheels.get(0).entries.get(0).control = "key.buildprint.open";
+            config.wheels.get(0).entries.get(0).unbindKey = false;
+            config.managedBindings.remove(excavatorName);
+            config.managedBindings.remove(oldToggle);
+            check(WheelConfig.save(config), "Restore Buildprint menu action after the excavator checks");
         });
     }
 

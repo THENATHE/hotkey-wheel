@@ -58,6 +58,14 @@ public final class WheelMenuReturn {
         pending = new PendingMenu(control.getName(), wheelOpener, Minecraft.getInstance().gui.screen(), ticks + OPEN_TIMEOUT_TICKS);
     }
 
+    /** A screen the wheel opened itself, such as a mod's settings, closes with the opener like the Buildprint menus. */
+    public static void own(Screen screen, InputConstants.Key wheelOpener) {
+        clearOwnership();
+        if (!WheelConfig.get().closeBuildprintWithWheelKey) return;
+        root = screen;
+        opener = wheelOpener;
+    }
+
     public static void tick(Minecraft client) {
         BuildprintEditorReturn.tick(client);
         ticks++;

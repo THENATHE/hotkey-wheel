@@ -1,21 +1,21 @@
-# Hotkey Wheel 1.1.0+26.3
+# Hotkey Wheel 1.1.1+26.3
 
 <img src="src/main/resources/assets/hotkey_wheel/icon.png" alt="Hotkey Wheel radial icon" width="128">
 
 A client-side Fabric mod for Minecraft Java 26.3. Create up to three radial menus with separate opening keys, assign Minecraft or registered mod controls, and choose floating block/item icons. Group slots into named folders. Hold or toggle a wheel, select by dragging from the center, and cycle wheels without releasing the original opener.
 
-Version 1.1.0 adds folders: a slot can be a named folder with its own icon and up to 12 slots, and folders can hold folders. Minecraft's Key Binds screen now marks every control a wheel uses, with a tooltip naming where. Settings from 1.0.x load unchanged. Version 1.0.11 added Tool Pouch slot toggles as wheel actions. Version 1.0.10 updated the integrations to Buildprint 0.1.38 and Tool Pouch 1.2.0. Buildprint 0.1.38 reserves more keys inside its editor, for example C and E. A wheel bound to one of those keys now closes the editor it opened. Tool Pouch's disabled slots are respected, and an unreadable settings file is now kept as a copy instead of being replaced on the next Save. On a multiplayer server, the editor a wheel opens still closes with the original opener when Buildprint first asks which camera to use. Existing 1.0.8 settings and key bindings load unchanged. Version 1.1.0 is verified with Vanilla++ 1.5.3, Buildprint 0.1.39 and Blocktone 0.1.39, and again with Buildprint 0.1.38 and Blocktone 0.1.38; see [QA.md](QA.md). [AUDIT-2026-11-08.md](AUDIT-2026-11-08.md) lists every finding, and [API-MIGRATION.md](API-MIGRATION.md) covers the Buildprint hooks and input ordering.
+Version 1.1.1 adds **Move to…** for moving slots and folders between levels, and **Mod settings** wheel actions that open a mod's settings screen. Slots saved with Blocktone's removed Toggle instant-break now act as Buildprint's Toggle Excavator. Version 1.1.0 added folders: a slot can be a named folder with its own icon and up to 12 slots, and folders can hold folders. Minecraft's Key Binds screen now marks every control a wheel uses, with a tooltip naming where. Settings from 1.0.x load unchanged. Version 1.0.11 added Tool Pouch slot toggles as wheel actions. Version 1.0.10 updated the integrations to Buildprint 0.1.38 and Tool Pouch 1.2.0. Buildprint 0.1.38 reserves more keys inside its editor, for example C and E. A wheel bound to one of those keys now closes the editor it opened. Tool Pouch's disabled slots are respected, and an unreadable settings file is now kept as a copy instead of being replaced on the next Save. On a multiplayer server, the editor a wheel opens still closes with the original opener when Buildprint first asks which camera to use. Existing 1.0.8 settings and key bindings load unchanged. Version 1.1.1 is verified with Vanilla++ 1.5.3, Buildprint 0.1.39 and Blocktone 0.1.39.1, and again with Blocktone 0.1.39; see [QA.md](QA.md). [AUDIT-2026-11-08.md](AUDIT-2026-11-08.md) lists every finding, and [API-MIGRATION.md](API-MIGRATION.md) covers the Buildprint hooks and input ordering.
 
 ## Install and configure
 
-Requires **Minecraft 26.3**, **Fabric Loader 0.19.5+**, **Java 25+**, and **Fabric API 0.161.0+26.3 or newer for 26.3**. Replace older Hotkey Wheel JARs with `hotkey-wheel-1.1.0+26.3.jar` in your client's `mods` folder, then restart. Install only one Hotkey Wheel version. Servers do not need Hotkey Wheel.
+Requires **Minecraft 26.3**, **Fabric Loader 0.19.5+**, **Java 25+**, and **Fabric API 0.161.0+26.3 or newer for 26.3**. Replace older Hotkey Wheel JARs with `hotkey-wheel-1.1.1+26.3.jar` in your client's `mods` folder, then restart. Install only one Hotkey Wheel version. Servers do not need Hotkey Wheel.
 
 Open **Options → Controls → Key Binds → Wheels…**, or use Hotkey Wheel's settings in Mod Menu. Controlling can search **hotkey wheel** to find the three opening keys, cycle key, and configuration shortcut. Sorted, Buildprint, Blocktone, Tool Pouch, Vanilla++, Controlling, Searchables, and Mod Menu are optional; Hotkey Wheel runs without them.
 
 - Wheel 1 defaults to **G** with **Hold** opening. Wheel 2 and 3 start unbound. **Cycle** defaults to **Tab**.
 - Choose **Active wheels** to enable up to three. Each wheel keeps its own name, opening mode, outside-edge behavior, and up to **12 slots**. Hidden wheels retain their settings.
-- Each slot has a searchable control picker, searchable icon picker, optional label, and **Tap / Hold** action. Unbound registered controls can still be used through the wheel. Icons do not require inventory items.
-- **Add folder** creates a folder slot. See [Folders](#folders).
+- Each slot has a searchable control picker, searchable icon picker, optional label, and **Tap / Hold** action. Unbound registered controls can still be used through the wheel. Icons do not require inventory items. The picker also lists Tool Pouch slot toggles and [mod settings](#mod-settings).
+- **Add folder** creates a folder slot. See [Folders](#folders). **Move to…** moves the selected slot or folder to another level; see [Moving slots](#moving-slots).
 - **Save** applies the draft and key changes. **Cancel** discards the draft. If saving fails, the editor keeps the draft for retry.
 
 ## Using a wheel
@@ -44,7 +44,26 @@ In the radial, a folder shows a small **»** beside its icon, and hovering it sh
 
 In the editor, select a folder slot to rename it, choose its icon, or **Open folder** to edit its slots. The path above the slots, such as **Wheel 1 › Tools**, leads back to each level. **Remove** asks before deleting a folder that holds slots; an empty folder is removed at once. Like every edit, nothing changes until **Save**.
 
+### Moving slots
+
+Select a slot or a folder in the editor and choose **Move to…**. A small picker lists the wheel's top level and every folder in it as a tree, each with its slot count. Choose one to move the selection there, after its last slot. A folder moves with everything in it. The picker greys out, with the reason in its tooltip:
+
+- the level the slot is already in;
+- a level that already holds 12 slots;
+- a place where a folder would end up more than three levels below the wheel, counting the folders inside it;
+- for a folder, the folder itself and every folder inside it.
+
+The moved slot keeps its control, icon, label, Tap / Hold and Unbind normal key, and Hotkey Wheel's remembered keys stay as they are. Moves happen within the wheel you are editing. As with every edit, nothing changes until **Save**, and **Cancel** discards the move.
+
 Everything else counts slots inside folders: Unbind normal key and its recovery keys, Safe mode, **Restore keys unbound by Hotkey Wheel**, Tool Pouch's Contextual Open and slot toggles, and the Buildprint and Blocktone menus that the original opener closes. Removing a folder whose slots were the last ones unbinding a control restores that control's key when you Save.
+
+## Mod settings
+
+The control picker's **Mod settings** group lists every installed mod that has a settings screen, with its name and icon; search for **settings** or the mod's name. A mod settings slot opens the same screen Mod Menu opens for that mod, and needs no key. This includes screens one mod provides for another, such as Buildprint's settings, and Minecraft's own options, which Mod Menu offers as Minecraft's settings. Mods without a settings screen are not listed.
+
+The slot is saved as `modmenu:config/<modid>`. The screen opens with no parent, so closing it returns to the game. With **Wheel key closes menus it opened** on, pressing the original wheel opener again closes it and its child screens through their own Done, Cancel or Save handling, as for the Buildprint menus; a screen that refuses to close keeps its own warning. A Hold action opens the screen once. Mod settings slots work inside folders.
+
+Mod Menu is needed to find the screens. Without it, mod settings slots stay in the configuration and show as **… settings (needs Mod Menu)**; selecting one only reports that. A slot whose mod has been removed shows **(mod not installed)**.
 
 ## Unbinding ordinary keys safely
 
@@ -78,9 +97,11 @@ Enable **Native contextual key uses wheel** to use the same radial when pressing
 
 ## Buildprint and Blocktone
 
-**Wheel key closes Buildprint menus** starts ON. After a wheel opens Buildprint's menu, Selection Editor, or Blocktone's instant-break settings, press the **original wheel opener again** to close that menu and its child screens. This includes Buildprint's YACL settings and nested migration screens. Cycling wheels before selection keeps the original opening key as the closing key.
+**Wheel key closes menus it opened** (called **Wheel key closes Buildprint menus** before 1.1.1) starts ON. After a wheel opens Buildprint's menu, Selection Editor, Blocktone 0.1.39's instant-break settings or a mod's settings, press the **original wheel opener again** to close that menu and its child screens. This includes Buildprint's YACL settings and nested migration screens. Cycling wheels before selection keeps the original opening key as the closing key.
 
 Closing uses each screen's normal save/cancel rules and commits Buildprint's pending edits. Invalid Blocktone settings can refuse closure and show their normal validation error; correct the fields and press the opener again. Menus opened through native Buildprint shortcuts or other routes retain their normal behavior. The Selection Editor is tracked by its freecam session rather than a screen parent. Its Save dialog can be canceled with the original opener before native editor exit. Public enter/exit events identify modern editor sessions; older Buildprint retains the private freecam fallback. Editors opened through their native binding remain independent; other non-menu controls retain their normal behavior.
+
+Blocktone for Buildprint 0.1.39.1 replaced its instant-break with Buildprint's own excavator. Slots saved with **Toggle instant-break** keep their saved setting; while Blocktone 0.1.39 or earlier registers the control, it works as before, and once Blocktone 0.1.39.1 removes it, the same slot toggles Buildprint's **Toggle Excavator**. Unbind normal key on such a slot then removes and remembers the excavator's key. If Hotkey Wheel had removed a key from Toggle instant-break, Blocktone had no key to carry over, so the wheel holds the only copy: turning the option off, removing the slot or **Restore keys unbound by Hotkey Wheel** gives it to Toggle Excavator, unless Toggle Excavator already has a key, which is never replaced. Slots saved with Blocktone's removed **Instant-break settings** show as unavailable.
 
 Buildprint 0.1.38 uses more raw keys inside the editor, such as C for the camera and the Drop and Inventory keys for switching tools. When a wheel opened the editor, its original opener closes it even if Buildprint uses that key; otherwise Buildprint's shortcuts work as usual. Opening another wheel while the editor is active still follows Buildprint's reserved keys. The walking-camera editor closes the same way as freecam. The first time you open the editor on a multiplayer server, Buildprint asks which camera to use. When a wheel asked for the editor, the session you start from that question belongs to the wheel, and the original opener closes it. Pressing the opener while the question is shown closes the question instead, and Escape cancels it as usual. Editors opened with Buildprint's own key are never claimed.
 
@@ -92,7 +113,7 @@ Registered mod controls that poll keymapping state work through the wheel. Raw k
 
 Wheel settings and recovery assignments are stored in `config/hotkey-wheel.json`; ordinary key assignments are stored in Minecraft's `options.txt`. Removing the JAR leaves configuration files intact.
 
-Folders are stored as slots with an `entries` list of their own; ordinary slots are saved exactly as in 1.0.x, so 1.0.x settings load and save unchanged. If you go back to 1.0.11 after saving folders, it loads the file without errors and leaves it as it is. Each folder shows there as an unassigned slot with its name and icon, and selecting it does nothing. Saving in 1.0.11's editor keeps that slot but drops the slots inside it, and gives back any keys that only folder slots had removed. Keep a copy of `hotkey-wheel.json` if you may go back. An unreadable settings file is still copied to `hotkey-wheel.json.unreadable` before a later Save can replace it. Restore automatically unbound keys through the editor before uninstalling if you want their remembered assignments back.
+Folders are stored as slots with an `entries` list of their own; ordinary slots are saved exactly as in 1.0.x, so 1.0.x and 1.1.0 settings load and save unchanged. Mod settings slots are ordinary slots whose `control` is `modmenu:config/<modid>`. An unreadable settings file is still copied to `hotkey-wheel.json.unreadable` before a later Save can replace it. Restore automatically unbound keys through the editor before uninstalling if you want their remembered assignments back.
 
 ## Source, build, and verification
 
@@ -111,14 +132,12 @@ xvfb-run -a -s "-screen 0 1280x800x24" python3 qa/run.py --integrated
 xvfb-run -a -s "-screen 0 1280x800x24" python3 qa/run.py --toolpouch
 xvfb-run -a -s "-screen 0 1280x800x24" python3 qa/run.py --suite
 xvfb-run -a -s "-screen 0 1280x800x24" python3 qa/run.py --polymer
-HOTKEY_WHEEL_JAR=/path/to/hotkey-wheel-1.0.11+26.3.jar HOTKEY_WHEEL_QA_TESTS=DowngradeTest \
-  HOTKEY_WHEEL_QA_RUN_ROOT=/tmp/hotkey-wheel-downgrade xvfb-run -a -s "-screen 0 1280x800x24" python3 qa/run.py
 python3 qa/run.py --api-previous
 python3 qa/run.py --api-baseline
 python3 qa/run.py --legacy
 ```
 
-The metadata directory must contain Minecraft 26.3, Fabric Loader 0.19.5 launcher metadata, libraries, natives, and assets. The Gradle cache supplies the Fabric client gametest API that matches the profile's Fabric API, so build once first. Run the clients on a virtual display such as Xvfb rather than your desktop. The runner sets `SDL_VIDEO_FORCE_EGL=1`, which Mesa needs on Xvfb. Each run starts from an empty mod `config/` folder in its isolated game directory. The integrated profile adds Controlling, Searchables, Sorted, Buildprint, Blocktone, Mod Menu, and YACL. The Tool Pouch profile adds standalone Tool Pouch 1.2.0 with Fzzy Config to the integrated set. The suite profile adds Vanilla++ 1.5.3, BRBR 1.11.8, and installed dependencies for actual Tool Pouch interactions, suite configuration navigation, and BRBR pin/settings coexistence. The runner reads the Tool Pouch version bundled in the tested suite JAR. The Polymer profile includes the same four-mod combination with the suite's supported Polymer 0.18.7+26.3 installation; the runner reads it from the suite workspace's `libs/installation/polymer-bundled-0.18.7+26.3.jar`, and `HOTKEY_WHEEL_POLYMER_JAR` selects another copy. `FolderWheelTest` runs last in every profile and covers folders, the editor, settings compatibility, controls with no key and the Key Binds marker, with Buildprint, Blocktone and Controlling when the profile has them. `DowngradeTest` runs alone against the 1.0.11 JAR, as above. Set `HOTKEY_WHEEL_BUILDPRINT_VERSION` and `HOTKEY_WHEEL_BLOCKTONE_VERSION` together with their JAR variables to check a newer Buildprint and Blocktone pair. `--no-blocktone` leaves Blocktone out and skips its checks; use it only to check a Buildprint release before its Blocktone build exists, because release packaging requires Blocktone.
+The metadata directory must contain Minecraft 26.3, Fabric Loader 0.19.5 launcher metadata, libraries, natives, and assets. The Gradle cache supplies the Fabric client gametest API that matches the profile's Fabric API, so build once first. Run the clients on a virtual display such as Xvfb rather than your desktop. The runner sets `SDL_VIDEO_FORCE_EGL=1`, which Mesa needs on Xvfb. Each run starts from an empty mod `config/` folder in its isolated game directory. The integrated profile adds Controlling, Searchables, Sorted, Buildprint, Blocktone, Mod Menu, and YACL. The Tool Pouch profile adds standalone Tool Pouch 1.2.0 with Fzzy Config to the integrated set. The suite profile adds Vanilla++ 1.5.3, BRBR 1.11.8, and installed dependencies for actual Tool Pouch interactions, suite configuration navigation, and BRBR pin/settings coexistence. The runner reads the Tool Pouch version bundled in the tested suite JAR. The Polymer profile includes the same four-mod combination with the suite's supported Polymer 0.18.7+26.3 installation; the runner reads it from the suite workspace's `libs/installation/polymer-bundled-0.18.7+26.3.jar`, and `HOTKEY_WHEEL_POLYMER_JAR` selects another copy. `FolderWheelTest` runs last in every profile and covers folders, the editor, settings compatibility, controls with no key and the Key Binds marker, with Buildprint, Blocktone and Controlling when the profile has them. `MoveSlotTest` and `ModSettingsTest` run in every profile; without Mod Menu, the minimal profile checks that mod settings slots stay saved and show as unavailable. Set `HOTKEY_WHEEL_BUILDPRINT_VERSION` and `HOTKEY_WHEEL_BLOCKTONE_VERSION` together with their JAR variables to check another Buildprint and Blocktone pair, such as Blocktone 0.1.39 with its instant-break. `--no-blocktone` leaves Blocktone out and skips its checks; use it only to check a Buildprint release before its Blocktone build exists, because release packaging requires Blocktone.
 
 Set `HOTKEY_WHEEL_SUITE_JAR`, `HOTKEY_WHEEL_BRBR_JAR`, `HOTKEY_WHEEL_BUILDPRINT_JAR`, `HOTKEY_WHEEL_BLOCKTONE_JAR`, `HOTKEY_WHEEL_TOOLPOUCH_JAR`, or `HOTKEY_WHEEL_POLYMER_JAR` to test an exact candidate artifact; runtime reports and provenance record its declared version and SHA-256. `--prepare-only` builds the isolated QA profile and test JAR without launching a rendered client. The ten-area Buildprint API audit in [API-MIGRATION.md](API-MIGRATION.md) links the official documentation and records the relevant hooks and unused areas.
 

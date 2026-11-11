@@ -52,6 +52,8 @@ public final class FolderWheelTest implements FabricClientGameTest {
     private final Map<String, Object> report = new LinkedHashMap<>();
     private final boolean buildprint = FabricLoader.getInstance().isModLoaded("buildprint");
     private final boolean blocktone = FabricLoader.getInstance().isModLoaded("buildprint_toning");
+    // Blocktone 0.1.39 and earlier have instant-break; 0.1.39.1 replaced it with Buildprint's excavator.
+    private final boolean instantBreak = blocktone && classExists(INSTAMINE_SCREEN);
     private final boolean controlling = FabricLoader.getInstance().isModLoaded("controlling");
 
     private void check(boolean condition, String description) {
@@ -151,6 +153,7 @@ public final class FolderWheelTest implements FabricClientGameTest {
         report.put("checks", checks);
         report.put("buildprint", buildprint);
         report.put("blocktone", blocktone);
+        report.put("blocktone_instant_break", instantBreak);
         report.put("controlling", controlling);
         ClientState[] original = {null};
         try {
@@ -592,7 +595,8 @@ public final class FolderWheelTest implements FabricClientGameTest {
             if (buildprint) {
                 tools.entries.add(slot("key.buildprint.open", "minecraft:oak_planks"));
                 tools.entries.add(slot("key.buildprint.editor", "minecraft:spyglass"));
-                if (blocktone) tools.entries.add(slot("key.buildprint_toning.instamine_settings", "minecraft:diamond_pickaxe"));
+                if (blocktone) tools.entries.add(slot(instantBreak ? "key.buildprint_toning.instamine_settings"
+                        : "key.buildprint_toning.instamine", "minecraft:diamond_pickaxe"));
             }
             WheelConfig.Wheel first = configuration.wheels.get(0);
             first.name = "Wheel 1";
@@ -966,7 +970,20 @@ public final class FolderWheelTest implements FabricClientGameTest {
         context.runOnClient(client -> check(!editorActive() && client.getCameraEntity() == client.player,
                 "The original opener closes the selection editor opened from a folder"));
 
-        if (blocktone) {
+        if (blocktone && !instantBreak) {
+            for (boolean on : new boolean[] {true, false}) {
+                context.getInput().holdKey(InputConstants.KEY_G);
+                context.waitTicks(3);
+                point(context, 0);
+                click(context);
+                point(context, 6);
+                context.getInput().releaseKey(InputConstants.KEY_G);
+                context.waitTicks(4);
+                context.runOnClient(client -> check(client.gui.screen() == null && excavatorOn() == on,
+                        "An old instant-break slot in a folder turns Buildprint's excavator " + (on ? "on" : "off")));
+            }
+        }
+        if (instantBreak) {
             context.getInput().holdKey(InputConstants.KEY_G);
             context.waitTicks(3);
             point(context, 0);
@@ -982,6 +999,20 @@ public final class FolderWheelTest implements FabricClientGameTest {
             context.getInput().releaseKey(InputConstants.KEY_G);
             context.waitTicks(2);
         }
+    }
+
+    private static boolean classExists(String name) {
+        try {
+            Class.forName(name, false, FolderWheelTest.class.getClassLoader());
+            return true;
+        } catch (ClassNotFoundException absent) {
+            return false;
+        }
+    }
+
+    private static boolean excavatorOn() throws Exception {
+        Object config = Class.forName("com.buildprint.config.ConfigManager").getMethod("get").invoke(null);
+        return config.getClass().getField("excavatorMode").getBoolean(config);
     }
 
     private static boolean editorActive() throws Exception {
