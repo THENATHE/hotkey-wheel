@@ -16,3 +16,9 @@ qa/inputs/
 qa/toolpouch/
 qa/source-rebuild/
 qa/blocktone-0.1.39/
+qa/minimal-restart/
+qa/suite-restart/
+qa/focus-*/
+qa/upgrade-source-*/
+art/preview.png
+qa/upgrade-inputs/

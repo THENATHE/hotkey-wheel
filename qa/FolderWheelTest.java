@@ -428,7 +428,7 @@ public final class FolderWheelTest implements FabricClientGameTest {
         check(!hasButton(editor, "Unbind normal key") && !hasButton(editor, "Action:"),
                 "A folder has a name and icon but no control options");
         editBox(editor, "Folder").setValue("Tools");
-        press(button(editor, "Choose block / item icon"));
+        press(button(editor, "Choose icon"));
         check(client.gui.screen() instanceof IconPickerScreen, "A folder icon is chosen with the existing icon picker");
         EditBox search = (EditBox) client.gui.screen().children().stream().filter(EditBox.class::isInstance).findFirst().orElseThrow();
         search.setValue("minecraft:iron_pickaxe");
@@ -527,6 +527,7 @@ public final class FolderWheelTest implements FabricClientGameTest {
         check(perspective.isUnbound(), "Unbinding counts a slot two folders deep");
         WheelEditorScreen editor = new WheelEditorScreen(null);
         client.gui.setScreen(editor);
+        press(button(editor, "General"));
         press(button(editor, "Restore keys unbound"));
         press(button(editor, "Save"));
         check(perspective.matches(original) && WheelConfig.get().managedBindings.isEmpty()
@@ -1162,7 +1163,7 @@ public final class FolderWheelTest implements FabricClientGameTest {
                         "Controlling's search results keep the marker");
                 search(shown[0]).setValue("hotkey wheel");
                 long wheelKeys = controllingRows(shown[0]).stream().filter(row -> row.control().getName().startsWith("key.hotkey_wheel.")).count();
-                check(wheelKeys == 5, "Controlling's search still finds the wheel's own five keys");
+                check(wheelKeys == 6, "Controlling's search still finds the wheel's own six keys");
             });
         }
         context.runOnClient(client -> client.gui.setScreen(null));

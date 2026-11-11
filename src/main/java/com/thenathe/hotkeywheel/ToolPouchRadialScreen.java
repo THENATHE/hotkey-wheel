@@ -34,8 +34,9 @@ public final class ToolPouchRadialScreen extends Screen {
     @Override
     protected void init() {
         centerX = width / 2;
-        centerY = (height - 32) / 2;
-        radius = Math.max(36, Math.min(110, Math.min(width / 2 - 22, (height - 90) / 2)));
+        RadialGeometry.Layout layout = RadialGeometry.layout(width, height);
+        centerY = layout.centerY();
+        radius = layout.radius();
         innerRadius = (int) (radius * 0.42);
         rebuildRing();
         centerPointer();

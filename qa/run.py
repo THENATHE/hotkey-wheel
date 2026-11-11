@@ -4,9 +4,11 @@ import io
 import json
 import os
 import shutil
+import struct
 import subprocess
 import sys
 import zipfile
+import zlib
 
 ROOT = Path(__file__).resolve().parent
 PROFILE = Path(os.environ.get('HOTKEY_WHEEL_PROFILE', str(Path.home() / '.local/share/ModrinthApp/profiles/Vanilla Fast')))
@@ -201,9 +203,19 @@ if TOOLPOUCH:
 if TOOLPOUCH or SUITE and not SUITE_TOOLPOUCH_VERSION.startswith('1.1.'):
     test_names.append('ToolPouchToggleTest')
 # Every profile moves slots and opens mod settings; without Mod Menu the latter checks the unavailable slot.
-test_names += ['MoveSlotTest', 'ModSettingsTest']
+test_names += ['MoveSlotTest', 'ModSettingsTest', 'IconPickerTest', 'ControlFolderTest', 'EditorLayoutTest', 'LayoutScaleTest']
+# Settings files written by earlier releases' own JARs (UpgradeSourceTest), loaded by this one.
+UPGRADE_DIR = os.environ.get('HOTKEY_WHEEL_QA_UPGRADE_DIR')
+if UPGRADE_DIR:
+    test_names.append('UpgradeTest')
 # Runs last and restores the keys and settings it changes; it covers whichever integrations the profile has.
 test_names.append('FolderWheelTest')
+# A second game that loads the settings and keys IconPickerTest left in an earlier run's restart/ folder.
+# Give it its own HOTKEY_WHEEL_QA_RUN_ROOT so the earlier run's reports stay as they are.
+RESTART_FROM = os.environ.get('HOTKEY_WHEEL_QA_RESTART_FROM')
+RESTART = RESTART_FROM is not None
+if RESTART:
+    test_names = ['RestartTest']
 if os.environ.get('HOTKEY_WHEEL_QA_TESTS'):
     test_names = os.environ['HOTKEY_WHEEL_QA_TESTS'].split(',')
     if any(not name.isidentifier() or not (ROOT / (name + '.java')).is_file() for name in test_names):
@@ -228,6 +240,54 @@ with zipfile.ZipFile(MODS / 'hotkey-wheel-qa.jar', 'w', zipfile.ZIP_DEFLATED) as
         archive.write(source, source.relative_to(classes))
 (GAME / 'options.txt').write_text('onboardAccessibility:false\nrenderDistance:2\nsimulationDistance:5\n'
                                   'guiScale:2\ntutorialStep:none\nmaxFps:60\npauseOnLostFocus:false\nfullscreen:false\n')
+if RESTART:
+    saved = Path(RESTART_FROM) / 'restart'
+    if not (saved / 'hotkey-wheel.json').is_file():
+        raise SystemExit('Run the profile first; IconPickerTest leaves the settings for the restart in restart/')
+    if saved.resolve() != (RUN / 'restart').resolve():
+        shutil.copytree(saved, RUN / 'restart', dirs_exist_ok=True)
+    (GAME / 'config').mkdir(parents=True, exist_ok=True)
+    shutil.copy2(saved / 'hotkey-wheel.json', GAME / 'config/hotkey-wheel.json')
+
+
+def png(width, height, pixel):
+    raw = b''.join(b'\x00' + b''.join(bytes(pixel(x, y)) for x in range(width)) for y in range(height))
+
+    def chunk(kind, data):
+        return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data) & 0xffffffff)
+
+    return (b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0))
+            + chunk(b'IDAT', zlib.compress(raw)) + chunk(b'IEND', b''))
+
+
+def huge_png_header():
+    # A real PNG header for a 9000 by 9000 picture; the mod must refuse it before decoding anything.
+    def chunk(kind, data):
+        return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data) & 0xffffffff)
+    return (b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', 9000, 9000, 8, 6, 0, 0, 0))
+            + chunk(b'IDAT', zlib.compress(b'\x00' * 4096)) + chunk(b'IEND', b''))
+
+
+# Small client mods whose declared icons are hard to use, for IconPickerTest and RestartTest.
+for old in MODS.glob('hkwqa-*.jar'):
+    old.unlink()
+if 'IconPickerTest' in test_names or 'RestartTest' in test_names:
+    icon_fixtures = {
+        'hkwqa_wide_icon': ('QA icon wide', 'assets/hkwqa/icon.png',
+                            png(48, 24, lambda x, y: (40, 120, 220, 255) if 8 <= y < 16 else (240, 170, 60, 255))),
+        'hkwqa_broken_icon': ('QA icon broken', 'assets/hkwqa/icon.png', b'This is not a PNG file.'),
+        'hkwqa_huge_icon': ('QA icon huge', 'assets/hkwqa/icon.png', huge_png_header()),
+        'hkwqa_missing_icon': ('QA icon missing', 'assets/hkwqa/absent.png', None),
+        'hkwqa_no_icon': ('QA no icon', None, None),
+    }
+    for mod_id, (name, icon_path, data) in icon_fixtures.items():
+        metadata = {'schemaVersion': 1, 'id': mod_id, 'version': '1', 'name': name, 'environment': 'client'}
+        if icon_path:
+            metadata['icon'] = icon_path
+        with zipfile.ZipFile(MODS / f'hkwqa-{mod_id}.jar', 'w') as archive:
+            archive.writestr('fabric.mod.json', json.dumps(metadata))
+            if data is not None:
+                archive.writestr(icon_path, data)
 if 'ServerCameraChoiceTest' in test_names:
     # The in-process dedicated server needs an accepted EULA, as in the workspace's other local test servers.
     (GAME / 'eula.txt').write_text('eula=true\n')
@@ -239,13 +299,16 @@ if (GAME / '.mixin.out').exists():
     shutil.rmtree(GAME / '.mixin.out')
 for name in ['key-management-results.json', 'buildprint-menu-results.json', 'toolpouch-results.json', 'brbr-integration-results.json',
              'side-mouse-editor-results.json', 'server-camera-results.json', 'toolpouch-toggle-results.json', 'folder-results.json',
-             'downgrade-results.json', 'move-slot-results.json', 'mod-settings-results.json']:
+             'downgrade-results.json', 'move-slot-results.json', 'mod-settings-results.json', 'icon-results.json',
+             'control-folder-results.json', 'editor-layout-results.json', 'upgrade-results.json', 'upgrade-source-results.json',
+             'restart-results.json', 'layout-scale-results.json']:
     (RUN / name).unlink(missing_ok=True)
 command = [str(compiler.parent / 'java'), '-Xmx3G' if 'ServerCameraChoiceTest' in test_names else '-Xmx2G', '-XX:ActiveProcessorCount=4',
            '-Djava.library.path=' + str(META / 'natives/26.3-0.19.5/lwjgl/3.4.3-snapshot/x64'),
            '-Dfabric.client.gametest', '-Dfabric.client.gametest.timeout=2400',
            '-Dwheel.qa.root=' + str(RUN), '-Dwheel.qa.suite.version=' + SUITE_VERSION,
            '-Dwheel.qa.brbr.version=' + BRBR_VERSION, '-Dwheel.qa.blocktone=' + str(BLOCKTONE).lower(),
+           '-Dwheel.qa.upgrade=' + (UPGRADE_DIR or ''),
            '-Dwheel.qa.toolpouch.version=' + (TOOLPOUCH_VERSION.split('+')[0] if TOOLPOUCH else SUITE_TOOLPOUCH_VERSION or ''),
            '-Dfabric.log.disableAnsi=true',
            '-cp', os.pathsep.join(map(str, classpath)), 'net.fabricmc.loader.impl.launch.knot.KnotClient',
@@ -312,7 +375,11 @@ report_names = {'WheelClientTest': 'results.json', 'KeyManagementTest': 'key-man
                 'BrbrIntegrationTest': 'brbr-integration-results.json', 'SideMouseEditorTest': 'side-mouse-editor-results.json',
                 'ServerCameraChoiceTest': 'server-camera-results.json', 'ToolPouchToggleTest': 'toolpouch-toggle-results.json',
                 'FolderWheelTest': 'folder-results.json', 'DowngradeTest': 'downgrade-results.json',
-                'MoveSlotTest': 'move-slot-results.json', 'ModSettingsTest': 'mod-settings-results.json'}
+                'MoveSlotTest': 'move-slot-results.json', 'ModSettingsTest': 'mod-settings-results.json',
+                'IconPickerTest': 'icon-results.json', 'ControlFolderTest': 'control-folder-results.json',
+                'EditorLayoutTest': 'editor-layout-results.json', 'UpgradeTest': 'upgrade-results.json',
+                'UpgradeSourceTest': 'upgrade-source-results.json', 'RestartTest': 'restart-results.json',
+                'LayoutScaleTest': 'layout-scale-results.json'}
 reports = [report_names[name] for name in test_names]
 for name in reports:
     path = RUN / name

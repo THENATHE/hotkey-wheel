@@ -24,6 +24,9 @@ public final class WheelConfig {
     public boolean toolPouchWheel = true;
     public boolean replaceToolPouchContextualKey;
     public boolean closeBuildprintWithWheelKey = true;
+    // The control picker's mod folders: null for one folder per mod, true for a single Mod controls folder.
+    // The default is left out of the file, so settings from earlier releases save back unchanged.
+    public Boolean modControlsInOneFolder;
     public Map<String, String> managedBindings = new LinkedHashMap<>();
     public List<Wheel> wheels = new ArrayList<>();
 
@@ -107,6 +110,8 @@ public final class WheelConfig {
         }
     }
 
+    public boolean oneModControlsFolder() { return Boolean.TRUE.equals(modControlsInOneFolder); }
+
     public static WheelConfig get() { return current; }
 
     public WheelConfig copy() { return GSON.fromJson(GSON.toJson(this), WheelConfig.class); }
@@ -157,6 +162,7 @@ public final class WheelConfig {
 
     public void normalize() {
         wheelCount = Math.clamp(wheelCount, 1, 3);
+        if (!oneModControlsFolder()) modControlsInOneFolder = null;
         if (managedBindings == null) managedBindings = new LinkedHashMap<>();
         if (wheels == null) wheels = new ArrayList<>();
         while (wheels.size() < 3) wheels.add(new Wheel());

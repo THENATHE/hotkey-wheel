@@ -316,6 +316,7 @@ public final class WheelClientTest implements FabricClientGameTest {
                 check(WheelConfig.get().wheels.get(0).name.equals("Saved from UI"), "Editor Cancel leaves saved settings intact");
                 client.gui.setScreen(new WheelEditorScreen(null));
                 Screen keyEditor = client.gui.screen();
+                button(keyEditor, "General").onPress(new KeyEvent(InputConstants.KEY_RETURN, 0, 0));
                 button(keyEditor, "Cycle while open").onPress(new KeyEvent(InputConstants.KEY_RETURN, 0, 0));
                 keyEditor.keyPressed(new KeyEvent(InputConstants.KEY_G, 0, 0));
                 button(keyEditor, "Save").onPress(new KeyEvent(InputConstants.KEY_RETURN, 0, 0));
@@ -496,7 +497,7 @@ public final class WheelClientTest implements FabricClientGameTest {
                 try { return ((KeyMapping) row.getClass().getMethod("getKey").invoke(row)).getName().startsWith("key.hotkey_wheel."); }
                 catch (Exception ignored) { return false; }
             }).count();
-            check(found == 5, "Controlling name search finds all three wheel keys, cycle, and configure");
+            check(found == 6, "Controlling name search finds all three wheel keys, cycle, configure, and settings in a wheel");
             check(button(screen, "Wheels") != null, "Editor shortcut survives Controlling replacement screen");
         });
         context.takeScreenshot("controlling-hotkey-wheel-search");

@@ -1,5 +1,17 @@
 # Changes
 
+## 1.1.2+26.3
+
+- **Icons:** the icon picker adds 39 icons of Hotkey Wheel's own, such as a cog, check mark, X, bulleted and numbered lists, arrows, a lock and a map pin, and the icon of every installed mod that has one. With no search, Hotkey Wheel's icons come first, then mods' icons, then blocks and items. A search looks through all three, best matches first: an exact name or alias, then names starting with the search, then words starting with it. Each of Hotkey Wheel's icons has aliases, so **settings** and **gear** find the cog. Slots and folders save them in the usual icon field as `hotkey_wheel:icon/<name>` or `hotkey_wheel:mod/<modid>`. A slot whose mod has been removed keeps its setting and shows a puzzle piece.
+- Mod icons are read from each mod's `fabric.mod.json`, fitted into a 64-pixel square texture once, and released when the picker closes unless a wheel uses them. Missing, unreadable, non-PNG and oversized icons show the puzzle piece instead.
+- **Settings from an open wheel:** a new key, **U** by default, opens the editor on the wheel and folder that are open. It only acts while a wheel is open. Its key is shown under the wheel next to the cycle key.
+- **Control chooser folders:** controls are sorted into **Minecraft controls**, **Mod settings**, a folder for each mod that adds controls, and **Other controls**. Tool Pouch's slot toggles are in Tool Pouch's folder. A search still covers every folder and names each match's folder. A general setting puts every mod's controls in one **Mod controls** folder instead.
+- **Editor:** a **General** tab holds the settings all wheels share: active wheels, the cycle, configure and settings keys, Safe mode, Restore keys, the control chooser and the integrations. Each wheel's tab starts with that wheel's own settings (name, opening key, Open mode and Outside wheel), followed by its slots. Save and Cancel work as before.
+- Settings from 1.0.x and 1.1.x load and save unchanged. The new control chooser setting is only written when it is on.
+- Fix: at large GUI scales, such as 3 at 1280×800 or 4 at 1080p, the name of the hovered slot and the key line under the wheel drew over the hearts and hotbar. On screens that short the wheel and the Tool Pouch item radial are now slightly smaller and higher, so the text ends above the hearts; wherever it already fitted, the radials are placed exactly as before.
+- Fix: the **Move to…** subtitle ran off both edges of the screen at GUI scale 3 and said "goes" for a folder and its slots. It now wraps to fit and says "go".
+- At the user's request, 1.1.2 was smoke-tested and targeted-tested in the minimal and Vanilla++ suite profiles, not put through the full five-profile matrix. See [QA.md](QA.md).
+
 ## 1.1.1+26.3
 
 - **Move to…** in the editor moves the selected slot, or a folder with everything in it, into a folder, up to the level above, or into another folder of the same wheel. A small picker shows the wheel and its folders as a tree with their slot counts. Full levels, places too deep for the three-level limit, and a folder's own insides are greyed out and say why. The slot keeps all its settings and Hotkey Wheel's remembered keys; as with every edit, nothing changes until Save.

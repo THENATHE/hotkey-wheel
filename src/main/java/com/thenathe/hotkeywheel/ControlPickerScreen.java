@@ -3,9 +3,12 @@ package com.thenathe.hotkeywheel;
 import com.mojang.blaze3d.platform.InputConstants;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.function.Consumer;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -14,16 +17,27 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 
+/**
+ * Chooses a slot's control from folders: Minecraft's controls, mods' settings screens, then one folder per mod
+ * that registers controls (or a single Mod controls folder), and Other controls for any control no mod can be
+ * credited with. A search looks through every folder at once.
+ */
 public final class ControlPickerScreen extends Screen {
+    public static final String MINECRAFT_FOLDER = "Minecraft controls";
+    public static final String MOD_SETTINGS_FOLDER = "Mod settings";
+    public static final String MOD_CONTROLS_FOLDER = "Mod controls";
+    public static final String OTHER_FOLDER = "Other controls";
     private final Screen parent;
     private final Consumer<String> accepted;
+    private final boolean oneModFolder;
     private final List<AbstractWidget> resultWidgets = new ArrayList<>();
     private final List<ShownIcon> shownIcons = new ArrayList<>();
-    private List<Option> catalog;
-    private List<Option> filtered = List.of();
+    private final List<Caption> headers = new ArrayList<>();
+    private List<Folder> folders = List.of();
+    private Folder openFolder;
+    private List<Row> filtered = List.of();
     private String query = "";
     private int page;
     private int left;
@@ -33,17 +47,29 @@ public final class ControlPickerScreen extends Screen {
     private Button next;
 
     // Key mappings, Tool Pouch slot toggles, which Tool Pouch binds to raw keys instead of key mappings, and
-    // mod settings screens, which need no key. Only mod settings carry the mod whose icon they show.
-    private record Option(String control, String name, String category, String key, String iconMod) {
-        Option(String control, String name, String category, String key) { this(control, name, category, key, null); }
-    }
+    // mod settings screens, which need no key. Mod settings carry the mod whose icon they show. The section
+    // groups a folder's controls: Minecraft's categories, or each mod's name in the single Mod controls folder.
+    private record Option(String control, String name, String section, String key, String iconMod, String folder) {}
 
-    private record ShownIcon(String modId, int x, int y) {}
+    private record Folder(String name, WheelIcons.Icon icon, List<Option> options) {}
+
+    // A page row is a folder, a section heading or a control; exactly one is set.
+    private record Row(Folder folder, String header, Option option) {}
+
+    private record ShownIcon(WheelIcons.Icon icon, int x, int y) {}
+
+    private record Caption(String text, int y) {}
 
     public ControlPickerScreen(Screen parent, Consumer<String> accepted) {
+        this(parent, accepted, WheelConfig.get().oneModControlsFolder());
+    }
+
+    /** {@code oneModFolder} puts every mod's controls in one Mod controls folder, as the editor's draft says. */
+    public ControlPickerScreen(Screen parent, Consumer<String> accepted, boolean oneModFolder) {
         super(Component.literal("Choose a control"));
         this.parent = parent;
         this.accepted = accepted;
+        this.oneModFolder = oneModFolder;
     }
 
     @Override
@@ -51,22 +77,14 @@ public final class ControlPickerScreen extends Screen {
         resultWidgets.clear();
         panelWidth = Math.min(560, width - 40);
         left = (width - panelWidth) / 2;
-        rows = Math.max(1, (height - 126) / 24);
-        List<Option> options = new ArrayList<>();
-        for (KeyMapping mapping : minecraft.options.keyMappings) {
-            if (mapping.getName().contains("hotkey_wheel")) continue;
-            options.add(new Option(mapping.getName(), controlName(mapping), mapping.getCategory().label().getString(),
-                    mapping.getTranslatedKeyMessage().getString()));
+        rows = Math.max(2, (height - 126) / 24);
+        folders = buildFolders();
+        if (openFolder != null) {
+            String name = openFolder.name();
+            openFolder = folders.stream().filter(folder -> folder.name().equals(name)).findFirst().orElse(null);
         }
-        for (ToolPouchToggles.Choice choice : ToolPouchToggles.choices()) {
-            options.add(new Option(choice.control(), choice.name(), "Tool Pouch slot toggles", choice.key()));
-        }
-        for (ModSettingsActions.Choice choice : ModSettingsActions.choices()) {
-            options.add(new Option(choice.control(), choice.name() + " settings", "Mod settings", "no key needed", choice.modId()));
-        }
-        catalog = options.stream().sorted(Comparator.comparing(option -> option.name().toLowerCase(Locale.ROOT))).toList();
         EditBox search = new EditBox(font, left, 32, panelWidth, 20, Component.literal("Search controls"));
-        search.setHint(Component.literal("Search control, category, or key…"));
+        search.setHint(Component.literal("Search all folders: control, category, mod, or key…"));
         search.setMaxLength(128);
         search.setValue(query);
         search.setResponder(value -> {
@@ -85,16 +103,88 @@ public final class ControlPickerScreen extends Screen {
         setInitialFocus(search);
     }
 
+    private List<Folder> buildFolders() {
+        List<Option> vanilla = new ArrayList<>();
+        Map<String, List<Option>> byMod = new LinkedHashMap<>();
+        List<Option> other = new ArrayList<>();
+        List<KeyMapping> mappings = new ArrayList<>(List.of(minecraft.options.keyMappings));
+        // Key Binds' own order: by category, then each category's order.
+        mappings.sort(KeyMapping::compareTo);
+        for (KeyMapping mapping : mappings) {
+            if (mapping.getName().contains("hotkey_wheel")) continue;
+            String owner = ControlOwners.modId(mapping).orElse(null);
+            String category = mapping.getCategory().label().getString();
+            String key = mapping.getTranslatedKeyMessage().getString();
+            if ("minecraft".equals(owner)) {
+                vanilla.add(new Option(mapping.getName(), controlName(mapping), category, key, null, MINECRAFT_FOLDER));
+            } else if (owner == null) {
+                other.add(new Option(mapping.getName(), controlName(mapping), category, key, null, OTHER_FOLDER));
+            } else {
+                byMod.computeIfAbsent(owner, id -> new ArrayList<>())
+                        .add(new Option(mapping.getName(), controlName(mapping), category, key, null, modName(owner)));
+            }
+        }
+        for (ToolPouchToggles.Choice choice : ToolPouchToggles.choices()) {
+            byMod.computeIfAbsent("toolpouch", id -> new ArrayList<>())
+                    .add(new Option(choice.control(), choice.name(), "Slot toggles", choice.key(), null, modName("toolpouch")));
+        }
+        List<Option> settings = ModSettingsActions.choices().stream()
+                .map(choice -> new Option(choice.control(), choice.name() + " settings", MOD_SETTINGS_FOLDER,
+                        "no key needed", choice.modId(), MOD_SETTINGS_FOLDER)).toList();
+
+        List<Folder> result = new ArrayList<>();
+        WheelIcons.Icon folderIcon = WheelIcons.resolve(WheelIcons.GLYPH_PREFIX + "folder");
+        if (!vanilla.isEmpty()) result.add(new Folder(MINECRAFT_FOLDER, folderIcon, vanilla));
+        if (!settings.isEmpty()) result.add(new Folder(MOD_SETTINGS_FOLDER, WheelIcons.resolve(WheelIcons.GLYPH_PREFIX + "cog"), settings));
+        List<String> mods = new ArrayList<>(byMod.keySet());
+        mods.sort(Comparator.comparing((String modId) -> modName(modId).toLowerCase(Locale.ROOT)).thenComparing(modId -> modId));
+        if (oneModFolder && !mods.isEmpty()) {
+            List<Option> merged = new ArrayList<>();
+            for (String modId : mods) {
+                for (Option option : byMod.get(modId)) {
+                    merged.add(new Option(option.control(), option.name(), modName(modId), option.key(), null, MOD_CONTROLS_FOLDER));
+                }
+            }
+            result.add(new Folder(MOD_CONTROLS_FOLDER, folderIcon, merged));
+        } else {
+            for (String modId : mods) {
+                result.add(new Folder(modName(modId), WheelIcons.resolve(WheelIcons.modIcon(modId)), byMod.get(modId)));
+            }
+        }
+        if (!other.isEmpty()) result.add(new Folder(OTHER_FOLDER, folderIcon, other));
+        return result;
+    }
+
+    private static String modName(String modId) {
+        return FabricLoader.getInstance().getModContainer(modId).map(mod -> mod.getMetadata().getName()).orElse(modId);
+    }
+
     private static String controlName(KeyMapping mapping) {
         return Component.translatable(mapping.getName()).getString();
     }
 
-    private List<Option> matches() {
+    /** Folders with no search; a folder's controls under their section headings; or every match, by name. */
+    private List<Row> rowsToShow() {
         String needle = query.strip().toLowerCase(Locale.ROOT);
-        return catalog.stream().filter(option -> {
-            String searchable = option.name() + " " + option.control() + " " + option.category() + " " + option.key();
-            return searchable.toLowerCase(Locale.ROOT).contains(needle);
-        }).toList();
+        if (!needle.isEmpty()) {
+            return folders.stream().flatMap(folder -> folder.options().stream()).filter(option -> {
+                String searchable = option.name() + " " + option.control() + " " + option.section() + " " + option.key() + " " + option.folder();
+                return searchable.toLowerCase(Locale.ROOT).contains(needle);
+            }).sorted(Comparator.comparing(option -> option.name().toLowerCase(Locale.ROOT)))
+                    .map(option -> new Row(null, null, option)).toList();
+        }
+        if (openFolder == null) return folders.stream().map(folder -> new Row(folder, null, null)).toList();
+        List<Row> result = new ArrayList<>();
+        boolean sections = openFolder.options().stream().map(Option::section).distinct().count() > 1;
+        String section = null;
+        for (Option option : openFolder.options()) {
+            if (sections && !option.section().equals(section)) {
+                section = option.section();
+                result.add(new Row(null, section, null));
+            }
+            result.add(new Row(null, null, option));
+        }
+        return result;
     }
 
     private void changePage(int amount) {
@@ -102,28 +192,66 @@ public final class ControlPickerScreen extends Screen {
         refreshResults();
     }
 
+    private void showFolder(Folder folder) {
+        openFolder = folder;
+        page = 0;
+        refreshResults();
+    }
+
+    /** Whether the folder list or a search is shown, rather than one folder. */
+    private boolean inFolder() { return openFolder != null && query.isBlank(); }
+
     private void refreshResults() {
         for (AbstractWidget widget : resultWidgets) removeWidget(widget);
         resultWidgets.clear();
         shownIcons.clear();
-        filtered = matches();
-        int lastPage = Math.max(0, (filtered.size() - 1) / rows);
+        headers.clear();
+        filtered = rowsToShow();
+        // Inside a folder the first row leads back to the folder list.
+        int top = 72;
+        int pageRows = rows;
+        if (inFolder()) {
+            Button back = Button.builder(Component.literal("‹ All folders · " + openFolder.name()), button -> showFolder(null))
+                    .bounds(left, top, panelWidth, 20)
+                    .tooltip(Tooltip.create(Component.literal("Back to the list of folders. Escape also goes back."))).build();
+            resultWidgets.add(addRenderableWidget(back));
+            top += 24;
+            pageRows--;
+        }
+        int lastPage = Math.max(0, (filtered.size() - 1) / pageRows);
         page = Math.clamp(page, 0, lastPage);
         previous.active = page > 0;
         next.active = page < lastPage;
-        int first = page * rows;
-        for (int index = first; index < Math.min(filtered.size(), first + rows); index++) {
-            Option option = filtered.get(index);
-            String text = option.name() + " · " + option.key();
-            String help = option.name() + "\n" + option.category() + "\n" + option.control();
+        int first = page * pageRows;
+        for (int index = first; index < Math.min(filtered.size(), first + pageRows); index++) {
+            Row row = filtered.get(index);
+            int y = top + (index - first) * 24;
+            if (row.header() != null) {
+                headers.add(new Caption(row.header(), y + 6));
+                continue;
+            }
+            if (row.folder() != null) {
+                Folder folder = row.folder();
+                int count = folder.options().size();
+                String text = folder.name() + " · " + count + (count == 1 ? " control" : " controls") + "  ›";
+                shownIcons.add(new ShownIcon(folder.icon(), left + 2, y + 2));
+                resultWidgets.add(addRenderableWidget(Button.builder(Component.literal(font.plainSubstrByWidth(text, panelWidth - 48)),
+                        button -> showFolder(folder)).bounds(left, y, panelWidth, 20)
+                        .tooltip(Tooltip.create(Component.literal("Open " + folder.name()))).build()));
+                continue;
+            }
+            Option option = row.option();
+            boolean searching = !query.isBlank();
+            String text = option.name() + " · " + option.key() + (searching ? " · " + option.folder() : "");
+            String help = option.name() + "\n" + option.folder() + (option.section().equals(option.folder()) ? "" : " › " + option.section())
+                    + "\n" + option.control();
             // Labels are centred; leaving room on both sides keeps a long one clear of the icon.
             int textWidth = option.iconMod() == null ? panelWidth - 12 : panelWidth - 48;
-            if (option.iconMod() != null) shownIcons.add(new ShownIcon(option.iconMod(), left + 2, 72 + (index - first) * 24 + 2));
+            if (option.iconMod() != null) shownIcons.add(new ShownIcon(WheelIcons.resolve(WheelIcons.modIcon(option.iconMod())), left + 2, y + 2));
             Button button = Button.builder(Component.literal(font.plainSubstrByWidth(text, textWidth)), selected -> {
                 accepted.accept(option.control());
                 onClose();
-            }).bounds(left, 72 + (index - first) * 24, panelWidth, 20)
-                    .tooltip(Tooltip.create(Component.literal(help))).build();
+            }).bounds(left, y, panelWidth, 20).tooltip(Tooltip.create(Component.literal(help))).build();
             resultWidgets.add(addRenderableWidget(button));
         }
     }
@@ -132,6 +260,10 @@ public final class ControlPickerScreen extends Screen {
     public boolean keyPressed(KeyEvent event) {
         if (event.key() == InputConstants.KEY_PAGEUP || event.key() == InputConstants.KEY_PAGEDOWN) {
             changePage(event.key() == InputConstants.KEY_PAGEUP ? -1 : 1);
+            return true;
+        }
+        if (event.key() == InputConstants.KEY_ESCAPE && inFolder()) {
+            showFolder(null);
             return true;
         }
         return super.keyPressed(event);
@@ -149,22 +281,27 @@ public final class ControlPickerScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         super.extractRenderState(graphics, mouseX, mouseY, delta);
-        graphics.centeredText(font, title, width / 2, 12, WheelUi.GOLD);
-        int count = filtered.size();
-        graphics.text(font, count + " controls · includes installed mods", left, 58, WheelUi.DIM);
-        graphics.centeredText(font, "Page " + (page + 1) + "/" + Math.max(1, (count + rows - 1) / rows),
+        graphics.centeredText(font, inFolder() ? title.getString() + " › " + openFolder.name() : title.getString(), width / 2, 12, WheelUi.GOLD);
+        int count = (int) filtered.stream().filter(row -> row.option() != null).count();
+        String summary = !query.isBlank() ? count + " matching controls in all folders"
+                : inFolder() ? count + (count == 1 ? " control" : " controls") + " in " + openFolder.name()
+                : folders.size() + " folders · includes installed mods";
+        graphics.text(font, summary, left, 58, WheelUi.DIM);
+        int pageRows = inFolder() ? rows - 1 : rows;
+        graphics.centeredText(font, "Page " + (page + 1) + "/" + Math.max(1, (filtered.size() + pageRows - 1) / pageRows),
                 width / 2, height - 43, WheelUi.DIM);
-        if (count == 0) graphics.centeredText(font, "No matching controls", width / 2, 80, WheelUi.DIM);
-        for (ShownIcon shown : shownIcons) {
-            ModSettingsActions.icon(shown.modId()).ifPresent(icon -> {
-                int[] size = ModSettingsActions.iconSize(icon);
-                graphics.blit(RenderPipelines.GUI_TEXTURED, icon, shown.x(), shown.y(), 0, 0, 16, 16, size[0], size[1], size[0], size[1]);
-            });
-        }
+        if (filtered.isEmpty()) graphics.centeredText(font, "No matching controls", width / 2, inFolder() ? 104 : 80, WheelUi.DIM);
+        for (Caption header : headers) graphics.text(font, header.text(), left + 4, header.y(), WheelUi.GOLD);
+        for (ShownIcon shown : shownIcons) shown.icon().draw(graphics, shown.x(), shown.y());
     }
 
     @Override
     public void onClose() { minecraft.gui.setScreen(parent); }
+
+    @Override
+    public void removed() {
+        ModIcons.releaseExcept(WheelIcons.modsUsedBy(WheelConfig.get().allEntries()));
+    }
 
     @Override
     public boolean isPauseScreen() { return false; }

@@ -39,17 +39,19 @@ SIDE_MOUSE_REGRESSION = SOURCE / 'qa/regressions/1.0.7-side-mouse-editor-close'
 UPSTREAM_REGRESSION = SOURCE / 'qa/regressions/1.0.8-upstream-2026-11'
 SERVER_REGRESSION = SOURCE / 'qa/regressions/1.0.9-server-camera-question'
 DOWNGRADE_REGRESSION = SOURCE / 'qa/regressions/1.1.0-downgrade-to-1.0.11'
+UPGRADE_REGRESSION = SOURCE / 'qa/regressions/1.1.2-upgrade-from-1.0.11-and-1.1.1'
 BUILDPRINT_VERSION = os.environ.get('HOTKEY_WHEEL_BUILDPRINT_VERSION', '0.1.39+26.3')
+# At the user's request 1.1.2 was smoke-tested and targeted-tested in two profiles rather than the full matrix.
+# Each profile also has a restart run: a second game that loads the settings the first one saved.
+NEW_REPORTS = ['icon-results.json', 'control-folder-results.json', 'editor-layout-results.json', 'layout-scale-results.json',
+               'upgrade-results.json']
 REPORTS = {
-    'minimal': ['results.json', 'key-management-results.json', 'move-slot-results.json', 'mod-settings-results.json', 'folder-results.json'],
-    'integrated': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json',
-                   'server-camera-results.json', 'move-slot-results.json', 'mod-settings-results.json', 'folder-results.json'],
-    'toolpouch': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json', 'toolpouch-results.json',
-                  'toolpouch-toggle-results.json', 'move-slot-results.json', 'mod-settings-results.json', 'folder-results.json'],
+    'minimal': ['results.json', 'key-management-results.json', 'move-slot-results.json', 'mod-settings-results.json',
+                *NEW_REPORTS, 'folder-results.json'],
+    'minimal-restart': ['restart-results.json'],
     'suite': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json', 'toolpouch-results.json', 'brbr-integration-results.json',
-                      'toolpouch-toggle-results.json', 'move-slot-results.json', 'mod-settings-results.json', 'folder-results.json'],
-    'suite-polymer': ['results.json', 'key-management-results.json', 'buildprint-menu-results.json', 'side-mouse-editor-results.json', 'toolpouch-results.json', 'brbr-integration-results.json',
-                      'toolpouch-toggle-results.json', 'move-slot-results.json', 'mod-settings-results.json', 'folder-results.json'],
+              'toolpouch-toggle-results.json', 'move-slot-results.json', 'mod-settings-results.json', *NEW_REPORTS, 'folder-results.json'],
+    'suite-restart': ['restart-results.json'],
 }
 
 
@@ -123,6 +125,13 @@ result = json.loads((DOWNGRADE_REGRESSION / 'release-1.0.11/downgrade-results.js
 provenance = json.loads((DOWNGRADE_REGRESSION / 'release-1.0.11/provenance.json').read_text())
 require(result.get('passed') is True and provenance['mods'].get('hotkey-wheel-1.0.11+26.3.jar') == RELEASED_1_0_11,
         'Downgrade evidence does not show the published 1.0.11 JAR loading 1.1.0 settings')
+# Settings files written by the published 1.0.11 and 1.1.1 JARs themselves, which UpgradeTest loads.
+RELEASED_1_1_1 = 'dd45d3f106071f61e48f0dd723bf9cd59caa2275514d5c9fca16dc63a4d686f2'
+for release, checksum in [('1.0.11', RELEASED_1_0_11), ('1.1.1', RELEASED_1_1_1)]:
+    provenance = json.loads((UPGRADE_REGRESSION / f'release-{release}/provenance.json').read_text())
+    require(provenance['mods'].get(f'hotkey-wheel-{release}+26.3.jar') == checksum
+            and (UPGRADE_REGRESSION / f'release-{release}/upgrade/settings-{release}+26.3.json').is_file(),
+            f'Upgrade evidence does not show the published {release} JAR writing its own settings')
 if SOURCE_REBUILD:
     rebuild = json.loads(Path(SOURCE_REBUILD).read_text())
     require(rebuild.get('passed') is True and rebuild.get('compile_from_exported_source') is True,
@@ -160,13 +169,14 @@ shared_inputs = {}
 integration_versions = {}
 for mode, names in REPORTS.items():
     root = SOURCE / 'qa' / mode
+    profile = mode.removesuffix('-restart')
     provenance = json.loads((root / 'provenance.json').read_text())
     require(provenance['minecraft'] == '26.3' and provenance['loader'] == '0.19.5', f'{mode}: unexpected game target')
-    require(provenance.get('integrated') is (mode != 'minimal') and provenance.get('suite') is mode.startswith('suite')
-            and provenance.get('polymer') is (mode == 'suite-polymer')
-            and (provenance.get('toolpouch_standalone') is not None) is (mode == 'toolpouch'),
+    require(provenance.get('integrated') is (profile != 'minimal') and provenance.get('suite') is profile.startswith('suite')
+            and provenance.get('polymer') is (profile == 'suite-polymer')
+            and (provenance.get('toolpouch_standalone') is not None) is (profile == 'toolpouch'),
             f'{mode}: profile provenance mismatch')
-    if mode != 'minimal':
+    if profile != 'minimal':
         blocktone_version = provenance.get('blocktone')
         # A --no-blocktone run records no Blocktone version and cannot be packaged.
         require(provenance.get('buildprint') == BUILDPRINT_VERSION and isinstance(blocktone_version, str) and blocktone_version,
@@ -193,7 +203,7 @@ for mode, names in REPORTS.items():
     keyboard = order['keyPress_callbacks']
     require(keyboard and keyboard[0]['method'].endswith('hotkeyWheel$menuReturn'),
             f'{mode}: owned-menu keyboard return does not run before other key handlers')
-    if mode != 'minimal':
+    if profile != 'minimal':
         methods = [callback['method'] for callback in keyboard]
         editor_keys = [index for index, method in enumerate(methods) if method.endswith('buildprint$toolKeys')]
         wheel_input = [index for index, method in enumerate(methods) if method.endswith('hotkeyWheel$input')]
@@ -226,7 +236,7 @@ for mode, names in REPORTS.items():
                     and result.get('blocktone') is True,
                     f'{mode}: public editor integration or Blocktone scenarios were not exercised')
         if name == 'toolpouch-results.json':
-            if mode == 'toolpouch':
+            if profile == 'toolpouch':
                 require(result.get('toolpouch') == provenance.get('toolpouch_standalone') and 'suite' not in result,
                         f'{mode}: unexpected standalone Tool Pouch version')
             else:
@@ -239,14 +249,14 @@ for mode, names in REPORTS.items():
         if name == 'brbr-integration-results.json':
             require(result.get('brbr') == provenance.get('brbr'), f'{mode}: unexpected BRBR version')
         if name == 'toolpouch-toggle-results.json':
-            require(result.get('suite') is mode.startswith('suite'), f'{mode}: slot toggle run has the wrong suite state')
+            require(result.get('suite') is profile.startswith('suite'), f'{mode}: slot toggle run has the wrong suite state')
             # The release must show the old suite elytra slots working after the suite removed its own mapping.
             require(result.get('suite_elytra_mapping') is False, f'{mode}: the suite elytra mapping was still registered')
         if name == 'folder-results.json':
             # Controlling replaces the vanilla key list, so the minimal profile checks vanilla and the others Controlling.
-            require(result.get('buildprint') is (mode != 'minimal') and result.get('controlling') is (mode != 'minimal'),
+            require(result.get('buildprint') is (profile != 'minimal') and result.get('controlling') is (profile != 'minimal'),
                     f'{mode}: folder fixture ran with the wrong integrations')
-            marker = 'vanilla_marker_pixels' if mode == 'minimal' else 'controlling_marker_pixels'
+            marker = 'vanilla_marker_pixels' if profile == 'minimal' else 'controlling_marker_pixels'
             require(isinstance(result.get(marker), int), f'{mode}: the Controls marker was not checked on its key list')
         if name == 'server-camera-results.json':
             require(len(result.get('scenarios', [])) == 6, f'{mode}: dedicated-server camera scenarios are incomplete')
@@ -260,7 +270,7 @@ for mode, names in REPORTS.items():
         if name in ('toolpouch-results.json', 'brbr-integration-results.json'):
             if name == 'brbr-integration-results.json':
                 prefix, runtime_version = 'better-recipe-book-rebetterered-', result.get('brbr')
-            elif mode == 'toolpouch':
+            elif profile == 'toolpouch':
                 prefix, runtime_version = 'toolpouch-fabric-', result.get('toolpouch')
             else:
                 prefix, runtime_version = 'vanilla-plusplus-quality-of-life-suite-', result.get('suite')
@@ -311,11 +321,12 @@ for mode, names in REPORTS.items():
 source_files = [SOURCE / name for name in [
     '.gitignore', 'LICENSE', 'README.md', 'QA.md', 'API-MIGRATION.md', 'AUDIT-2026-11-08.md', 'CHANGELOG.md', 'ICON.md', 'build.gradle',
     'gradle.properties', 'settings.gradle', 'gradlew', 'qa/run.py', 'qa/package_release.py', 'qa/buildprint-api-audit.json',
-    'qa/upstream-inputs.json']]
+    'qa/upstream-inputs.json', 'art/draw_glyphs.py']]
 source_files += list((SOURCE / 'qa').glob('*Test.java'))
 # Console logs stay local; they are ignored by Git and not part of the public archives.
 regression_files = sorted(path for path in [*SIDE_MOUSE_REGRESSION.rglob('*'), *UPSTREAM_REGRESSION.rglob('*'),
-                                            *SERVER_REGRESSION.rglob('*'), *DOWNGRADE_REGRESSION.rglob('*')]
+                                            *SERVER_REGRESSION.rglob('*'), *DOWNGRADE_REGRESSION.rglob('*'),
+                                            *UPGRADE_REGRESSION.rglob('*')]
                           if path.is_file() and path.suffix != '.log')
 require(not any(path.suffix in ('.class', '.jar') for path in regression_files),
         'Regression source/evidence must not redistribute exported classes or mod JARs')
@@ -377,6 +388,8 @@ report = {
     'upstreamRegression': 'qa/regressions/1.0.8-upstream-2026-11', 'audit': 'AUDIT-2026-11-08.md',
     'serverCameraRegression': 'qa/regressions/1.0.9-server-camera-question',
     'downgradeRegression': 'qa/regressions/1.1.0-downgrade-to-1.0.11',
+    'upgradeRegression': 'qa/regressions/1.1.2-upgrade-from-1.0.11-and-1.1.1',
+    'testScope': 'smoke and targeted tests in the minimal and suite profiles, at the user\'s request; the full five-profile matrix was not run',
     'apiAudit': 'buildprint-api-audit.json',
     'sourceFiles': {str(path.relative_to(SOURCE)): sha256(path) for path in sorted(source_files)},
     'verification': 'QA.md', 'published': False, 'installedIntoUserProfile': False,

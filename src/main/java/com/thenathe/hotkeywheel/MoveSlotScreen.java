@@ -7,6 +7,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 
 /** Picks where a slot or folder goes: the wheel's top level or any folder in it, shown as a tree. */
 public final class MoveSlotScreen extends Screen {
@@ -18,6 +19,7 @@ public final class MoveSlotScreen extends Screen {
     private final List<Destination> destinations = new ArrayList<>();
     private int page;
     private int rows;
+    private List<FormattedCharSequence> subtitle = List.of();
 
     @FunctionalInterface
     public interface Mover {
@@ -78,7 +80,10 @@ public final class MoveSlotScreen extends Screen {
     protected void init() {
         int panelWidth = Math.min(560, width - 40);
         int left = (width - panelWidth) / 2;
-        rows = Math.max(1, (height - 126) / 24);
+        // A long folder name or a large GUI scale wraps the subtitle; the list moves down only when it needs a third line.
+        subtitle = font.split(Component.literal(subtitleText()), panelWidth);
+        int top = Math.max(52, 32 + subtitle.size() * 10);
+        rows = Math.max(1, (height - 74 - top) / 24);
         int lastPage = Math.max(0, (destinations.size() - 1) / rows);
         page = Math.clamp(page, 0, lastPage);
         int first = page * rows;
@@ -89,7 +94,7 @@ public final class MoveSlotScreen extends Screen {
                     + " · " + destination.entries().size() + "/" + WheelConfig.MAX_SLOTS;
             String help = destination.refusal() != null ? destination.refusal() : "Move " + slotName() + " here, after its last slot.";
             Button button = Button.builder(Component.literal(font.plainSubstrByWidth(text, panelWidth - 12)), pressed -> choose(destination))
-                    .bounds(left, 52 + (index - first) * 24, panelWidth, 20)
+                    .bounds(left, top + (index - first) * 24, panelWidth, 20)
                     .tooltip(Tooltip.create(Component.literal(help))).build();
             button.active = destination.refusal() == null;
             addRenderableWidget(button);
@@ -102,6 +107,23 @@ public final class MoveSlotScreen extends Screen {
         next.active = page < lastPage;
         addRenderableWidget(Button.builder(Component.literal("Cancel"), button -> onClose())
                 .bounds(left, height - 25, panelWidth, 20).build());
+    }
+
+    private String subtitleText() {
+        String verb = moving.isFolder() ? " go" : " goes";
+        return "Choose where " + slotName() + verb + " · greyed-out levels say why in their tooltip";
+    }
+
+    /** The subtitle's lines, as drawn; one line where it fits, as before. */
+    public List<String> subtitleLines() {
+        return subtitle.stream().map(line -> {
+            StringBuilder text = new StringBuilder();
+            line.accept((index, style, codePoint) -> {
+                text.appendCodePoint(codePoint);
+                return true;
+            });
+            return text.toString();
+        }).toList();
     }
 
     private String slotName() {
@@ -117,8 +139,11 @@ public final class MoveSlotScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         super.extractRenderState(graphics, mouseX, mouseY, delta);
         graphics.centeredText(font, title, width / 2, 12, WheelUi.GOLD);
-        graphics.centeredText(font, "Choose where " + slotName() + " goes · greyed-out levels say why in their tooltip",
-                width / 2, 30, WheelUi.DIM);
+        int y = subtitle.size() == 1 ? 30 : 24;
+        for (FormattedCharSequence line : subtitle) {
+            graphics.centeredText(font, line, width / 2, y, WheelUi.DIM);
+            y += 10;
+        }
     }
 
     @Override

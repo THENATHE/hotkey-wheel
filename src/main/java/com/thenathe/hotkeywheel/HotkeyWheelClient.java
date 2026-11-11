@@ -23,6 +23,8 @@ public final class HotkeyWheelClient implements ClientModInitializer {
     public static final KeyMapping[] WHEEL_KEYS = new KeyMapping[3];
     public static KeyMapping CYCLE_KEY;
     public static KeyMapping CONFIGURE_KEY;
+    // Only read while a wheel is open, so its default cannot take a key from normal play.
+    public static KeyMapping SETTINGS_KEY;
     // Controls whose mod replaced them with another mod's control. A slot keeps the saved name and uses
     // the replacement only once the original is no longer registered.
     private static final Map<String, String> REPLACED_CONTROLS = Map.of(
@@ -47,6 +49,7 @@ public final class HotkeyWheelClient implements ClientModInitializer {
         }
         CYCLE_KEY = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.hotkey_wheel.cycle", InputConstants.KEY_TAB, category));
         CONFIGURE_KEY = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.hotkey_wheel.configure", InputConstants.UNKNOWN.getValue(), category));
+        SETTINGS_KEY = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.hotkey_wheel.settings", InputConstants.KEY_U, category));
         ClientTickEvents.START_CLIENT_TICK.register(HotkeyWheelClient::tick);
         BuildprintApiIntegration.initialize();
         WheelMenuReturn.initialize();
@@ -70,6 +73,16 @@ public final class HotkeyWheelClient implements ClientModInitializer {
         if (action == InputConstants.PRESS) physicalKeys.add(key);
         if (action == InputConstants.RELEASE) physicalKeys.remove(key);
         return WheelMenuReturn.handleInput(key, action);
+    }
+
+    /** The keys the editor sets, in its order: three wheel openers, cycle, configure, and settings inside a wheel. */
+    public static KeyMapping editorKey(int index) {
+        if (index < 3) return WHEEL_KEYS[index];
+        return switch (index) {
+            case 3 -> CYCLE_KEY;
+            case 4 -> CONFIGURE_KEY;
+            default -> SETTINGS_KEY;
+        };
     }
 
     public static boolean handleInput(InputConstants.Key key, int action) {
@@ -104,6 +117,12 @@ public final class HotkeyWheelClient implements ClientModInitializer {
             }
             if (press && CYCLE_KEY.matches(key)) {
                 wheel.cycle();
+                consumedKeys.add(key);
+                return true;
+            }
+            if (press && SETTINGS_KEY.matches(key) && !wheel.opener().equals(key)) {
+                clearActions();
+                client.gui.setScreen(new WheelEditorScreen(null, wheel.wheelIndex(), wheel.folderPath()));
                 consumedKeys.add(key);
                 return true;
             }

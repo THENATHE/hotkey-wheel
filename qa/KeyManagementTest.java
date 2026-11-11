@@ -161,12 +161,14 @@ public final class KeyManagementTest implements FabricClientGameTest {
                         && WheelConfig.get().managedBindings.containsKey(perspective.getName()),
                 "Opt-in and recovery binding survive configuration reload");
         client.gui.setScreen(new WheelEditorScreen(null));
+        press(button(client.gui.screen(), "General"));
         press(button(client.gui.screen(), "Restore keys unbound"));
         check(perspective.isUnbound(), "Restore request leaves live bindings unchanged before Save");
         press(button(client.gui.screen(), "Cancel"));
         check(perspective.isUnbound() && WheelConfig.get().wheels.get(0).entries.get(0).unbindKey,
                 "Cancel discards the bulk restore request");
         client.gui.setScreen(new WheelEditorScreen(null));
+        press(button(client.gui.screen(), "General"));
         press(button(client.gui.screen(), "Restore keys unbound"));
         press(button(client.gui.screen(), "Save"));
         check(perspective.matches(original) && WheelConfig.get().managedBindings.isEmpty()
@@ -200,6 +202,7 @@ public final class KeyManagementTest implements FabricClientGameTest {
         check(perspective.isUnbound(), "The retained unbinding preference removes the newer manual key");
         WheelConfig.load();
         client.gui.setScreen(new WheelEditorScreen(null));
+        press(button(client.gui.screen(), "General"));
         press(button(client.gui.screen(), "Restore keys unbound"));
         press(button(client.gui.screen(), "Save"));
         check(perspective.matches(key(InputConstants.KEY_Q))

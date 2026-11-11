@@ -134,7 +134,7 @@ public final class WheelBindings {
             return "Could not prepare key changes. Your draft is kept here.";
         }
         Map<KeyMapping, InputConstants.Key> changes = new LinkedHashMap<>(plan.changes());
-        for (int index = 0; index < wheelKeys.length; index++) changes.put(wheelKey(index), wheelKeys[index]);
+        for (int index = 0; index < wheelKeys.length; index++) changes.put(HotkeyWheelClient.editorKey(index), wheelKeys[index]);
         Map<KeyMapping, InputConstants.Key> previousKeys = new LinkedHashMap<>();
         for (KeyMapping mapping : changes.keySet()) previousKeys.put(mapping, InputConstants.getKey(mapping.saveString()));
         Map<String, InputConstants.Key> previousPouchKeys = new LinkedHashMap<>();
@@ -181,11 +181,6 @@ public final class WheelBindings {
             return restoredConfiguration ? "Key save failed. Keys restored; your draft is kept here."
                     : "Key save failed. Keys restored; recovery bindings kept in the config.";
         }
-    }
-
-    private static KeyMapping wheelKey(int index) {
-        if (index < 3) return HotkeyWheelClient.WHEEL_KEYS[index];
-        return index == 3 ? HotkeyWheelClient.CYCLE_KEY : HotkeyWheelClient.CONFIGURE_KEY;
     }
 
     private static void restoreOptions(Path path, byte[] original) throws IOException {

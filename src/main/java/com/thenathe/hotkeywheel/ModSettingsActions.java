@@ -1,24 +1,16 @@
 package com.thenathe.hotkeywheel;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import com.mojang.blaze3d.platform.NativeImage;
 import com.terraformersmc.modmenu.api.ConfigScreenFactory;
 import com.terraformersmc.modmenu.api.ModMenuApi;
-import java.io.InputStream;
-import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import net.fabricmc.loader.api.FabricLoader;
-import net.fabricmc.loader.api.ModContainer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import org.slf4j.LoggerFactory;
 
 /**
@@ -28,7 +20,6 @@ import org.slf4j.LoggerFactory;
  */
 public final class ModSettingsActions {
     public static final String PREFIX = "modmenu:config/";
-    private static final Map<String, Optional<Identifier>> icons = new HashMap<>();
     private static Map<String, ConfigScreenFactory<?>> factories;
 
     public record Choice(String control, String modId, String name) {}
@@ -133,35 +124,5 @@ public final class ModSettingsActions {
         provided.keySet().removeIf(modId -> FabricLoader.getInstance().getModContainer(modId).isEmpty());
         factories = provided;
         return factories;
-    }
-
-    /** The mod's own icon as a texture, loaded the first time it is drawn; empty when it has none. */
-    public static Optional<Identifier> icon(String modId) {
-        return icons.computeIfAbsent(modId, ModSettingsActions::loadIcon);
-    }
-
-    private static Optional<Identifier> loadIcon(String modId) {
-        Optional<ModContainer> mod = FabricLoader.getInstance().getModContainer(modId);
-        Optional<String> iconPath = mod.flatMap(container -> container.getMetadata().getIconPath(16));
-        if (iconPath.isEmpty()) return Optional.empty();
-        var path = mod.get().findPath(iconPath.get());
-        if (path.isEmpty() || !Files.isRegularFile(path.get())) return Optional.empty();
-        try (InputStream input = Files.newInputStream(path.get())) {
-            NativeImage image = NativeImage.read(input);
-            Identifier id = Identifier.fromNamespaceAndPath("hotkey_wheel", "mod_icon/" + Integer.toHexString(modId.hashCode()));
-            Minecraft.getInstance().getTextureManager().register(id, new DynamicTexture(() -> "Hotkey Wheel icon for " + modId, image));
-            return Optional.of(id);
-        } catch (Exception failure) {
-            LoggerFactory.getLogger("hotkey-wheel").debug("No usable icon for {}", modId, failure);
-            return Optional.empty();
-        }
-    }
-
-    /** Icon textures are drawn at their own size, so the picker needs it. */
-    public static int[] iconSize(Identifier id) {
-        if (Minecraft.getInstance().getTextureManager().getTexture(id) instanceof DynamicTexture texture && texture.getPixels() != null) {
-            return new int[] {texture.getPixels().getWidth(), texture.getPixels().getHeight()};
-        }
-        return new int[] {16, 16};
     }
 }

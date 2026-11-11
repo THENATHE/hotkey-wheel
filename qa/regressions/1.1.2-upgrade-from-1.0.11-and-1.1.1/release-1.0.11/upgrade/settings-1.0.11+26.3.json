@@ -1,0 +1,60 @@
+{
+  "wheelCount": 2,
+  "safeMode": false,
+  "toolPouchWheel": false,
+  "replaceToolPouchContextualKey": true,
+  "closeBuildprintWithWheelKey": false,
+  "managedBindings": {
+    "key.togglePerspective": "key.keyboard.f5"
+  },
+  "wheels": [
+    {
+      "name": "Builder",
+      "toggleOpen": false,
+      "selectOutside": true,
+      "entries": [
+        {
+          "control": "key.togglePerspective",
+          "icon": "minecraft:spyglass",
+          "label": "Camera",
+          "holdAction": false,
+          "unbindKey": true
+        },
+        {
+          "control": "key.playerlist",
+          "icon": "minecraft:player_head",
+          "label": "",
+          "holdAction": true,
+          "unbindKey": false
+        },
+        {
+          "control": "toolpouch:slot_toggle/3",
+          "icon": "minecraft:elytra",
+          "label": "Wings",
+          "holdAction": false,
+          "unbindKey": false
+        }
+      ]
+    },
+    {
+      "name": "Second",
+      "toggleOpen": true,
+      "selectOutside": false,
+      "entries": [
+        {
+          "control": "key.inventory",
+          "icon": "minecraft:chest",
+          "label": "",
+          "holdAction": false,
+          "unbindKey": false
+        }
+      ]
+    },
+    {
+      "name": "Wheel 3",
+      "toggleOpen": false,
+      "selectOutside": false,
+      "entries": []
+    }
+  ]
+}

@@ -35,14 +35,14 @@ final class WheelUi {
     }
 
     static final class IconButton extends Button {
-        private final Item item;
+        private final WheelIcons.Icon icon;
         private final BooleanSupplier selected;
         private boolean folderMark;
 
-        IconButton(int x, int y, int size, Item item, Component description,
+        IconButton(int x, int y, int size, WheelIcons.Icon icon, Component description,
                    BooleanSupplier selected, OnPress action) {
             super(x, y, size, size, description, action, DEFAULT_NARRATION);
-            this.item = item;
+            this.icon = icon;
             this.selected = selected;
             setTooltip(Tooltip.create(description));
         }
@@ -60,13 +60,12 @@ final class WheelUi {
                 graphics.fill(getX(), getY(), getX() + 2, getY() + getHeight(), GOLD);
                 graphics.fill(getX() + getWidth() - 2, getY(), getX() + getWidth(), getY() + getHeight(), GOLD);
             }
-            if (Minecraft.getInstance().level != null) {
-                graphics.fakeItem(new ItemStack(item), getX() + (getWidth() - 16) / 2,
-                        getY() + (getHeight() - 16) / 2);
+            if (!icon.needsWorld() || Minecraft.getInstance().level != null) {
+                icon.draw(graphics, getX() + (getWidth() - 16) / 2, getY() + (getHeight() - 16) / 2);
             } else {
                 // Item components are supplied when connecting; stacks cannot be created at first startup.
                 var font = Minecraft.getInstance().font;
-                String label = font.plainSubstrByWidth(itemName(item).getString(), getWidth() - 6);
+                String label = font.plainSubstrByWidth(icon.name().getString(), getWidth() - 6);
                 graphics.centeredText(font, label, getX() + getWidth() / 2,
                         getY() + (getHeight() - 9) / 2, TEXT);
             }

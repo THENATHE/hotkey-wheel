@@ -17,6 +17,27 @@ public final class RadialGeometry {
         return Math.min(count - 1, (int) (angle * count / TURN));
     }
 
+    // The hotbar and the hearts row above it take the bottom 39 GUI pixels; the hovered name and the key line
+    // below a radial reach 40 pixels past its edge, and its title sits 28 above it.
+    private static final int HUD_HEIGHT = 39;
+    private static final int TEXT_BELOW = 40;
+    private static final int TITLE_ABOVE = 28;
+
+    public record Layout(int centerY, int radius) {}
+
+    /**
+     * Where a radial sits on a screen of this size. Wherever the text below it clears the hearts and hotbar it is
+     * placed as it always was; on short screens, such as GUI scale 3 or 4 at 1080p, it shrinks and moves up instead.
+     */
+    public static Layout layout(int width, int height) {
+        int centerY = (height - 32) / 2;
+        int radius = Math.max(36, Math.min(110, Math.min(width / 2 - 22, (height - 90) / 2)));
+        int hudTop = height - HUD_HEIGHT;
+        if (centerY + radius + TEXT_BELOW <= hudTop) return new Layout(centerY, radius);
+        radius = Math.max(36, Math.min(radius, (hudTop - TEXT_BELOW - TITLE_ABOVE) / 2));
+        return new Layout(Math.max(radius + TITLE_ABOVE, hudTop - TEXT_BELOW - radius), radius);
+    }
+
     public static double angle(int slot, int count) { return slot * TURN / count - Math.PI / 2; }
 
     public record Run(int x, int y, int length, int sector) {}

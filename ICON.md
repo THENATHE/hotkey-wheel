@@ -12,3 +12,7 @@ Subject and composition: a single centered eight-sector circular ring with an em
 Style: crisp minimal game UI emblem, flat geometric shapes with restrained pixel-art accents. Match the mod palette: dark slate #263038, lighter slate #53616c, warm gold #f1c56c. Actual transparent background.
 Constraints: no text, no letters, no numbers, no watermark, no surrounding square, no keyboard, no photorealism, no scene or scenery.
 ```
+
+## Picker icons
+
+Hotkey Wheel's 39 general-purpose icons, such as the cog, check mark and map pin, are original 16×16 pixel art made for this mod in 1.1.2; no third-party icon font or set was used. `art/draw_glyphs.py` draws each one from simple shapes and writes the GUI sprites to [src/main/resources/assets/hotkey_wheel/textures/gui/sprites/icon/](src/main/resources/assets/hotkey_wheel/textures/gui/sprites/icon/). Every icon uses the same three colours: a light glyph (`#F2F2F2`), a lighter grey for details (`#B0BAC4`) and a dark outline (`#14181C`, 90% opaque) around every lit pixel, so it reads on the wheel's dark sectors and over the world. To change an icon, edit its shapes in the script and run `python3 art/draw_glyphs.py --preview`, which also writes `art/preview.png` at 8× size; do not commit the preview. Resource packs can replace the sprites like any other GUI sprite.

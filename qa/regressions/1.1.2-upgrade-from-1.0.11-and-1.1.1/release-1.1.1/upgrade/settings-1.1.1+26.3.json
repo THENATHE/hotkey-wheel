@@ -1,0 +1,93 @@
+{
+  "wheelCount": 1,
+  "safeMode": true,
+  "toolPouchWheel": true,
+  "replaceToolPouchContextualKey": false,
+  "closeBuildprintWithWheelKey": true,
+  "managedBindings": {
+    "key.togglePerspective": "key.keyboard.f5"
+  },
+  "wheels": [
+    {
+      "name": "Wheel 1",
+      "toggleOpen": false,
+      "selectOutside": false,
+      "entries": [
+        {
+          "control": "",
+          "icon": "minecraft:iron_pickaxe",
+          "label": "Tools",
+          "holdAction": false,
+          "unbindKey": false,
+          "entries": [
+            {
+              "control": "key.togglePerspective",
+              "icon": "minecraft:spyglass",
+              "label": "Camera",
+              "holdAction": false,
+              "unbindKey": true
+            },
+            {
+              "control": "",
+              "icon": "minecraft:chest",
+              "label": "Deep",
+              "holdAction": false,
+              "unbindKey": false,
+              "entries": [
+                {
+                  "control": "",
+                  "icon": "minecraft:barrel",
+                  "label": "Deepest",
+                  "holdAction": false,
+                  "unbindKey": false,
+                  "entries": [
+                    {
+                      "control": "key.drop",
+                      "icon": "minecraft:dropper",
+                      "label": "",
+                      "holdAction": false,
+                      "unbindKey": false
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "control": "modmenu:config/hotkey_wheel",
+          "icon": "minecraft:comparator",
+          "label": "",
+          "holdAction": false,
+          "unbindKey": false
+        },
+        {
+          "control": "key.buildprint_toning.instamine",
+          "icon": "minecraft:diamond_pickaxe",
+          "label": "Dig",
+          "holdAction": false,
+          "unbindKey": false
+        },
+        {
+          "control": "key.inventory",
+          "icon": "minecraft:chest",
+          "label": "",
+          "holdAction": false,
+          "unbindKey": false
+        }
+      ]
+    },
+    {
+      "name": "Wheel 2",
+      "toggleOpen": false,
+      "selectOutside": false,
+      "entries": []
+    },
+    {
+      "name": "Wheel 3",
+      "toggleOpen": false,
+      "selectOutside": false,
+      "entries": []
+    }
+  ]
+}

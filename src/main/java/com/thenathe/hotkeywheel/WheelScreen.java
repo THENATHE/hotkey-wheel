@@ -8,11 +8,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 
 public final class WheelScreen extends Screen {
     private final InputConstants.Key opener;
@@ -28,7 +24,7 @@ public final class WheelScreen extends Screen {
     private final List<WheelConfig.Entry> openFolders = new ArrayList<>();
     private List<RadialGeometry.Run> ring = List.of();
     // Looked up once per wheel instead of every frame; null marks a control that is not registered.
-    private List<ItemStack> icons = List.of();
+    private List<WheelIcons.Icon> icons = List.of();
     private List<KeyMapping> controls = List.of();
     private List<Boolean> pouchToggles = List.of();
 
@@ -56,6 +52,17 @@ public final class WheelScreen extends Screen {
         return openFolders.isEmpty() ? wheel().entries : openFolders.getLast().entries;
     }
 
+    /** Where each open folder sits in the level above it, outermost first. */
+    public List<Integer> folderPath() {
+        List<Integer> path = new ArrayList<>();
+        List<WheelConfig.Entry> level = wheel().entries;
+        for (WheelConfig.Entry folder : openFolders) {
+            path.add(level.indexOf(folder));
+            level = folder.entries;
+        }
+        return path;
+    }
+
     /** The wheel name followed by each open folder, as shown above the radial. */
     public String location() {
         StringBuilder location = new StringBuilder(wheel().name);
@@ -66,8 +73,9 @@ public final class WheelScreen extends Screen {
     @Override
     protected void init() {
         centerX = width / 2;
-        centerY = (height - 32) / 2;
-        radius = Math.max(36, Math.min(110, Math.min(width / 2 - 22, (height - 90) / 2)));
+        RadialGeometry.Layout layout = RadialGeometry.layout(width, height);
+        centerY = layout.centerY();
+        radius = layout.radius();
         innerRadius = (int) (radius * 0.42);
         rebuildWheel();
         // Always begin inside Cancel, including after a window resize.
@@ -81,7 +89,7 @@ public final class WheelScreen extends Screen {
         controls = new ArrayList<>(entries.size());
         pouchToggles = new ArrayList<>(entries.size());
         for (WheelConfig.Entry entry : entries) {
-            icons.add(icon(entry.icon));
+            icons.add(WheelIcons.resolve(entry.icon));
             controls.add(HotkeyWheelClient.findControl(entry.control));
             pouchToggles.add(ToolPouchToggles.handles(entry.control) || ModSettingsActions.available(entry.control));
         }
@@ -213,7 +221,7 @@ public final class WheelScreen extends Screen {
             graphics.pose().translate(x, y);
             float scale = selected == slot ? 1.25f : 1.0f;
             graphics.pose().scale(scale, scale);
-            graphics.fakeItem(icons.get(slot), -8, -8);
+            icons.get(slot).draw(graphics, -8, -8);
             graphics.pose().popMatrix();
             if (entries.get(slot).isFolder()) graphics.text(font, "»", x + 5, y + 2, 0xfff1c56c);
             else if (controls.get(slot) == null && !pouchToggles.get(slot)) graphics.text(font, "!", x + 5, y - 11, 0xffff9999);
@@ -231,21 +239,17 @@ public final class WheelScreen extends Screen {
                     : HotkeyWheelClient.controlLabel(entry.control);
             graphics.centeredText(font, font.plainSubstrByWidth(label, width - 24), centerX, centerY + radius + 18, 0xffe6e8ea);
         }
-        String cycle = "Cycle wheel: " + HotkeyWheelClient.CYCLE_KEY.getTranslatedKeyMessage().getString();
-        graphics.centeredText(font, cycle, centerX, centerY + radius + 31, 0xfff1c56c);
+        String keys = "Cycle wheel: " + HotkeyWheelClient.CYCLE_KEY.getTranslatedKeyMessage().getString();
+        if (!HotkeyWheelClient.SETTINGS_KEY.isUnbound()) {
+            keys += " · Settings: " + HotkeyWheelClient.SETTINGS_KEY.getTranslatedKeyMessage().getString();
+        }
+        graphics.centeredText(font, keys, centerX, centerY + radius + 31, 0xfff1c56c);
         String hint;
         if (toggleOpen()) hint = inFolder ? "Click to select · center, right click or Esc goes back"
                 : "Click to select · wheel key again to select · Esc to cancel";
         else hint = inFolder ? "Release to select · click to hold or go back · Esc goes back"
                 : "Release to select · click to hold an action · Esc to cancel";
         graphics.centeredText(font, hint, centerX, height - 12, 0xff8a9199);
-    }
-
-    public static ItemStack icon(String id) {
-        Identifier identifier = Identifier.tryParse(id);
-        if (identifier == null) return new ItemStack(Items.BARRIER);
-        var item = BuiltInRegistries.ITEM.getOptional(identifier).orElse(Items.BARRIER);
-        return new ItemStack(item == Items.AIR ? Items.BARRIER : item);
     }
 
     private static void drawLine(GuiGraphicsExtractor graphics, int startX, int startY, int endX, int endY, int color) {
