@@ -92,6 +92,8 @@ public final class SideMouseEditorTest implements FabricClientGameTest {
                         .translatable("buildprint.save.quick").getString());
                 clickButton(context, saveLabel);
                 context.waitFor(client -> Files.isRegularFile(output), 200);
+                // The file is written off the main thread; Buildprint clears the selection when it hears back.
+                for (int tick = 0; tick < 40 && !context.computeOnClient(client -> selectionEmpty()); tick++) context.waitTick();
                 context.runOnClient(client -> {
                     check(Files.size(output) > 0 && active(), "Native Save writes a real blueprint and retains the editor");
                     check((boolean) call("com.buildprint.client.edit.EditorMode", "selection").getClass()
@@ -275,6 +277,11 @@ public final class SideMouseEditorTest implements FabricClientGameTest {
 
     private static boolean active() throws Exception {
         return (boolean) call("com.buildprint.api.editor.BuildprintEditor", "isActive");
+    }
+
+    private static boolean selectionEmpty() throws Exception {
+        Object selection = call("com.buildprint.client.edit.EditorMode", "selection");
+        return (boolean) selection.getClass().getMethod("isEmpty").invoke(selection);
     }
 
     private static Object call(String type, String method) throws Exception {

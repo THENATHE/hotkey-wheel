@@ -58,6 +58,12 @@ public final class ControlFolderTest implements FabricClientGameTest {
                 .findFirst().orElseThrow(() -> new AssertionError("Missing button " + prefix));
     }
 
+    /** A wheel's tab in the editor, which shows the wheel's name since 1.2.0. */
+    private static Button wheelTab(Screen editor, int wheel) {
+        String name = WheelConfig.get().wheels.get(wheel).name;
+        return button(editor, name == null || name.isBlank() ? "Wheel " + (wheel + 1) : name);
+    }
+
     private static EditBox search(Screen screen) {
         return screen.children().stream().filter(EditBox.class::isInstance).map(EditBox.class::cast).findFirst().orElseThrow();
     }
@@ -288,7 +294,7 @@ public final class ControlFolderTest implements FabricClientGameTest {
         press(button(editor, "General"));
         press(button(editor, "Mod controls: A folder for each mod"));
         check(hasButton(editor, "Mod controls: One Mod controls folder"), "General settings switch the picker to one Mod controls folder");
-        press(button(editor, "Wheel 1"));
+        press(wheelTab(editor, 0));
         press(button(editor, "Control:"));
         Field oneFolder = ControlPickerScreen.class.getDeclaredField("oneModFolder");
         oneFolder.setAccessible(true);

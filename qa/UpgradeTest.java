@@ -46,6 +46,12 @@ public final class UpgradeTest implements FabricClientGameTest {
                 .findFirst().orElseThrow(() -> new AssertionError("Missing button " + prefix));
     }
 
+    /** A wheel's tab in the editor, which shows the wheel's name since 1.2.0. */
+    private static Button wheelTab(Screen editor, int wheel) {
+        String name = WheelConfig.get().wheels.get(wheel).name;
+        return button(editor, name == null || name.isBlank() ? "Wheel " + (wheel + 1) : name);
+    }
+
     private static void press(Button button) {
         button.onPress(new KeyEvent(InputConstants.KEY_RETURN, 0, 0));
     }
@@ -128,7 +134,7 @@ public final class UpgradeTest implements FabricClientGameTest {
         WheelEditorScreen editor = new WheelEditorScreen(null);
         client.gui.setScreen(editor);
         press(button(editor, "General"));
-        press(button(editor, "Wheel 1"));
+        press(wheelTab(editor, 0));
         press(button(editor, "Save"));
         check(Files.readString(WheelConfig.path()).equals(written), release + ": a Save in the new editor writes the file back byte for byte");
         check(perspective.isUnbound() && WheelConfig.get().managedBindings.containsKey(perspective.getName()),

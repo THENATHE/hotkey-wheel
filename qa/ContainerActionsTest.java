@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.loader.api.FabricLoader;
@@ -49,6 +50,8 @@ public final class ContainerActionsTest implements FabricClientGameTest {
     private static final String[] ENDER_CHEST_SHULKERS = {"red", "green", "blue", "black", "brown"};
     private final List<String> checks = new ArrayList<>();
     private final Map<String, Object> report = new LinkedHashMap<>();
+    // Sets the fixture up: typed by the player on a dedicated server, run by the integrated server in singleplayer.
+    private Consumer<String> command;
 
     private record Expected(int kind, List<ContainerProtocol.Step> path) {}
 
@@ -80,9 +83,13 @@ public final class ContainerActionsTest implements FabricClientGameTest {
             String plain = System.getProperty("wheel.qa.plain_server", "");
             String vanillaPlus = System.getProperty("wheel.qa.server", "");
             report.put("servers", Map.of("plain", plain, "vanilla_plus_features", vanillaPlus));
-            check(!plain.isBlank() || !vanillaPlus.isBlank(), "A QA server address is given");
             if (!plain.isBlank()) withoutVanillaPlus(context, plain);
             if (!vanillaPlus.isBlank()) withVanillaPlus(context, vanillaPlus, sharedTypes);
+            if (plain.isBlank() && vanillaPlus.isBlank()) {
+                // With no server given, Vanilla+ Features on this client also runs in the singleplayer world.
+                check(sharedTypes, "The singleplayer pass needs Vanilla+ Features on this client");
+                singleplayer(context);
+            }
             report.put("passed", true);
         } catch (Throwable failure) {
             report.put("passed", false);
@@ -165,8 +172,24 @@ public final class ContainerActionsTest implements FabricClientGameTest {
         leave(context);
     }
 
+    private void singleplayer(ClientGameTestContext context) {
+        try (var world = context.worldBuilder().create()) {
+            world.getConnection().waitForChunksDownload();
+            command = text -> world.getServer().runCommand("execute as @a at @s run " + text);
+            context.waitTicks(20);
+            report.put("singleplayer", true);
+            withVanillaPlusJoined(context, true);
+        }
+    }
+
     private void withVanillaPlus(ClientGameTestContext context, String address, boolean sharedTypes) {
         join(context, address);
+        command = text -> context.runOnClient(client -> client.player.connection.sendCommand(text));
+        withVanillaPlusJoined(context, sharedTypes);
+        leave(context);
+    }
+
+    private void withVanillaPlusJoined(ClientGameTestContext context, boolean sharedTypes) {
         context.waitFor(client -> ContainerRequests.chooserUnavailable() == null, 200);
         context.runOnClient(client -> {
             check(ContainerRequests.chooserUnavailable() == null && ContainerRequests.enderChestUnavailable() == null,
@@ -194,7 +217,6 @@ public final class ContainerActionsTest implements FabricClientGameTest {
         closesOnChange(context);
         staleEntry(context);
         nothingToOpen(context);
-        leave(context);
     }
 
     /**
@@ -215,7 +237,7 @@ public final class ContainerActionsTest implements FabricClientGameTest {
             commands.add("item replace entity @s enderchest." + slot + " with " + item);
         }
         for (String command : commands) {
-            context.runOnClient(client -> client.player.connection.sendCommand(command));
+            this.command.accept(command);
             context.waitTick();
         }
         context.waitFor(client -> client.player.getInventory().getItem(10).is(net.minecraft.world.item.Items.BUNDLE), 100);
@@ -334,23 +356,17 @@ public final class ContainerActionsTest implements FabricClientGameTest {
     /** The chooser closes as soon as the inventory changes, since its list may no longer match. */
     private void closesOnChange(ClientGameTestContext context) {
         openChooser(context);
-        context.runOnClient(client -> client.player.connection.sendCommand("give @s minecraft:stone 1"));
+        command.accept("give @s minecraft:stone 1");
         context.waitFor(client -> !(client.gui.screen() instanceof ContainerRadialScreen), 100);
-        context.runOnClient(client -> {
-            check(client.gui.screen() == null, "The chooser closes when the inventory changes");
-            client.player.connection.sendCommand("clear @s minecraft:stone");
-        });
+        context.runOnClient(client -> check(client.gui.screen() == null, "The chooser closes when the inventory changes"));
+        command.accept("clear @s minecraft:stone");
         context.waitTicks(15);
         openChooser(context);
         // Moving a box within the inventory, as a player would with the inventory screen.
-        context.runOnClient(client -> {
-            client.player.connection.sendCommand("item replace entity @s inventory.20 from entity @s hotbar.1");
-        });
+        command.accept("item replace entity @s inventory.20 from entity @s hotbar.1");
         context.waitFor(client -> !(client.gui.screen() instanceof ContainerRadialScreen), 100);
-        context.runOnClient(client -> {
-            check(client.gui.screen() == null, "The chooser closes when an item is copied into another slot");
-            client.player.connection.sendCommand("item replace entity @s inventory.20 with minecraft:air");
-        });
+        context.runOnClient(client -> check(client.gui.screen() == null, "The chooser closes when an item is copied into another slot"));
+        command.accept("item replace entity @s inventory.20 with minecraft:air");
         context.waitTicks(25);
     }
 
@@ -360,10 +376,8 @@ public final class ContainerActionsTest implements FabricClientGameTest {
      */
     private void staleEntry(ClientGameTestContext context) {
         ContainerRadialScreen radial = openChooser(context);
-        context.runOnClient(client -> {
-            client.player.connection.sendCommand("item replace entity @s enderchest.20 from entity @s enderchest.0");
-            client.player.connection.sendCommand("item replace entity @s enderchest.0 with minecraft:air");
-        });
+        command.accept("item replace entity @s enderchest.20 from entity @s enderchest.0");
+        command.accept("item replace entity @s enderchest.0 with minecraft:air");
         context.waitTicks(20);
         check(context.computeOnClient(client -> client.gui.screen() == radial),
                 "A change inside the ender chest, which the client cannot see, leaves the chooser open");
@@ -394,10 +408,8 @@ public final class ContainerActionsTest implements FabricClientGameTest {
     }
 
     private void nothingToOpen(ClientGameTestContext context) {
-        context.runOnClient(client -> {
-            client.player.connection.sendCommand("clear @s");
-            for (int slot = 0; slot < 27; slot++) client.player.connection.sendCommand("item replace entity @s enderchest." + slot + " with minecraft:air");
-        });
+        command.accept("clear @s");
+        for (int slot = 0; slot < 27; slot++) command.accept("item replace entity @s enderchest." + slot + " with minecraft:air");
         context.waitFor(client -> client.player.getInventory().isEmpty(), 100);
         context.waitTicks(20);
         context.runOnClient(client -> clearOverlay(client));

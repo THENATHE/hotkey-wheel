@@ -68,6 +68,12 @@ public final class IconPickerTest implements FabricClientGameTest {
                 .findFirst().orElseThrow(() -> new AssertionError("Missing button " + prefix));
     }
 
+    /** A wheel's tab in the editor, which shows the wheel's name since 1.2.0. */
+    private static Button wheelTab(Screen editor, int wheel) {
+        String name = WheelConfig.get().wheels.get(wheel).name;
+        return button(editor, name == null || name.isBlank() ? "Wheel " + (wheel + 1) : name);
+    }
+
     private static EditBox search(Screen screen) {
         return screen.children().stream().filter(EditBox.class::isInstance).map(EditBox.class::cast).findFirst().orElseThrow();
     }
@@ -301,7 +307,7 @@ public final class IconPickerTest implements FabricClientGameTest {
             press(button(editor, "Slot 3"));
             press(button(editor, "Open folder: Tools"));
             chooseFor(client, editor, "Slot 1", "warning", "Warning");
-            press(button(editor, "Wheel 1"));
+            press(wheelTab(editor, 0));
             press(button(editor, "Save"));
             List<WheelConfig.Entry> saved = WheelConfig.get().wheels.get(0).entries;
             check(saved.get(0).icon.equals(WheelIcons.GLYPH_PREFIX + "cog"), "A slot saves a Hotkey Wheel icon as hotkey_wheel:icon/cog");

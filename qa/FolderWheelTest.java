@@ -637,7 +637,7 @@ public final class FolderWheelTest implements FabricClientGameTest {
             press(button(editor, "Open folder: Tools"));
             press(button(editor, "Slot 2: Folder Deep"));
             editor.keyPressed(new KeyEvent(InputConstants.KEY_PAGEDOWN, 0, 0));
-            check(button(editor, "Wheel 1").active && hasButton(editor, "Open folder: Deep"), "The in-game editor opens the Tools folder");
+            check(breadcrumb(editor, "Wheel 1").active && hasButton(editor, "Open folder: Deep"), "The in-game editor opens the Tools folder");
         });
         context.waitTicks(3);
         context.takeScreenshot("folder-editor-tools");

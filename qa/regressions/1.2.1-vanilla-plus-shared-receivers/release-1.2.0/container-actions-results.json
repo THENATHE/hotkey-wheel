@@ -1,0 +1,18 @@
+{
+  "checks": [
+    "The container fixture saves",
+    "With Vanilla+ Features on the server both actions become available after its hello, with Vanilla+ Features also on this client",
+    "The slot drops its reason"
+  ],
+  "vanilla_plus_features_on_client": true,
+  "sorted_on_client": false,
+  "servers": {
+    "plain": "",
+    "vanilla_plus_features": "127.0.0.1:25871"
+  },
+  "shulker_tooltip_with_vanilla_plus_client": [
+    "Shulker Box"
+  ],
+  "passed": false,
+  "failure": "java.lang.AssertionError: Vanilla+ Features\u0027 own client still receives the server\u0027s hello (its tooltip hint shows)"
+}
