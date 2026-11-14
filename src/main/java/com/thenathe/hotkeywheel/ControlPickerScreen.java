@@ -309,9 +309,9 @@ public final class ControlPickerScreen extends LookScreen {
                 : folders.size() + " folders · includes installed mods";
         caption(graphics, summary, left, listTop() + 26, rowWidth);
         int pageRows = inFolder() ? rows - 1 : rows;
-        graphics.centeredText(font, "Page " + (page + 1) + "/" + Math.max(1, (filtered.size() + pageRows - 1) / pageRows),
+        centredText(graphics, "Page " + (page + 1) + "/" + Math.max(1, (filtered.size() + pageRows - 1) / pageRows),
                 left + rowWidth / 2, listBottom() - 14, look.dim());
-        if (filtered.isEmpty()) graphics.centeredText(font, "No matching controls", left + rowWidth / 2, inFolder() ? rowsTop + 30 : rowsTop + 6, look.dim());
+        if (filtered.isEmpty()) centredText(graphics, "No matching controls", left + rowWidth / 2, inFolder() ? rowsTop + 30 : rowsTop + 6, look.dim());
         for (Caption header : headers) caption(graphics, header.text(), left + 4, header.y(), rowWidth - 4);
         for (ShownIcon shown : shownIcons) shown.icon().draw(graphics, shown.x(), shown.y());
         extractAccentPopup(graphics, mouseX, mouseY);

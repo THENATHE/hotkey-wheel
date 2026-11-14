@@ -121,6 +121,11 @@ public abstract class LookScreen extends Screen {
         }
     }
 
+    /** Text centred on the panel, shadowed only where the look's panel text is, unlike vanilla's centred text. */
+    protected void centredText(GuiGraphicsExtractor graphics, String text, int centreX, int y, int colour) {
+        graphics.text(font, text, centreX - font.width(text) / 2, y, colour, Look.current().panelShadow());
+    }
+
     /** Draws the accent list over everything else; screens call this last when they draw. */
     protected void extractAccentPopup(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         if (!accentOpen || !Look.current().house()) return;

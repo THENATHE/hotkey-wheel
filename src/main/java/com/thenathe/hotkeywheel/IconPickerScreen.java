@@ -202,8 +202,8 @@ public final class IconPickerScreen extends LookScreen {
         int count = filtered.size();
         caption(graphics, count + (showItemIcons ? " icons · cosmetic only" : " icons · previews load in a world"), left, listTop() + 26, rowWidth);
         int pages = Math.max(1, (count + rows * columns - 1) / (rows * columns));
-        graphics.centeredText(font, "Page " + (page + 1) + "/" + pages, left + rowWidth / 2, listBottom() - 14, look.dim());
-        if (count == 0) graphics.centeredText(font, "No matching icons", left + rowWidth / 2, tilesTop + 6, look.dim());
+        centredText(graphics, "Page " + (page + 1) + "/" + pages, left + rowWidth / 2, listBottom() - 14, look.dim());
+        if (count == 0) centredText(graphics, "No matching icons", left + rowWidth / 2, tilesTop + 6, look.dim());
         extractAccentPopup(graphics, mouseX, mouseY);
     }
 

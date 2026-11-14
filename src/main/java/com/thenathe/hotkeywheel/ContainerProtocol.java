@@ -4,6 +4,7 @@ import io.netty.buffer.Unpooled;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.impl.networking.PayloadTypeRegistryImpl;
@@ -26,6 +27,10 @@ import org.slf4j.LoggerFactory;
  * them. With it, Vanilla+ Features has registered them already (its common initializer runs before any client
  * one), so its payload objects arrive here and must be sent back. Those are converted through the wire format,
  * which is all the two mods share: written with the registered codec and read with this one, or the reverse.
+ *
+ * <p>Fabric also keeps a single receiver per message, and Vanilla+ Features' own client listens for the same three.
+ * Hotkey Wheel therefore starts listening only once every mod has started, and passes each message on to the
+ * receiver it found there before handling it itself, so both mods hear the server.
  */
 public final class ContainerProtocol {
     public static final int VERSION = 1;
@@ -179,13 +184,16 @@ public final class ContainerProtocol {
 
     static void initialize(Consumer<Hello> hello, Consumer<ListReply> list, Consumer<OpenResult> openResult) {
         ownTypes = !FabricLoader.getInstance().isModLoaded(NAMESPACE) && registerTypes();
-        receiving = receive(HELLO, Hello.class, Hello.CODEC, hello)
-                & receive(LIST, ListReply.class, ListReply.CODEC, list)
-                & receive(OPEN_RESULT, OpenResult.class, OpenResult.CODEC, openResult);
-        if (!receiving) {
-            LoggerFactory.getLogger("hotkey-wheel").info("Another mod on this client handles Vanilla+ Features' container messages; "
-                    + "Hotkey Wheel's open shulker box and ender chest actions stay unavailable");
-        }
+        // Client initializers run in no fixed order; by now every mod that listens for these messages has said so.
+        ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
+            receiving = receive(HELLO, Hello.class, Hello.CODEC, hello)
+                    & receive(LIST, ListReply.class, ListReply.CODEC, list)
+                    & receive(OPEN_RESULT, OpenResult.class, OpenResult.CODEC, openResult);
+            if (!receiving) {
+                LoggerFactory.getLogger("hotkey-wheel").info("Cannot listen for Vanilla+ Features' container messages; "
+                        + "Hotkey Wheel's open shulker box and ender chest actions stay unavailable");
+            }
+        });
     }
 
     private static boolean registerTypes() {
@@ -203,18 +211,25 @@ public final class ContainerProtocol {
         }
     }
 
-    /** Listens for one message, converting another mod's payload object into Hotkey Wheel's own when needed. */
+    /**
+     * Listens for one message, converting another mod's payload object into Hotkey Wheel's own when needed. A
+     * receiver already registered for it, such as Vanilla+ Features' own client, keeps getting every message first.
+     */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static <T extends CustomPacketPayload> boolean receive(CustomPacketPayload.Type<T> type, Class<T> ownClass,
                                                                    StreamCodec<RegistryFriendlyByteBuf, T> codec, Consumer<T> handler) {
         // Typed as any payload, so another mod's object reaches the conversion instead of failing a cast.
         CustomPacketPayload.Type<CustomPacketPayload> anyPayload = (CustomPacketPayload.Type) type;
         try {
-            return ClientPlayNetworking.registerGlobalReceiver(anyPayload, (payload, context) -> {
+            var earlier = (ClientPlayNetworking.PlayPayloadHandler<CustomPacketPayload>) ClientPlayNetworking.unregisterGlobalReceiver(type.id());
+            boolean registered = ClientPlayNetworking.registerGlobalReceiver(anyPayload, (payload, context) -> {
+                if (earlier != null) earlier.receive(payload, context);
                 T own = ownClass.isInstance(payload) ? ownClass.cast(payload)
                         : convert(payload, RegisteredCodecs.clientbound(type.id()), codec);
                 if (own != null) handler.accept(own);
             });
+            if (!registered && earlier != null) ClientPlayNetworking.registerGlobalReceiver(anyPayload, earlier);
+            return registered;
         } catch (RuntimeException failure) {
             LoggerFactory.getLogger("hotkey-wheel").warn("Cannot listen for {}", type.id(), failure);
             return false;

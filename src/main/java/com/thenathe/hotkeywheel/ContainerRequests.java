@@ -19,10 +19,13 @@ import org.slf4j.LoggerFactory;
 public final class ContainerRequests {
     private static final long ANSWER_TIMEOUT_MILLIS = 5000;
     private static final int REQUESTS_PER_SECOND = 4;
+    // Vanilla+ Features' own client numbers its requests from 1 on the same connection and sees every list too;
+    // starting far above keeps either mod from taking the other's answer for its own.
+    private static final int FIRST_REQUEST_ID = 1 << 20;
     private static final ArrayDeque<Long> recentSends = new ArrayDeque<>();
     private static ContainerProtocol.Hello hello;
     private static Pending pending;
-    private static int nextRequestId = 1;
+    private static int nextRequestId = FIRST_REQUEST_ID;
 
     private enum Purpose { CHOOSE, ENDER_CHEST, OPEN }
 
@@ -42,7 +45,7 @@ public final class ContainerRequests {
         hello = null;
         pending = null;
         recentSends.clear();
-        nextRequestId = 1;
+        nextRequestId = FIRST_REQUEST_ID;
     }
 
     /** Why the shulker box chooser cannot be used right now, or null when it can. */

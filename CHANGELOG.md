@@ -1,5 +1,12 @@
 # Changes
 
+## 1.2.1+26.3
+
+- Fix: with Vanilla+ Features installed on the client as well, Hotkey Wheel took the three messages both mods listen for, so Vanilla+ Features' own client never heard the server. Its tooltip hint, opening from the creative inventory and its refusal messages stopped working. Hotkey Wheel now starts listening once every mod has started and passes each message on to the receiver already there, so both mods hear the server. Its request numbers also start far above the ones Vanilla+ Features' client uses on the same connection, so neither mod takes the other's answer for its own.
+- Fix: the remove-folder question ran past the right edge of its panel when the folder had a long name, at GUI scale 2 and 3. The title now wraps like the message.
+- Fix: on light panels (House light, and the Minecraft look) the page counter and the "No matching…" line in the control chooser and the icon picker, and in House light the text typed into text fields, were drawn with a dark drop shadow that smeared them. They now follow the look's rule: no shadow on light panels.
+- 1.2.1 is the first 1.2 release tested in a game. See [QA.md](QA.md).
+
 ## 1.2.0+26.3
 
 - **House look:** the editor, the control chooser, the icon picker, **Move to…** and the remove-folder question are rebuilt in a new look, **House**: flat bevelled panels in dark or light with an accent colour of your choice. The footer's **Look: House** button switches to a **Minecraft** look drawn from the game's own buttons and panels. The look is saved in Hotkey Wheel's settings as soon as it changes. The editor's tabs move to a column on the left, with a **Description** box under them for the setting under the pointer. The radial menus keep their own design.

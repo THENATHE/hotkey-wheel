@@ -30,6 +30,8 @@ public final class LookTextField extends EditBox {
         setBordered(false);
         setHint(Component.literal(hint).withColor(look.house() ? look.colors().textDim() : 0xFF8A8A8A));
         setTextColor(look.house() ? look.colors().text() : 0xFFFFFFFF);
+        // Vanilla's black field keeps its shadowed white text; in House the text follows the mode, as panel text does.
+        setTextShadow(!look.house() || look.colors().textShadow());
         setFrame(x, y, width, height);
     }
 

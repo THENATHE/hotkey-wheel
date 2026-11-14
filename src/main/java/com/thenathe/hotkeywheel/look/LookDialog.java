@@ -20,6 +20,7 @@ public final class LookDialog extends Screen {
     private final String yesLabel;
     private final String noLabel;
     private final BooleanConsumer answer;
+    private List<FormattedCharSequence> titleLines = List.of();
     private List<FormattedCharSequence> lines = List.of();
     private int boxX;
     private int boxY;
@@ -37,12 +38,14 @@ public final class LookDialog extends Screen {
     @Override
     protected void init() {
         boxWidth = Math.min(320, width - 20);
+        // A long folder name makes a long title; it wraps like the message instead of running past the panel.
+        titleLines = font.split(title, boxWidth - 2 * PAD);
         lines = font.split(message, boxWidth - 2 * PAD);
         int noWidth = Math.max(70, font.width(noLabel) + 20);
         int yesWidth = Math.max(70, font.width(yesLabel) + 20);
         boolean stacked = noWidth + yesWidth + 4 > boxWidth - 2 * PAD;
         int buttonsHeight = stacked ? 44 : 20;
-        boxHeight = PAD + 12 + lines.size() * 10 + 10 + buttonsHeight + PAD;
+        boxHeight = PAD + titleLines.size() * 10 + 2 + lines.size() * 10 + 10 + buttonsHeight + PAD;
         boxX = (width - boxWidth) / 2;
         boxY = Math.max(4, (height - boxHeight) / 2);
         int buttonsY = boxY + boxHeight - PAD - buttonsHeight;
@@ -67,8 +70,12 @@ public final class LookDialog extends Screen {
         if (!look.house() && minecraft.level != null) extractTransparentBackground(graphics);
         else super.extractBackground(graphics, mouseX, mouseY, delta);
         look.panel(graphics, boxX, boxY, boxWidth, boxHeight);
-        graphics.text(font, title, boxX + PAD, boxY + PAD, look.strong(), look.panelShadow());
-        int y = boxY + PAD + 14;
+        int y = boxY + PAD;
+        for (FormattedCharSequence line : titleLines) {
+            graphics.text(font, line, boxX + PAD, y, look.strong(), look.panelShadow());
+            y += 10;
+        }
+        y += 4;
         for (FormattedCharSequence line : lines) {
             graphics.text(font, line, boxX + PAD, y, look.text(), look.panelShadow());
             y += 10;
