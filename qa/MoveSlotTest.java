@@ -37,6 +37,8 @@ public final class MoveSlotTest implements FabricClientGameTest {
     private static Button button(Screen screen, String prefix) {
         return screen.children().stream().filter(Button.class::isInstance).map(Button.class::cast)
                 .filter(candidate -> candidate.getMessage().getString().startsWith(prefix))
+                // An exact label wins over a longer one that starts the same, such as a tab named "Saved…".
+                .sorted(java.util.Comparator.comparing(candidate -> !candidate.getMessage().getString().equals(prefix)))
                 .findFirst().orElseThrow(() -> new AssertionError("Missing button " + prefix));
     }
 

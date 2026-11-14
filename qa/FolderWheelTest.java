@@ -16,6 +16,7 @@ import com.thenathe.hotkeywheel.WheelConfig;
 import com.thenathe.hotkeywheel.WheelEditorScreen;
 import com.thenathe.hotkeywheel.WheelMenuReturn;
 import com.thenathe.hotkeywheel.WheelScreen;
+import com.thenathe.hotkeywheel.look.LookDialog;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -36,7 +37,6 @@ import net.minecraft.client.gui.components.AbstractSelectionList;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
@@ -72,7 +72,18 @@ public final class FolderWheelTest implements FabricClientGameTest {
     private static Button button(Screen screen, String prefix) {
         return screen.children().stream().filter(Button.class::isInstance).map(Button.class::cast)
                 .filter(candidate -> candidate.getMessage().getString().startsWith(prefix))
+                // An exact label wins over a longer one that starts the same, such as a tab named "Saved…".
+                .sorted(java.util.Comparator.comparing(candidate -> !candidate.getMessage().getString().equals(prefix)))
                 .findFirst().orElseThrow(() -> new AssertionError("Missing button " + prefix));
+    }
+
+    /** A breadcrumb above the slots. The wheel's own crumb has the same label as its tab, which sits left of the panel. */
+    private static Button breadcrumb(Screen screen, String label) {
+        Button general = button(screen, "General");
+        return screen.children().stream().filter(Button.class::isInstance).map(Button.class::cast)
+                .filter(candidate -> candidate.getMessage().getString().equals(label))
+                .filter(candidate -> candidate.getX() > general.getX() + general.getWidth())
+                .findFirst().orElseThrow(() -> new AssertionError("Missing breadcrumb " + label));
     }
 
     private static boolean hasButton(Screen screen, String prefix) {
@@ -437,7 +448,7 @@ public final class FolderWheelTest implements FabricClientGameTest {
                 "The renamed folder keeps its new name after the icon picker returns");
 
         press(button(editor, "Open folder: Tools"));
-        check(button(editor, "Wheel 1").active && !button(editor, "● Tools").active,
+        check(breadcrumb(editor, "Wheel 1").active && !button(editor, "● Tools").active,
                 "Opening a folder shows the path back as breadcrumbs");
         check(!hasButton(editor, "Control:"), "A new folder starts with no slots");
         press(button(editor, "Add"));
@@ -466,7 +477,7 @@ public final class FolderWheelTest implements FabricClientGameTest {
         press(button(editor, "› Tools"));
         check(!button(editor, "● Tools").active && hasButton(editor, "Open folder: Deep"),
                 "A breadcrumb returns to its level with the folder just left selected");
-        press(button(editor, "Wheel 1"));
+        press(breadcrumb(editor, "Wheel 1"));
         check(hasButton(editor, "Open folder: Tools") && !hasButton(editor, "● Tools"),
                 "The wheel breadcrumb returns to the top level");
         press(button(editor, "Save"));
@@ -486,7 +497,8 @@ public final class FolderWheelTest implements FabricClientGameTest {
         client.gui.setScreen(editor);
         press(button(editor, "Slot 2: Folder Tools"));
         press(button(editor, "Remove"));
-        check(client.gui.screen() instanceof ConfirmScreen, "Removing a folder that holds slots asks first");
+        check(client.gui.screen() instanceof LookDialog question && question.getTitle().getString().equals("Remove the folder \"Tools\"?"),
+                "Removing a folder that holds slots asks first, naming the folder");
         press(button(client.gui.screen(), "Keep"));
         check(client.gui.screen() == editor && hasButton(editor, "Open folder: Tools"), "Keep leaves the folder in place");
         press(button(editor, "Remove"));
@@ -1163,7 +1175,8 @@ public final class FolderWheelTest implements FabricClientGameTest {
                         "Controlling's search results keep the marker");
                 search(shown[0]).setValue("hotkey wheel");
                 long wheelKeys = controllingRows(shown[0]).stream().filter(row -> row.control().getName().startsWith("key.hotkey_wheel.")).count();
-                check(wheelKeys == 6, "Controlling's search still finds the wheel's own six keys");
+                long ownKeys = HotkeyWheelClient.ELYTRA_KEY == null ? 6 : 7;
+                check(wheelKeys == ownKeys, "Controlling's search still finds the wheel's own " + ownKeys + " keys");
             });
         }
         context.runOnClient(client -> client.gui.setScreen(null));

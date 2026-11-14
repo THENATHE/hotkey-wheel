@@ -66,7 +66,20 @@ public final class WheelClientTest implements FabricClientGameTest {
 
     private static Button button(Screen screen, String prefix) {
         return screen.children().stream().filter(Button.class::isInstance).map(Button.class::cast)
-                .filter(candidate -> candidate.getMessage().getString().startsWith(prefix)).findFirst().orElseThrow();
+                .filter(candidate -> candidate.getMessage().getString().startsWith(prefix))
+                // An exact label wins over a longer one that starts the same, such as a tab named "Saved…".
+                .sorted(java.util.Comparator.comparing(candidate -> !candidate.getMessage().getString().equals(prefix))).findFirst().orElseThrow();
+    }
+
+    /** The editor's error line, for failure messages. */
+    private static String editorError(Screen editor) {
+        try {
+            var field = WheelEditorScreen.class.getDeclaredField("error");
+            field.setAccessible(true);
+            return String.valueOf(field.get(editor));
+        } catch (ReflectiveOperationException failure) {
+            return failure.toString();
+        }
     }
 
     @Override
@@ -334,12 +347,14 @@ public final class WheelClientTest implements FabricClientGameTest {
                 button(failedEditor, "Save").onPress(new KeyEvent(InputConstants.KEY_RETURN, 0, 0));
                 check(client.gui.screen() == failedEditor && WheelConfig.get().wheels.get(0).name.equals("Saved from UI"),
                         "Save failure keeps draft open and leaves current configuration unchanged");
+                check(editorError(failedEditor).startsWith("Could not save."), "Save failure says so in the editor: " + editorError(failedEditor));
                 check(Files.readString(WheelConfig.path().resolve("preserve")).equals("keep"), "Save failure preserves destination contents");
                 Files.delete(WheelConfig.path().resolve("preserve"));
                 Files.delete(WheelConfig.path());
                 Files.write(WheelConfig.path(), original);
                 button(failedEditor, "Save").onPress(new KeyEvent(InputConstants.KEY_RETURN, 0, 0));
-                check(WheelConfig.get().wheels.get(0).name.equals("Retry saved"), "Retry commits the preserved draft");
+                check(WheelConfig.get().wheels.get(0).name.equals("Retry saved"),
+                        "Retry commits the preserved draft (editor says: " + editorError(failedEditor) + ")");
                 client.gui.setScreen(new ControlPickerScreen(null, selected -> {}));
                 EditBox search = (EditBox) client.gui.screen().children().stream().filter(EditBox.class::isInstance).findFirst().orElseThrow();
                 search.setValue("inventory");
@@ -497,7 +512,10 @@ public final class WheelClientTest implements FabricClientGameTest {
                 try { return ((KeyMapping) row.getClass().getMethod("getKey").invoke(row)).getName().startsWith("key.hotkey_wheel."); }
                 catch (Exception ignored) { return false; }
             }).count();
-            check(found == 6, "Controlling name search finds all three wheel keys, cycle, configure, and settings in a wheel");
+            // Without Vanilla++ the elytra switch adds Toggle elytra flight to Hotkey Wheel's keys.
+            long expected = HotkeyWheelClient.ELYTRA_KEY == null ? 6 : 7;
+            check(found == expected, "Controlling name search finds all three wheel keys, cycle, configure, settings in a wheel"
+                    + (expected == 7 ? " and Toggle elytra flight" : "") + " (" + found + ")");
             check(button(screen, "Wheels") != null, "Editor shortcut survives Controlling replacement screen");
         });
         context.takeScreenshot("controlling-hotkey-wheel-search");

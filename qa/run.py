@@ -7,6 +7,7 @@ import shutil
 import struct
 import subprocess
 import sys
+import time
 import zipfile
 import zlib
 
@@ -22,6 +23,14 @@ SUITE = '--suite' in sys.argv or POLYMER
 # Standalone Tool Pouch with Buildprint, for Tool Pouch releases newer than the copy nested in the suite.
 TOOLPOUCH = '--toolpouch' in sys.argv
 INTEGRATED = '--integrated' in sys.argv or SUITE or TOOLPOUCH or BASELINE or PREVIOUS or LEGACY
+# The Vanilla+ Features profile joins separate dedicated servers (see test_server.py), one per pass: one with
+# Vanilla+ Features at HOTKEY_WHEEL_QA_SERVER, or one without it at HOTKEY_WHEEL_QA_PLAIN_SERVER. --vpf-client also
+# puts Vanilla+ Features on this client, so both mods share its payload types; --sorted adds Sorted alone.
+VPF = '--vpf' in sys.argv
+VPF_CLIENT = '--vpf-client' in sys.argv
+SORTED = '--sorted' in sys.argv
+if VPF and INTEGRATED:
+    raise SystemExit('The Vanilla+ Features profile keeps the client small; add --sorted rather than an integrated profile.')
 # Blocktone pins one exact Buildprint release, so a new Buildprint can be checked before its Blocktone build exists.
 BLOCKTONE = INTEGRATED and '--no-blocktone' not in sys.argv
 # The supported Buildprint release and its matching Blocktone; set both to check a newer pair.
@@ -37,7 +46,7 @@ POLYMER_VERSION = os.environ.get('HOTKEY_WHEEL_POLYMER_VERSION', '0.18.7+26.3')
 WORKSPACE = ROOT.parents[2]
 if sum([BASELINE, PREVIOUS, LEGACY, SUITE, TOOLPOUCH]) > 1:
     raise SystemExit('Baseline and legacy modes are separate integrated profiles.')
-RUN = Path(os.environ.get('HOTKEY_WHEEL_QA_RUN_ROOT', str(ROOT / ('legacy' if LEGACY else 'api-baseline' if BASELINE else 'api-previous' if PREVIOUS else 'suite-polymer' if POLYMER else 'suite' if SUITE else 'toolpouch' if TOOLPOUCH else 'integrated' if INTEGRATED else 'minimal'))))
+RUN = Path(os.environ.get('HOTKEY_WHEEL_QA_RUN_ROOT', str(ROOT / ('legacy' if LEGACY else 'api-baseline' if BASELINE else 'api-previous' if PREVIOUS else 'vpf-shared' if '--vpf-client' in sys.argv else 'vpf' if '--vpf' in sys.argv else 'suite-polymer' if POLYMER else 'suite' if SUITE else 'toolpouch' if TOOLPOUCH else 'integrated' if INTEGRATED else 'minimal'))))
 RUN.mkdir(parents=True, exist_ok=True)
 GAME = RUN / 'game'
 MODS = GAME / 'mods'
@@ -57,6 +66,8 @@ if SUITE:
                  'cloth-config-*.jar', 'fabric-language-kotlin-*.jar', 'codecui-*.jar', 'mixson-*.jar']
 if TOOLPOUCH:
     patterns += ['fzzy_config-0.7.7+fix3+26.3.jar', 'fabric-language-kotlin-*.jar']
+if SORTED and not INTEGRATED:
+    patterns.append('sorted-fabric-*.jar')
 for pattern in patterns:
     matches = list((PROFILE / 'mods').glob(pattern))
     if len(matches) != 1:
@@ -109,6 +120,17 @@ if TOOLPOUCH:
     if metadata['id'] != 'toolpouch':
         raise SystemExit(f'Unexpected Tool Pouch mod ID: {metadata["id"]}')
     TOOLPOUCH_VERSION = metadata['version']
+    shutil.copy2(source, MODS / source.name)
+VPF_VERSION = None
+if VPF_CLIENT:
+    releases = WORKSPACE / 'Builds/Minecraft/Vanilla+ Features/Main Plugin'
+    newest = max(releases.iterdir(), key=lambda folder: [int(part) for part in folder.name.split('+')[0].split('.')])
+    source = Path(os.environ.get('HOTKEY_WHEEL_VPF_JAR', str(newest / f'vanilla-plus-features-{newest.name}.jar')))
+    with zipfile.ZipFile(source) as archive:
+        metadata = json.loads(archive.read('fabric.mod.json'))
+    if metadata['id'] != 'vanilla_plus_features':
+        raise SystemExit(f'Unexpected Vanilla+ Features mod ID: {metadata["id"]}')
+    VPF_VERSION = metadata['version']
     shutil.copy2(source, MODS / source.name)
 if INTEGRATED:
     current = BUILDPRINT_VERSION == CURRENT_BUILDPRINT
@@ -203,7 +225,8 @@ if TOOLPOUCH:
 if TOOLPOUCH or SUITE and not SUITE_TOOLPOUCH_VERSION.startswith('1.1.'):
     test_names.append('ToolPouchToggleTest')
 # Every profile moves slots and opens mod settings; without Mod Menu the latter checks the unavailable slot.
-test_names += ['MoveSlotTest', 'ModSettingsTest', 'IconPickerTest', 'ControlFolderTest', 'EditorLayoutTest', 'LayoutScaleTest']
+test_names += ['MoveSlotTest', 'ModSettingsTest', 'IconPickerTest', 'ControlFolderTest', 'EditorLayoutTest', 'LayoutScaleTest',
+               'LookTest', 'ElytraFlightTest']
 # Settings files written by earlier releases' own JARs (UpgradeSourceTest), loaded by this one.
 UPGRADE_DIR = os.environ.get('HOTKEY_WHEEL_QA_UPGRADE_DIR')
 if UPGRADE_DIR:
@@ -216,10 +239,16 @@ RESTART_FROM = os.environ.get('HOTKEY_WHEEL_QA_RESTART_FROM')
 RESTART = RESTART_FROM is not None
 if RESTART:
     test_names = ['RestartTest']
+if VPF:
+    # The elytra switch needs a server it can glide on, so it runs in the pass with Vanilla+ Features.
+    test_names = ['ContainerActionsTest'] + (['ElytraFlightTest'] if os.environ.get('HOTKEY_WHEEL_QA_SERVER') else [])
 if os.environ.get('HOTKEY_WHEEL_QA_TESTS'):
     test_names = os.environ['HOTKEY_WHEEL_QA_TESTS'].split(',')
     if any(not name.isidentifier() or not (ROOT / (name + '.java')).is_file() for name in test_names):
         raise SystemExit('Unknown focused QA fixture')
+# Sorted's first-run guide would open over the fixtures' screens; this marks it seen before they start.
+if INTEGRATED or SORTED:
+    test_names.insert(0, 'QaSetupTest')
 executed = RUN / 'executed-source'
 executed.mkdir(exist_ok=True)
 source_audit = []
@@ -301,7 +330,8 @@ for name in ['key-management-results.json', 'buildprint-menu-results.json', 'too
              'side-mouse-editor-results.json', 'server-camera-results.json', 'toolpouch-toggle-results.json', 'folder-results.json',
              'downgrade-results.json', 'move-slot-results.json', 'mod-settings-results.json', 'icon-results.json',
              'control-folder-results.json', 'editor-layout-results.json', 'upgrade-results.json', 'upgrade-source-results.json',
-             'restart-results.json', 'layout-scale-results.json']:
+             'restart-results.json', 'layout-scale-results.json', 'container-actions-results.json', 'elytra-results.json',
+             'look-results.json']:
     (RUN / name).unlink(missing_ok=True)
 command = [str(compiler.parent / 'java'), '-Xmx3G' if 'ServerCameraChoiceTest' in test_names else '-Xmx2G', '-XX:ActiveProcessorCount=4',
            '-Djava.library.path=' + str(META / 'natives/26.3-0.19.5/lwjgl/3.4.3-snapshot/x64'),
@@ -309,6 +339,8 @@ command = [str(compiler.parent / 'java'), '-Xmx3G' if 'ServerCameraChoiceTest' i
            '-Dwheel.qa.root=' + str(RUN), '-Dwheel.qa.suite.version=' + SUITE_VERSION,
            '-Dwheel.qa.brbr.version=' + BRBR_VERSION, '-Dwheel.qa.blocktone=' + str(BLOCKTONE).lower(),
            '-Dwheel.qa.upgrade=' + (UPGRADE_DIR or ''),
+           '-Dwheel.qa.server=' + (os.environ.get('HOTKEY_WHEEL_QA_SERVER', '') if VPF else ''),
+           '-Dwheel.qa.plain_server=' + (os.environ.get('HOTKEY_WHEEL_QA_PLAIN_SERVER', '') if VPF else ''),
            '-Dwheel.qa.toolpouch.version=' + (TOOLPOUCH_VERSION.split('+')[0] if TOOLPOUCH else SUITE_TOOLPOUCH_VERSION or ''),
            '-Dfabric.log.disableAnsi=true',
            '-cp', os.pathsep.join(map(str, classpath)), 'net.fabricmc.loader.impl.launch.knot.KnotClient',
@@ -322,24 +354,97 @@ if os.environ.get('HOTKEY_WHEEL_QA_EXPORT') == 'true':
     'buildprint': BUILDPRINT_VERSION if INTEGRATED else None, 'blocktone': BLOCKTONE_VERSION if BLOCKTONE else None,
     'suite_version': SUITE_VERSION if SUITE else None, 'brbr': BRBR_VERSION if SUITE else None,
     'polymer_version': POLYMER_VERSION if POLYMER else None,
+    'vanilla_plus_features_client': VPF_VERSION, 'sorted_alone': SORTED and not INTEGRATED,
+    'servers': {'vanilla_plus_features': os.environ.get('HOTKEY_WHEEL_QA_SERVER'),
+                'plain': os.environ.get('HOTKEY_WHEEL_QA_PLAIN_SERVER')} if VPF else None,
     'wheel_version': wheel_metadata['version'], 'wheel_source': str(addon.resolve()),
     'tests': test_names, 'command': command,
     'mods': {source.name: hashlib.sha256(source.read_bytes()).hexdigest() for source in sorted(MODS.glob('*.jar'))}}, indent=2))
 if '--prepare-only' in sys.argv:
     print('Prepared isolated QA profile:', RUN)
     raise SystemExit(0)
-environment = os.environ.copy()
-environment['SDL_VIDEODRIVER'] = 'x11'
-# SDL's GLX path cannot load Xvfb's Mesa GL; EGL works on Xvfb and on hardware displays.
-environment.setdefault('SDL_VIDEO_FORCE_EGL', '1')
-with (RUN / 'console.log').open('w') as log:
-    process = subprocess.Popen(command, cwd=GAME, env=environment, stdout=log, stderr=subprocess.STDOUT)
-    try:
-        code = process.wait(timeout=600)
-    except subprocess.TimeoutExpired:
-        process.terminate()
-        process.wait(timeout=20)
-        raise
+
+
+def free_display():
+    # Start well above the displays other workspace runners pick (:90 and up) unless told otherwise.
+    first = int(os.environ.get('HOTKEY_WHEEL_QA_DISPLAY_BASE', '150'))
+    for number in range(first, first + 50):
+        if not Path(f'/tmp/.X{number}-lock').exists() and not Path(f'/tmp/.X11-unix/X{number}').exists():
+            return number
+    raise SystemExit(f'No free X display between :{first} and :{first + 49}')
+
+
+def start_xvfb():
+    for _ in range(5):
+        number = free_display()
+        server = subprocess.Popen(['Xvfb', f':{number}', '-screen', '0', '1920x1080x24', '-nolisten', 'tcp'],
+                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for _ in range(100):
+            if server.poll() is not None or Path(f'/tmp/.X11-unix/X{number}').exists():
+                break
+            time.sleep(0.1)
+        # Another runner may have taken the same number between the check and the start; try the next one.
+        if server.poll() is None and Path(f'/tmp/.X11-unix/X{number}').exists():
+            return number, server
+        server.kill()
+        server.wait()
+    raise SystemExit('Xvfb did not start')
+
+
+def client_environment(number):
+    """X11 on the private Xvfb only. Minecraft 26.3 opens its window through SDL3, which prefers Wayland whenever
+    the desktop's variables are present, so those are removed rather than overridden."""
+    environment = {key: value for key, value in os.environ.items()
+                   if key not in ('WAYLAND_DISPLAY', 'WAYLAND_SOCKET', 'EGL_PLATFORM', 'QT_QPA_PLATFORM', 'GDK_BACKEND',
+                                  'SDL_VIDEODRIVER', 'SDL_VIDEO_DRIVER', 'XAUTHORITY', 'DISPLAY', 'XDG_RUNTIME_DIR')
+                   and not key.startswith('QT_WAYLAND')}
+    environment['DISPLAY'] = f':{number}'
+    environment['XDG_SESSION_TYPE'] = 'x11'
+    environment['SDL_VIDEO_DRIVER'] = 'x11'
+    environment['SDL_VIDEODRIVER'] = 'x11'
+    # SDL's GLX path cannot load Xvfb's Mesa GL; EGL works on Xvfb and on hardware displays.
+    environment['SDL_VIDEO_FORCE_EGL'] = '1'
+    # A private, empty runtime folder, so nothing can find the desktop compositor's socket in the user's one.
+    runtime = RUN / 'xdg-runtime'
+    if runtime.exists():
+        shutil.rmtree(runtime)
+    runtime.mkdir(mode=0o700)
+    environment['XDG_RUNTIME_DIR'] = str(runtime)
+    return environment
+
+
+def desktop_entries(pid):
+    """The client's own environment as the kernel sees it: any entry that could reach the desktop session."""
+    entries = Path(f'/proc/{pid}/environ').read_bytes().split(b'\0')
+    return [entry.decode(errors='replace') for entry in entries
+            if entry.startswith((b'WAYLAND', b'EGL_PLATFORM')) or entry.startswith(b'XDG_RUNTIME_DIR=/run/user')]
+
+
+display, xvfb = start_xvfb()
+try:
+    environment = client_environment(display)
+    if any(key.startswith('WAYLAND') for key in environment) or environment['DISPLAY'] != f':{display}':
+        raise SystemExit('Refusing to launch: the client environment could reach the desktop session')
+    with (RUN / 'console.log').open('w') as log:
+        process = subprocess.Popen(command, cwd=GAME, env=environment, stdout=log, stderr=subprocess.STDOUT)
+        time.sleep(1)
+        leaked = desktop_entries(process.pid) if process.poll() is None else ['client exited before the check']
+        (RUN / 'display-check.json').write_text(json.dumps({
+            'display': f':{display}', 'pid': process.pid, 'xdg_runtime_dir': environment['XDG_RUNTIME_DIR'],
+            'desktop_entries': leaked}, indent=2))
+        if leaked:
+            process.kill()
+            process.wait()
+            raise SystemExit(f'Stopped the client: its environment could reach the desktop session: {leaked}')
+        try:
+            code = process.wait(timeout=int(os.environ.get('HOTKEY_WHEEL_QA_TIMEOUT', '900')))
+        except subprocess.TimeoutExpired:
+            process.terminate()
+            process.wait(timeout=20)
+            raise
+finally:
+    xvfb.terminate()
+    xvfb.wait(timeout=30)
 print('EXIT', code)
 
 
@@ -379,8 +484,9 @@ report_names = {'WheelClientTest': 'results.json', 'KeyManagementTest': 'key-man
                 'IconPickerTest': 'icon-results.json', 'ControlFolderTest': 'control-folder-results.json',
                 'EditorLayoutTest': 'editor-layout-results.json', 'UpgradeTest': 'upgrade-results.json',
                 'UpgradeSourceTest': 'upgrade-source-results.json', 'RestartTest': 'restart-results.json',
-                'LayoutScaleTest': 'layout-scale-results.json'}
-reports = [report_names[name] for name in test_names]
+                'LayoutScaleTest': 'layout-scale-results.json', 'ContainerActionsTest': 'container-actions-results.json',
+                'ElytraFlightTest': 'elytra-results.json', 'LookTest': 'look-results.json'}
+reports = [report_names[name] for name in test_names if name in report_names]
 for name in reports:
     path = RUN / name
     if not path.exists():

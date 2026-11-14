@@ -25,3 +25,4 @@ qa/upgrade-inputs/
 qa/integrated-restart/
 qa/toolpouch-restart/
 qa/suite-polymer-restart/
+qa/runs/

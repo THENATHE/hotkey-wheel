@@ -2,6 +2,7 @@ package com.thenathe.hotkeywheel.qa;
 
 import com.google.gson.GsonBuilder;
 import com.mojang.blaze3d.platform.InputConstants;
+import com.thenathe.hotkeywheel.ElytraFlight;
 import com.thenathe.hotkeywheel.HotkeyWheelClient;
 import com.thenathe.hotkeywheel.RadialGeometry;
 import com.thenathe.hotkeywheel.WheelConfig;
@@ -41,6 +42,8 @@ public final class RestartTest implements FabricClientGameTest {
     private static Button button(Screen screen, String prefix) {
         return screen.children().stream().filter(Button.class::isInstance).map(Button.class::cast)
                 .filter(candidate -> candidate.getMessage().getString().startsWith(prefix))
+                // An exact label wins over a longer one that starts the same, such as a tab named "Saved…".
+                .sorted(java.util.Comparator.comparing(candidate -> !candidate.getMessage().getString().equals(prefix)))
                 .findFirst().orElseThrow(() -> new AssertionError("Missing button " + prefix));
     }
 
@@ -61,6 +64,10 @@ public final class RestartTest implements FabricClientGameTest {
                                 && slots.get(4).icon.equals(WheelIcons.modIcon("hkwqa_removed_mod"))
                                 && slots.get(2).entries.get(0).icon.equals(WheelIcons.GLYPH_PREFIX + "warning"),
                         "After a restart every slot and folder keeps its Hotkey Wheel, mod or removed-mod icon");
+                check(!WheelConfig.get().houseLook() && WheelConfig.get().elytraFlightOff(),
+                        "After a restart the Minecraft look and elytra flight off are still set");
+                check(ElytraFlight.blocksGliding() == ElytraFlight.offered(),
+                        "After a restart the saved Off stops gliding, unless Vanilla++ is installed");
                 // The client gametest harness starts every game with default options, so the keys the previous game
                 // saved in options.txt are read back here with Minecraft's own Options.load, as at a normal startup.
                 Path options = client.options.getFile().toPath();
@@ -141,6 +148,9 @@ public final class RestartTest implements FabricClientGameTest {
                 context.takeScreenshot("restart-editor");
                 context.runOnClient(client -> {
                     check(client.gui.screen() instanceof WheelEditorScreen, "After a restart the settings key opens the editor from the wheel");
+                    check(client.gui.screen().children().stream().anyMatch(child -> child instanceof Button button
+                                    && button.getMessage().getString().equals("Look: Minecraft")),
+                            "After a restart the editor opens in the Minecraft look");
                     button(client.gui.screen(), "Save").onPress(new KeyEvent(InputConstants.KEY_RETURN, 0, 0));
                     check(client.gui.screen() == null && Files.readString(WheelConfig.path()).equals(expected),
                             "After a restart Save writes the same settings again");

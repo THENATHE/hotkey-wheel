@@ -7,6 +7,7 @@ import com.thenathe.hotkeywheel.ControlPickerScreen;
 import com.thenathe.hotkeywheel.HotkeyWheelClient;
 import com.thenathe.hotkeywheel.ModSettingsActions;
 import com.thenathe.hotkeywheel.ToolPouchToggles;
+import com.thenathe.hotkeywheel.WheelActions;
 import com.thenathe.hotkeywheel.WheelConfig;
 import com.thenathe.hotkeywheel.WheelEditorScreen;
 import java.io.IOException;
@@ -52,6 +53,8 @@ public final class ControlFolderTest implements FabricClientGameTest {
 
     private static Button button(Screen screen, String prefix) {
         return buttons(screen).stream().filter(candidate -> candidate.getMessage().getString().startsWith(prefix))
+                // An exact label wins over a longer one that starts the same, such as a tab named "Saved…".
+                .sorted(java.util.Comparator.comparing(candidate -> !candidate.getMessage().getString().equals(prefix)))
                 .findFirst().orElseThrow(() -> new AssertionError("Missing button " + prefix));
     }
 
@@ -180,7 +183,14 @@ public final class ControlFolderTest implements FabricClientGameTest {
         check(names.getFirst().equals(ControlPickerScreen.MINECRAFT_FOLDER), "Minecraft controls is the first folder");
         int settingsAt = names.indexOf(ControlPickerScreen.MOD_SETTINGS_FOLDER);
         check(modMenu ? settingsAt == 1 : settingsAt < 0, modMenu ? "Mod settings is the second folder" : "Without Mod Menu there is no Mod settings folder");
-        List<String> modFolders = names.subList(modMenu ? 2 : 1, names.size() - (names.getLast().equals(ControlPickerScreen.OTHER_FOLDER) ? 1 : 0));
+        int actionsAt = names.indexOf(ControlPickerScreen.ACTIONS_FOLDER);
+        check(actionsAt == (modMenu ? 2 : 1), "Hotkey Wheel actions follows Minecraft controls and Mod settings");
+        List<String> actions = folders.get(ControlPickerScreen.ACTIONS_FOLDER);
+        List<String> expectedActions = new ArrayList<>(List.of(WheelActions.OPEN_ENDER_CHEST, WheelActions.OPEN_SHULKER_BOX));
+        if (!FabricLoader.getInstance().isModLoaded("vpp_mod_suite")) expectedActions.add(WheelActions.ELYTRA_FLIGHT);
+        check(new HashSet<>(actions).equals(new HashSet<>(expectedActions)) && actions.size() == expectedActions.size(),
+                "Hotkey Wheel actions holds the container actions, and the elytra switch unless Vanilla++ is installed: " + actions);
+        List<String> modFolders = names.subList(actionsAt + 1, names.size() - (names.getLast().equals(ControlPickerScreen.OTHER_FOLDER) ? 1 : 0));
         List<String> sorted = new ArrayList<>(modFolders);
         sorted.sort(String.CASE_INSENSITIVE_ORDER);
         boolean modControls = FabricLoader.getInstance().isModLoaded("buildprint");
@@ -215,7 +225,7 @@ public final class ControlFolderTest implements FabricClientGameTest {
             seen.addAll(controls);
         }
         long mappings = List.of(client.options.keyMappings).stream().filter(mapping -> !mapping.getName().contains("hotkey_wheel")).count();
-        int expected = (int) mappings + ToolPouchToggles.choices().size() + ModSettingsActions.choices().size();
+        int expected = (int) mappings + ToolPouchToggles.choices().size() + ModSettingsActions.choices().size() + WheelActions.choices().size();
         check(total == seen.size() && total == expected, "Every control is in exactly one folder (" + total + " of " + expected + ")");
         int minecraftCount = minecraft.size();
         check(hasButton(picker, ControlPickerScreen.MINECRAFT_FOLDER + " · " + minecraftCount + " controls"),
@@ -258,7 +268,9 @@ public final class ControlFolderTest implements FabricClientGameTest {
         List<String> names = new ArrayList<>(merged.keySet());
         Set<String> expected = new java.util.LinkedHashSet<>(List.of(ControlPickerScreen.MINECRAFT_FOLDER));
         if (modMenu) expected.add(ControlPickerScreen.MOD_SETTINGS_FOLDER);
-        Set<String> shared = Set.of(ControlPickerScreen.MINECRAFT_FOLDER, ControlPickerScreen.MOD_SETTINGS_FOLDER, ControlPickerScreen.OTHER_FOLDER);
+        expected.add(ControlPickerScreen.ACTIONS_FOLDER);
+        Set<String> shared = Set.of(ControlPickerScreen.MINECRAFT_FOLDER, ControlPickerScreen.MOD_SETTINGS_FOLDER,
+                ControlPickerScreen.ACTIONS_FOLDER, ControlPickerScreen.OTHER_FOLDER);
         int perMod = perModFolders.entrySet().stream().filter(entry -> !shared.contains(entry.getKey()))
                 .mapToInt(entry -> entry.getValue().size()).sum();
         if (perMod > 0) expected.add(ControlPickerScreen.MOD_CONTROLS_FOLDER);

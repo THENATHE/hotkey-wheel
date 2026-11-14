@@ -45,9 +45,31 @@ public final class LayoutScaleTest implements FabricClientGameTest {
         checks.add(description);
     }
 
+    private static int listWidth(MoveSlotScreen picker) {
+        try {
+            var method = com.thenathe.hotkeywheel.look.LookScreen.class.getDeclaredMethod("listWidth");
+            method.setAccessible(true);
+            return (int) method.invoke(picker);
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError("Cannot read the width of Move to…'s list", failure);
+        }
+    }
+
+    private static int subtitleTop(MoveSlotScreen picker) {
+        try {
+            var field = MoveSlotScreen.class.getDeclaredField("subtitleTop");
+            field.setAccessible(true);
+            return field.getInt(picker);
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError("Cannot read where Move to… draws its subtitle", failure);
+        }
+    }
+
     private static Button button(Screen screen, String prefix) {
         return screen.children().stream().filter(Button.class::isInstance).map(Button.class::cast)
                 .filter(candidate -> candidate.getMessage().getString().startsWith(prefix))
+                // An exact label wins over a longer one that starts the same, such as a tab named "Saved…".
+                .sorted(java.util.Comparator.comparing(candidate -> !candidate.getMessage().getString().equals(prefix)))
                 .findFirst().orElseThrow(() -> new AssertionError("Missing button " + prefix));
     }
 
@@ -183,8 +205,9 @@ public final class LayoutScaleTest implements FabricClientGameTest {
                 report.put("move_to_scale_" + scale + (folder ? "_folder" : "_slot"), lines);
                 String joined = String.join(" ", lines);
                 int widest = lines.stream().mapToInt(client.font::width).max().orElse(0);
-                check(widest <= Math.min(560, picker.width - 40),
-                        "At GUI scale " + scale + " every subtitle line fits inside the screen (" + widest + " of " + picker.width + ")");
+                int listWidth = listWidth(picker);
+                check(widest <= listWidth && listWidth <= picker.width - 40,
+                        "At GUI scale " + scale + " every subtitle line fits inside the panel (" + widest + " of " + listWidth + ", screen " + picker.width + ")");
                 if (folder) {
                     check(joined.contains("the folder Gemstones and other shiny things and its slots go ·") && !joined.contains(" goes"),
                             "A folder and its slots \"go\"");
@@ -192,11 +215,13 @@ public final class LayoutScaleTest implements FabricClientGameTest {
                     check(joined.contains("this slot goes ·"), "A single slot \"goes\"");
                 }
                 if (scale == 2 && !folder) check(lines.size() == 1, "At GUI scale 2 the slot's subtitle is one line, as before");
-                int lowest = 30 + lines.size() * 10;
+                // 1.2.0's frame puts the subtitle at the top of the panel; read where it was drawn.
+                int lowest = subtitleTop(picker) + lines.size() * 10;
                 int firstRow = picker.children().stream().filter(Button.class::isInstance).map(Button.class::cast)
                         .mapToInt(Button::getY).min().orElseThrow();
                 check(firstRow >= lowest + 2, "The levels start below the subtitle at GUI scale " + scale);
-                if (scale == 2) check(firstRow == 52, "At GUI scale 2 the levels start where they did");
+                check(firstRow == lowest + 6, "At GUI scale " + scale + " the levels start 6 pixels under the subtitle's last line");
+                check(subtitleTop(picker) >= 24 + 2, "The subtitle sits inside the panel at GUI scale " + scale);
                 client.gui.setScreen(null);
             });
         }

@@ -50,7 +50,26 @@ public final class EditorLayoutTest implements FabricClientGameTest {
     private static Button button(Screen screen, String prefix) {
         return screen.children().stream().filter(Button.class::isInstance).map(Button.class::cast)
                 .filter(candidate -> candidate.getMessage().getString().startsWith(prefix))
+                // An exact label wins over a longer one that starts the same, such as a tab named "Saved…".
+                .sorted(java.util.Comparator.comparing(candidate -> !candidate.getMessage().getString().equals(prefix)))
                 .findFirst().orElseThrow(() -> new AssertionError("Missing button " + prefix));
+    }
+
+    /** Labels of the buttons drawn pressed in: the open tab, since 1.2.0 marks it that way instead of with "● ". */
+    private static List<String> chosenTabs(Screen screen) {
+        try {
+            var chosen = com.thenathe.hotkeywheel.look.PlateButton.class.getDeclaredMethod("isChosen");
+            chosen.setAccessible(true);
+            List<String> labels = new ArrayList<>();
+            for (var child : screen.children()) {
+                if (child instanceof com.thenathe.hotkeywheel.look.PlateButton plate && (boolean) chosen.invoke(plate)) {
+                    labels.add(plate.getMessage().getString());
+                }
+            }
+            return labels;
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError("Cannot read which tab is open", failure);
+        }
     }
 
     private static boolean hasButton(Screen screen, String prefix) {
@@ -169,15 +188,15 @@ public final class EditorLayoutTest implements FabricClientGameTest {
     private void tabs(Minecraft client) {
         WheelEditorScreen editor = new WheelEditorScreen(null);
         client.gui.setScreen(editor);
-        check(!editor.showingGeneral() && editor.editedWheel() == 0 && hasButton(editor, "● Wheel 1"),
-                "The editor opens on Wheel 1's tab");
+        check(!editor.showingGeneral() && editor.editedWheel() == 0 && chosenTabs(editor).equals(List.of("Wheel 1")),
+                "The editor opens on Wheel 1's tab, shown pressed in");
         check(hasButton(editor, "General") && hasButton(editor, "Wheel 2") && !hasButton(editor, "Wheel 3"),
                 "Tabs: General, then each active wheel");
         for (String label : WHEEL) check(hasButton(editor, label), "A wheel tab shows " + label);
         for (String label : GENERAL) check(!hasButton(editor, label), "A wheel tab leaves " + label + " to General");
         check(button(editor, "Opening key:").getMessage().getString().endsWith(": G"), "The wheel's own opening key is in its settings");
         press(button(editor, "General"));
-        check(editor.showingGeneral() && hasButton(editor, "● General"), "General is a tab of its own");
+        check(editor.showingGeneral() && chosenTabs(editor).equals(List.of("General")), "General is a tab of its own, shown pressed in");
         for (String label : GENERAL) check(hasButton(editor, label), "General shows " + label);
         for (String label : WHEEL) check(!hasButton(editor, label), "General leaves " + label + " to the wheel tabs");
         check(button(editor, "Settings from an open wheel:").getMessage().getString().endsWith(": U"), "General shows the settings key");
@@ -203,7 +222,8 @@ public final class EditorLayoutTest implements FabricClientGameTest {
         press(button(editor, "Outside wheel: Cancel"));
         press(button(editor, "General"));
         check(hasButton(editor, "Active wheels: 2"), "Switching tabs keeps the draft");
-        press(button(editor, "Wheel 2"));
+        check(hasButton(editor, "Renamed") && !hasButton(editor, "Wheel 2"), "A wheel's tab is labelled with its draft name");
+        press(button(editor, "Renamed"));
         check(editBox(editor, "Renamed") != null && hasButton(editor, "Outside wheel: Select by direction"),
                 "Wheel edits survive a visit to General");
         press(button(editor, "Save"));

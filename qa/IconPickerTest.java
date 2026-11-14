@@ -63,6 +63,8 @@ public final class IconPickerTest implements FabricClientGameTest {
     private static Button button(Screen screen, String prefix) {
         return screen.children().stream().filter(Button.class::isInstance).map(Button.class::cast)
                 .filter(candidate -> candidate.getMessage().getString().startsWith(prefix))
+                // An exact label wins over a longer one that starts the same, such as a tab named "Saved…".
+                .sorted(java.util.Comparator.comparing(candidate -> !candidate.getMessage().getString().equals(prefix)))
                 .findFirst().orElseThrow(() -> new AssertionError("Missing button " + prefix));
     }
 
@@ -410,6 +412,11 @@ public final class IconPickerTest implements FabricClientGameTest {
             check(HotkeyWheelClient.SETTINGS_KEY.matches(InputConstants.Type.KEYBOARD.getOrCreate(InputConstants.KEY_P)),
                     "The editor binds the settings key");
             check(Files.readString(WheelConfig.path()).equals(before), "An editor Save with no slot changes writes the same file");
+            // The look and the elytra switch are saved the moment they change; the restart checks both come back.
+            check(WheelConfig.update(config -> {
+                config.setHouseLook(false);
+                config.setElytraFlightOff(true);
+            }), "The Minecraft look and elytra flight off are saved for the restart");
             Path restart = Path.of(System.getProperty("wheel.qa.root"), "restart");
             Files.createDirectories(restart);
             Files.copy(WheelConfig.path(), restart.resolve("hotkey-wheel.json"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
