@@ -1,23 +1,34 @@
 package com.thenathe.hotkeywheel;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.thenathe.hotkeywheel.look.Look;
+import com.thenathe.hotkeywheel.look.LookDialog;
+import com.thenathe.hotkeywheel.look.LookScreen;
+import com.thenathe.hotkeywheel.look.LookTextField;
+import com.thenathe.hotkeywheel.look.PlateButton;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
-import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 import net.fabricmc.loader.api.FabricLoader;
 
-public final class WheelEditorScreen extends Screen {
+/**
+ * Hotkey Wheel's settings: the General tab and one tab per active wheel in the navigation column, the chosen
+ * tab's settings in the panel, and Save and Cancel in the footer. Everything except the look is a draft until
+ * Save, because Save also changes key bindings.
+ */
+public final class WheelEditorScreen extends LookScreen {
     private static final String ICON_HELP = "Choose one of Hotkey Wheel's icons, an installed mod's icon, or any block or item. "
             + "Icons are visual labels; you do not need to carry the block or item.";
     private final Screen parent;
@@ -27,7 +38,8 @@ public final class WheelEditorScreen extends Screen {
     private final List<ContentWidget> contentWidgets = new ArrayList<>();
     private final List<Caption> captions = new ArrayList<>();
     private final List<Section> sections = new ArrayList<>();
-    private final List<AbstractWidget> fixedWidgets = new ArrayList<>();
+    // What each control does, shown in the description box under the tabs, or as a tooltip when there is no room.
+    private final Map<AbstractWidget, String> descriptions = new IdentityHashMap<>();
     // The folders opened for editing inside the active wheel, outermost first.
     private final List<WheelConfig.Entry> openFolders = new ArrayList<>();
     // The General tab, or the active wheel's tab.
@@ -36,16 +48,22 @@ public final class WheelEditorScreen extends Screen {
     private int selectedSlot;
     private int sectionTop;
     private int capturingKey = -1;
+    // The rows' left edge and width inside the panel, and the part of the panel they scroll in.
     private int left;
-    private int panelWidth;
+    private int rowWidth;
+    private int viewportTop;
     private int viewportBottom;
+    private int describeTop;
+    private boolean describeInNav;
     private int contentHeight;
     private int scroll;
     private String error = "";
     private String notice = "";
 
     private record ContentWidget(AbstractWidget widget, int offset) {}
-    private record Caption(Component text, int offset, int color) {}
+    private enum CaptionKind { SECTION, LABEL, NOTE }
+
+    private record Caption(Component text, int offset, CaptionKind kind) {}
     private record Section(int top, int bottom) {}
 
     public WheelEditorScreen(Screen parent) {
@@ -88,42 +106,54 @@ public final class WheelEditorScreen extends Screen {
     protected void init() {
         contentWidgets.clear();
         captions.clear();
-        fixedWidgets.clear();
-        panelWidth = Math.min(560, Math.max(180, width - 40));
-        left = (width - panelWidth) / 2;
-        viewportBottom = height - 57;
+        descriptions.clear();
+        layoutFrame(true);
+        left = listX();
+        rowWidth = listWidth();
+        viewportTop = listTop();
+        viewportBottom = listBottom();
         activeWheel = Math.min(activeWheel, draft.wheelCount - 1);
-        int tabWidth = (panelWidth - 8 * draft.wheelCount) / (draft.wheelCount + 1);
-        Button general = Button.builder(Component.literal((showGeneral ? "● " : "") + "General"), button -> {
+        int navStep = 22;
+        int tabs = draft.wheelCount + 1;
+        describeTop = PANEL_Y + tabs * navStep + 4;
+        describeInNav = panelBottom - describeTop >= 44;
+        PlateButton general = new PlateButton(contentX, PANEL_Y, navWidth, 20, Component.literal("General"), button -> {
             showGeneral = true;
             scroll = 0;
             rebuildWidgets();
-        }).bounds(left, 32, tabWidth, 20).tooltip(Tooltip.create(Component.literal(
-                "Settings every wheel shares: active wheels, cycle and settings keys, Safe mode, the control chooser and integrations."))).build();
-        fixedWidgets.add(addRenderableWidget(general));
+        }).chosenWhen(() -> showGeneral);
+        describe(general, "Settings every wheel shares: active wheels, the cycle and settings keys, Safe mode, the control chooser and integrations.");
+        addRenderableWidget(general);
         for (int index = 0; index < draft.wheelCount; index++) {
             int target = index;
-            Button tab = Button.builder(Component.literal((!showGeneral && index == activeWheel ? "● " : "") + "Wheel " + (index + 1)), button -> {
-                if (showGeneral && activeWheel == target) {
-                    showGeneral = false;
-                } else {
-                    showGeneral = false;
+            PlateButton tab = new PlateButton(contentX, PANEL_Y + (index + 1) * navStep, navWidth, 20,
+                    Component.literal(tabName(index)), button -> {
+                if (!showGeneral && activeWheel == target) return;
+                if (activeWheel != target) {
                     activeWheel = target;
                     openFolders.clear();
                     selectedSlot = 0;
                 }
+                showGeneral = false;
                 scroll = 0;
                 rebuildWidgets();
-            }).bounds(left + (index + 1) * (tabWidth + 8), 32, tabWidth, 20).build();
-            fixedWidgets.add(addRenderableWidget(tab));
+            }).chosenWhen(() -> !showGeneral && activeWheel == target);
+            describe(tab, "Wheel " + (index + 1) + ": its name, opening key, open mode and slots.");
+            addRenderableWidget(tab);
         }
         buildContent();
-        int half = (panelWidth - 8) / 2;
-        fixedWidgets.add(addRenderableWidget(Button.builder(Component.literal("Save"), button -> save())
-                .bounds(left, height - 25, half, 20).build()));
-        fixedWidgets.add(addRenderableWidget(Button.builder(Component.literal("Cancel"), button -> onClose())
-                .bounds(left + half + 8, height - 25, half, 20).build()));
+        int freeX = addLookControls();
+        int right = contentX + contentWidth;
+        int buttonWidth = Math.clamp((right - freeX - 4) / 2, 40, 70);
+        // Save acts, so it sits last, at the right edge.
+        addRenderableWidget(PlateButton.of("Cancel", right - 2 * buttonWidth - 4, footerY, buttonWidth, button -> onClose()));
+        addRenderableWidget(PlateButton.of("Save", right - buttonWidth, footerY, buttonWidth, button -> save()));
         positionContent();
+    }
+
+    private String tabName(int index) {
+        String name = draft.wheels.get(index).name;
+        return name == null || name.isBlank() ? "Wheel " + (index + 1) : name;
     }
 
     private void buildContent() {
@@ -135,7 +165,7 @@ public final class WheelEditorScreen extends Screen {
     /** Settings shared by every wheel. */
     private int buildGeneralSettings() {
         int offset = beginSection("General settings · all wheels", 0);
-        contentButton("Active wheels: " + draft.wheelCount, offset, panelWidth, left, button -> {
+        contentButton("Active wheels: " + draft.wheelCount, offset, rowWidth, left, button -> {
             draft.wheelCount = draft.wheelCount % 3 + 1;
             if (activeWheel >= draft.wheelCount) openFolders.clear();
             activeWheel = Math.min(activeWheel, draft.wheelCount - 1);
@@ -149,12 +179,12 @@ public final class WheelEditorScreen extends Screen {
         addKeyButton(5, "Settings from an open wheel", offset,
                 "Opens this editor on the wheel and folder you have open. It only acts while a wheel is open, so it may share a key with an ordinary control or with Configure wheels.");
         offset += 26;
-        contentButton("Safe mode: " + (draft.safeMode ? "ON" : "OFF"), offset, panelWidth, left, button -> {
+        contentButton("Safe mode: " + (draft.safeMode ? "ON" : "OFF"), offset, rowWidth, left, button -> {
             draft.safeMode = !draft.safeMode;
             rebuildWidgets();
         }, "Protect Inventory, Attack/Use, movement, Jump, Sneak, Sprint, Pick Block, chat/commands, and hotbar keys from automatic unbinding. Escape and primary mouse buttons are reserved for normal menu input. Turning this on restores essential keys previously unbound by this mod when you Save.");
         offset += 26;
-        Button restore = contentButton("Restore keys unbound by Hotkey Wheel", offset, panelWidth, left, button -> {
+        Button restore = contentButton("Restore keys unbound by Hotkey Wheel", offset, rowWidth, left, button -> {
             for (WheelConfig.Entry entry : draft.allEntries()) entry.unbindKey = false;
             rebuildWidgets();
         }, "Turn off automatic unbinding for all slots, including slots in folders. Save restores remembered keys that are still unbound, preserving later manual bindings. Cancel discards this request.");
@@ -162,41 +192,59 @@ public final class WheelEditorScreen extends Screen {
         offset = endSection(offset + 20);
 
         offset = beginSection("Control chooser", offset);
-        contentButton("Mod controls: " + (draft.oneModControlsFolder() ? "One Mod controls folder" : "A folder for each mod"), offset, panelWidth, left, button -> {
+        contentButton("Mod controls: " + (draft.oneModControlsFolder() ? "One Mod controls folder" : "A folder for each mod"), offset, rowWidth, left, button -> {
             draft.modControlsInOneFolder = draft.oneModControlsFolder() ? null : true;
             rebuildWidgets();
         }, "The control chooser lists Minecraft controls, Mod settings, then the controls of each mod that adds them. Choose one Mod controls folder to list every mod's controls together, under each mod's name.");
         offset = endSection(offset + 20);
 
         offset = beginSection("Integrations", offset);
-        Button contextual = contentButton("Tool Pouch contextual wheel: " + (draft.toolPouchWheel ? "ON" : "OFF"), offset, panelWidth, left, button -> {
+        Button contextual = contentButton("Tool Pouch contextual wheel: " + (draft.toolPouchWheel ? "ON" : "OFF"), offset, rowWidth, left, button -> {
             draft.toolPouchWheel = !draft.toolPouchWheel;
             rebuildWidgets();
         }, "Contextual Open selected in a wheel automatically shows the native menu's interactable pouch items as a radial. Click an item to choose, including in Hold mode. Requires Tool Pouch, standalone or in Vanilla++.");
         contextual.active = ToolPouchIntegration.available();
         offset += 26;
-        Button nativeKey = contentButton("Native contextual key uses wheel: " + (draft.replaceToolPouchContextualKey ? "ON" : "OFF"), offset, panelWidth, left, button -> {
+        Button nativeKey = contentButton("Native contextual key uses wheel: " + (draft.replaceToolPouchContextualKey ? "ON" : "OFF"), offset, rowWidth, left, button -> {
             draft.replaceToolPouchContextualKey = !draft.replaceToolPouchContextualKey;
             rebuildWidgets();
         }, "Use the radial for Tool Pouch's normal Contextual Open key outside Hotkey Wheel as well. Item selection requires a click; releasing the key does not choose an item.");
         nativeKey.active = ToolPouchIntegration.available() && draft.toolPouchWheel;
         offset += 26;
-        Button buildprint = contentButton("Wheel key closes menus it opened: " + (draft.closeBuildprintWithWheelKey ? "ON" : "OFF"), offset, panelWidth, left, button -> {
+        Button buildprint = contentButton("Wheel key closes menus it opened: " + (draft.closeBuildprintWithWheelKey ? "ON" : "OFF"), offset, rowWidth, left, button -> {
             draft.closeBuildprintWithWheelKey = !draft.closeBuildprintWithWheelKey;
             rebuildWidgets();
         }, "When a wheel opens a Buildprint or Blocktone menu, or a mod's settings, its original opening key closes that menu and its children using their normal save/cancel behavior. Other routes and unrelated menus keep their normal behavior.");
         buildprint.active = FabricLoader.getInstance().isModLoaded("buildprint") || ModSettingsActions.modMenuPresent();
         offset = endSection(offset + 20);
+
+        offset = beginSection("Hotkey Wheel actions", offset);
+        offset = wrappedCaption("Open shulker box… and Open ender chest are in the control chooser under Hotkey Wheel actions. "
+                + "They need Vanilla+ Features on the server." + containerStatus(), offset);
+        offset += 4;
+        if (ElytraFlight.offered()) {
+            offset = wrappedCaption("Elytra flight is " + (WheelConfig.get().elytraFlightOff() ? "off" : "on")
+                    + ". Switch it from a wheel, with the Toggle elytra flight key in Key Binds, or with /hotkeywheel elytra.", offset);
+        } else {
+            offset = wrappedCaption("Vanilla++ is installed, so its pouch elytra toggle is used instead of Hotkey Wheel's elytra switch.", offset);
+        }
+        offset = endSection(offset + 2);
         offset = wrappedCaption("Cycle changes wheels while the opener remains held. Keys also appear in Controls → Key Binds → Hotkey Wheel and are searchable with Controlling.", offset);
         return offset;
+    }
+
+    private String containerStatus() {
+        if (minecraft.level == null) return "";
+        String reason = ContainerRequests.chooserUnavailable();
+        return reason == null ? " This server has it." : " On this server: " + reason + ".";
     }
 
     /** The active wheel's own settings, then its slots. */
     private int buildWheelSettings() {
         int offset = beginSection("Wheel " + (activeWheel + 1) + " settings", 0);
-        caption("Wheel name", offset, WheelUi.DIM);
+        caption("Wheel name", offset, CaptionKind.LABEL);
         offset += 12;
-        EditBox name = new EditBox(font, left, 0, panelWidth, 20, Component.literal("Wheel name"));
+        LookTextField name = new LookTextField(left, 0, rowWidth, 20, Component.literal("Wheel name"), "Wheel " + (activeWheel + 1), false);
         name.setMaxLength(32);
         name.setValue(wheel().name);
         name.setResponder(value -> wheel().name = value);
@@ -204,12 +252,12 @@ public final class WheelEditorScreen extends Screen {
         offset += 26;
         addKeyButton(activeWheel, "Opening key", offset, "The key that opens this wheel.");
         offset += 26;
-        contentButton("Open mode: " + (wheel().toggleOpen ? "Toggle" : "Hold"), offset, panelWidth, left, button -> {
+        contentButton("Open mode: " + (wheel().toggleOpen ? "Toggle" : "Hold"), offset, rowWidth, left, button -> {
             wheel().toggleOpen = !wheel().toggleOpen;
             rebuildWidgets();
         }, "Hold: keep the wheel key down and release to use the hovered slot. Toggle: press the key to open, then click a slot.");
         offset += 26;
-        contentButton("Outside wheel: " + (wheel().selectOutside ? "Select by direction" : "Cancel"), offset, panelWidth, left, button -> {
+        contentButton("Outside wheel: " + (wheel().selectOutside ? "Select by direction" : "Cancel"), offset, rowWidth, left, button -> {
             wheel().selectOutside = !wheel().selectOutside;
             rebuildWidgets();
         }, "Select by direction keeps the entry under the cursor line selected beyond the wheel's outer edge. Confirm with the usual release or click. The center still cancels.");
@@ -219,7 +267,7 @@ public final class WheelEditorScreen extends Screen {
         offset = beginSection(level + " · " + entries.size() + "/" + WheelConfig.MAX_SLOTS, offset);
         if (!openFolders.isEmpty()) offset = addBreadcrumbs(offset);
         selectedSlot = Math.clamp(selectedSlot, 0, Math.max(0, entries.size() - 1));
-        int columns = Math.min(12, Math.max(1, panelWidth / 32));
+        int columns = Math.min(12, Math.max(1, rowWidth / 32));
         for (int index = 0; index < entries.size(); index++) {
             int slot = index;
             WheelConfig.Entry entry = entries.get(index);
@@ -233,42 +281,51 @@ public final class WheelEditorScreen extends Screen {
             content(icon, offset + index / columns * 32);
         }
         offset += Math.max(1, (entries.size() + columns - 1) / columns) * 32 + 4;
-        int fifth = (panelWidth - 24) / 5;
-        Button add = contentButton("Add", offset, fifth, left, button -> addSlot(new WheelConfig.Entry()),
+        // Five buttons in a row where their names fit, otherwise three and two.
+        int perRow = (rowWidth - 24) / 5 >= 60 ? 5 : 3;
+        int slotButtonWidth = (rowWidth - 6 * (perRow - 1)) / perRow;
+        List<Button> slotButtons = new ArrayList<>();
+        Button add = contentButton("Add", offset, slotButtonWidth, left, button -> addSlot(new WheelConfig.Entry()),
                 "Add another slot, up to 12 per wheel or folder.");
         add.active = entries.size() < WheelConfig.MAX_SLOTS;
-        Button addFolder = contentButton("Add folder", offset, fifth, left + fifth + 6,
+        slotButtons.add(add);
+        Button addFolder = contentButton("Add folder", offset, slotButtonWidth, left,
                 button -> addSlot(WheelConfig.Entry.folder("Folder")),
                 "Add a named folder with up to 12 slots of its own. Folders can hold folders, three levels deep.");
         addFolder.active = entries.size() < WheelConfig.MAX_SLOTS && openFolders.size() < WheelConfig.MAX_FOLDER_DEPTH;
-        Button remove = contentButton("Remove", offset, fifth, left + 2 * (fifth + 6), button -> removeSlot(),
+        slotButtons.add(addFolder);
+        Button remove = contentButton("Remove", offset, slotButtonWidth, left, button -> removeSlot(),
                 "Remove the selected slot. Removing a folder that holds slots asks first.");
         remove.active = !entries.isEmpty();
-        Button earlier = contentButton("← Move", offset, fifth, left + 3 * (fifth + 6), button -> moveSlot(-1),
+        slotButtons.add(remove);
+        Button earlier = contentButton("← Move", offset, slotButtonWidth, left, button -> moveSlot(-1),
                 "Move the selected slot one position earlier around the wheel.");
         earlier.active = !entries.isEmpty() && selectedSlot > 0;
-        Button later = contentButton("Move →", offset, fifth, left + 4 * (fifth + 6), button -> moveSlot(1),
+        slotButtons.add(earlier);
+        Button later = contentButton("Move →", offset, slotButtonWidth, left, button -> moveSlot(1),
                 "Move the selected slot one position later around the wheel.");
         later.active = !entries.isEmpty() && selectedSlot < entries.size() - 1;
-        offset += 33;
+        slotButtons.add(later);
+        placeInRows(slotButtons, offset, perRow, slotButtonWidth);
+        offset += (slotButtons.size() + perRow - 1) / perRow * 24 + 9;
         if (!entries.isEmpty() && entries.get(selectedSlot).isFolder()) {
             offset = addFolderSettings(entries.get(selectedSlot), offset);
         } else if (!entries.isEmpty()) {
             WheelConfig.Entry entry = entries.get(selectedSlot);
-            caption("Selected slot " + (selectedSlot + 1), offset, WheelUi.DIM);
+            caption("Selected slot " + (selectedSlot + 1), offset, CaptionKind.SECTION);
             offset += 14;
             offset = addMoveButton(entry, offset);
             String controlName = entry.control.isBlank() ? "Choose a control" : HotkeyWheelClient.controlLabel(entry.control);
-            contentButton("Control: " + controlName, offset, panelWidth, left, button -> {
+            contentButton("Control: " + controlName, offset, rowWidth, left, button -> {
                 minecraft.gui.setScreen(new ControlPickerScreen(this, control -> entry.control = control, draft.oneModControlsFolder()));
-            }, "Choose a standard Minecraft control, a control registered by an installed mod, a Tool Pouch slot toggle, or a mod's settings screen.");
+            }, "Choose a standard Minecraft control, a control registered by an installed mod, a Tool Pouch slot toggle, a mod's settings screen, or one of Hotkey Wheel's own actions.");
             offset += 26;
             KeyMapping control = HotkeyWheelClient.findControl(entry.control);
             boolean pouchToggle = ToolPouchToggles.handles(entry.control);
             boolean protectedKey = draft.safeMode && control != null && WheelBindings.protectedControl(control);
             String unbindLabel = protectedKey ? "Unbind normal key: Protected by safe mode"
                     : "Unbind normal key: " + (entry.unbindKey ? "ON (on Save)" : "OFF");
-            Button unbind = contentButton(unbindLabel, offset, panelWidth, left, button -> {
+            Button unbind = contentButton(unbindLabel, offset, rowWidth, left, button -> {
                 entry.unbindKey = !entry.unbindKey;
                 rebuildWidgets();
             }, "Remove only this control's ordinary key after Save. The wheel still activates it. Its original key is remembered and restored when you turn this off, remove the slot, or disable the wheel. Other controls sharing the key stay bound.");
@@ -277,21 +334,20 @@ public final class WheelEditorScreen extends Screen {
             unbind.active = control != null && !protectedKey || pouchToggle && ToolPouchToggles.canUnbind(entry.control)
                     || control == null && entry.unbindKey;
             offset += 26;
-            contentButton("Choose icon…", offset, panelWidth, left, button -> {
+            contentButton("Choose icon…", offset, rowWidth, left, button -> {
                 minecraft.gui.setScreen(new IconPickerScreen(this, entry.icon, icon -> entry.icon = icon));
             }, ICON_HELP);
             offset += 29;
-            caption("Custom label (optional)", offset, WheelUi.DIM);
+            caption("Custom label (optional)", offset, CaptionKind.LABEL);
             offset += 12;
-            EditBox label = new EditBox(font, left, 0, panelWidth, 20, Component.literal("Custom slot label"));
+            LookTextField label = new LookTextField(left, 0, rowWidth, 20, Component.literal("Custom slot label"), "Use the control's name", false);
             label.setMaxLength(48);
-            label.setHint(Component.literal("Use the control's name"));
             label.setValue(entry.label);
             label.setResponder(value -> entry.label = value);
             content(label, offset);
             offset += 26;
             String action = wheel().toggleOpen ? "Action: Tap (toggle mode)" : "Action: " + (entry.holdAction ? "Hold" : "Tap");
-            Button mode = contentButton(action, offset, panelWidth, left, button -> {
+            Button mode = contentButton(action, offset, rowWidth, left, button -> {
                 entry.holdAction = !entry.holdAction;
                 rebuildWidgets();
             }, "Tap presses the control once. Hold closes the wheel when you click and keeps the control down until you release the wheel key. Hold requires Hold open mode.");
@@ -307,10 +363,23 @@ public final class WheelEditorScreen extends Screen {
         return offset;
     }
 
+    /** Spreads buttons made at one offset over rows of {@code perRow}, keeping their order. */
+    private void placeInRows(List<Button> buttons, int offset, int perRow, int buttonWidth) {
+        for (int index = 0; index < buttons.size(); index++) {
+            Button button = buttons.get(index);
+            button.setX(left + index % perRow * (buttonWidth + 6));
+            for (int row = 0; row < contentWidgets.size(); row++) {
+                if (contentWidgets.get(row).widget() == button) {
+                    contentWidgets.set(row, new ContentWidget(button, offset + index / perRow * 24));
+                }
+            }
+        }
+    }
+
     /** Opens a titled section; its darker background runs to the offset given to endSection. */
     private int beginSection(String title, int offset) {
         sectionTop = offset;
-        caption(title, offset + 4, WheelUi.GOLD);
+        caption(title, offset + 5, CaptionKind.SECTION);
         return offset + 18;
     }
 
@@ -322,7 +391,7 @@ public final class WheelEditorScreen extends Screen {
     private int addBreadcrumbs(int offset) {
         // The wheel, then each open folder; the last one is the level being edited.
         int count = openFolders.size() + 1;
-        int crumbWidth = (panelWidth - 6 * (count - 1)) / count;
+        int crumbWidth = (rowWidth - 6 * (count - 1)) / count;
         for (int depth = 0; depth < count; depth++) {
             int target = depth;
             String name = depth == 0 ? wheel().name : openFolders.get(depth - 1).folderName();
@@ -342,29 +411,28 @@ public final class WheelEditorScreen extends Screen {
     }
 
     private int addFolderSettings(WheelConfig.Entry folder, int offset) {
-        caption("Selected folder " + (selectedSlot + 1), offset, WheelUi.GOLD);
+        caption("Selected folder " + (selectedSlot + 1), offset, CaptionKind.SECTION);
         offset += 14;
         offset = addMoveButton(folder, offset);
-        Button open = contentButton(openFolderLabel(folder), offset, panelWidth, left, button -> {
+        Button open = contentButton(openFolderLabel(folder), offset, rowWidth, left, button -> {
             openFolders.add(folder);
             selectedSlot = 0;
             scroll = 0;
             rebuildWidgets();
         }, "Edit the slots inside this folder. The path above the slots leads back.");
         offset += 29;
-        caption("Folder name", offset, WheelUi.DIM);
+        caption("Folder name", offset, CaptionKind.LABEL);
         offset += 12;
-        EditBox name = new EditBox(font, left, 0, panelWidth, 20, Component.literal("Folder name"));
+        LookTextField name = new LookTextField(left, 0, rowWidth, 20, Component.literal("Folder name"), "Folder", false);
         name.setMaxLength(32);
-        name.setHint(Component.literal("Folder"));
         name.setValue(folder.label);
         name.setResponder(value -> {
             folder.label = value;
-            open.setMessage(Component.literal(font.plainSubstrByWidth(openFolderLabel(folder), panelWidth - 10)));
+            open.setMessage(Component.literal(font.plainSubstrByWidth(openFolderLabel(folder), rowWidth - 10)));
         });
         content(name, offset);
         offset += 26;
-        contentButton("Choose icon…", offset, panelWidth, left, button -> {
+        contentButton("Choose icon…", offset, rowWidth, left, button -> {
             minecraft.gui.setScreen(new IconPickerScreen(this, folder.icon, icon -> folder.icon = icon));
         }, ICON_HELP);
         return offset + 31;
@@ -372,7 +440,7 @@ public final class WheelEditorScreen extends Screen {
 
     private int addMoveButton(WheelConfig.Entry entry, int offset) {
         String what = entry.isFolder() ? "this folder, with everything in it," : "this slot";
-        contentButton("Move to…", offset, panelWidth, left, button -> {
+        contentButton("Move to…", offset, rowWidth, left, button -> {
             minecraft.gui.setScreen(new MoveSlotScreen(this, wheel(), entries(), entry, this::moveTo));
         }, "Move " + what + " into a folder, out to the level above, or into another folder of this wheel. Its settings and remembered keys stay as they are. Nothing changes until Save.");
         return offset + 26;
@@ -408,13 +476,13 @@ public final class WheelEditorScreen extends Screen {
             return;
         }
         int slots = entry.nestedSlotCount();
-        Component title = Component.literal("Remove the folder \"" + entry.folderName() + "\"?");
-        Component message = Component.literal("It holds " + slots + (slots == 1 ? " slot" : " slots")
-                + ", counting folders inside it. Save applies the removal; Cancel in the editor keeps everything.");
-        minecraft.gui.setScreen(new ConfirmScreen(confirmed -> {
+        String title = "Remove the folder \"" + entry.folderName() + "\"?";
+        String message = "It holds " + slots + (slots == 1 ? " slot" : " slots")
+                + ", counting folders inside it. Save applies the removal; Cancel in the editor keeps everything.";
+        minecraft.gui.setScreen(new LookDialog(title, message, "Remove folder", "Keep", confirmed -> {
             if (confirmed) removeSelectedSlot();
             minecraft.gui.setScreen(this);
-        }, title, message, Component.literal("Remove folder"), Component.literal("Keep")));
+        }));
     }
 
     private void removeSelectedSlot() {
@@ -426,31 +494,37 @@ public final class WheelEditorScreen extends Screen {
     private void addKeyButton(int index, String label, int offset, String help) {
         String text = capturingKey == index ? label + ": press a key or mouse button…"
                 : label + ": " + stagedKeys[index].getDisplayName().getString();
-        contentButton(text, offset, panelWidth, left, button -> {
+        contentButton(text, offset, rowWidth, left, button -> {
             capturingKey = index;
             rebuildWidgets();
         }, help + " Click to bind a keyboard key or mouse button. Escape clears the binding. Key changes are applied when you Save.");
     }
 
     private Button contentButton(String text, int offset, int buttonWidth, int x, Button.OnPress action, String help) {
-        Button button = Button.builder(Component.literal(font.plainSubstrByWidth(text, buttonWidth - 10)), action)
-                .bounds(x, 0, buttonWidth, 20).tooltip(Tooltip.create(Component.literal(help))).build();
+        PlateButton button = new PlateButton(x, 0, buttonWidth, 20, Component.literal(text), action);
+        describe(button, help);
         content(button, offset);
         return button;
     }
 
+    /** Scrolling rows take input like any widget but are drawn by this screen, clipped to the panel. */
     private void content(AbstractWidget widget, int offset) {
-        contentWidgets.add(new ContentWidget(addRenderableWidget(widget), offset));
+        contentWidgets.add(new ContentWidget(addWidget(widget), offset));
     }
 
-    private void caption(String text, int offset, int color) {
-        captions.add(new Caption(Component.literal(text), offset, color));
+    private void describe(AbstractWidget widget, String text) {
+        descriptions.put(widget, text);
+        if (!describeInNav) widget.setTooltip(Tooltip.create(Component.literal(text)));
+    }
+
+    private void caption(String text, int offset, CaptionKind kind) {
+        captions.add(new Caption(Component.literal(text), offset, kind));
     }
 
     private int wrappedCaption(String text, int offset) {
         Component component = Component.literal(text);
-        captions.add(new Caption(component, offset, WheelUi.DIM));
-        return offset + font.split(component, panelWidth).size() * 10;
+        captions.add(new Caption(component, offset, CaptionKind.NOTE));
+        return offset + font.split(component, rowWidth).size() * 10;
     }
 
     private static String entryName(WheelConfig.Entry entry) {
@@ -466,14 +540,21 @@ public final class WheelEditorScreen extends Screen {
         rebuildWidgets();
     }
 
-    private int maxScroll() { return Math.max(0, contentHeight - (viewportBottom - 62)); }
+    private int maxScroll() { return Math.max(0, contentHeight - (viewportBottom - viewportTop)); }
 
     private void positionContent() {
         scroll = Math.clamp(scroll, 0, maxScroll());
         for (ContentWidget row : contentWidgets) {
             AbstractWidget widget = row.widget();
-            widget.setY(62 + row.offset() - scroll);
-            widget.visible = widget.getY() >= 62 && widget.getY() + widget.getHeight() <= viewportBottom;
+            int y = viewportTop + row.offset() - scroll;
+            int rowHeight = widget.getHeight();
+            if (widget instanceof LookTextField field) {
+                field.setFrameY(y);
+                rowHeight = field.frameHeight();
+            } else {
+                widget.setY(y);
+            }
+            widget.visible = y >= viewportTop && y + rowHeight <= viewportBottom;
             if (!widget.visible && getFocused() == widget) clearFocus();
         }
     }
@@ -491,7 +572,7 @@ public final class WheelEditorScreen extends Screen {
             return true;
         }
         if (event.key() == InputConstants.KEY_PAGEUP || event.key() == InputConstants.KEY_PAGEDOWN) {
-            scroll += (event.key() == InputConstants.KEY_PAGEUP ? -1 : 1) * Math.max(24, viewportBottom - 82);
+            scroll += (event.key() == InputConstants.KEY_PAGEUP ? -1 : 1) * Math.max(24, viewportBottom - viewportTop - 20);
             positionContent();
             return true;
         }
@@ -510,7 +591,7 @@ public final class WheelEditorScreen extends Screen {
     @Override
     public boolean mouseScrolled(double x, double y, double horizontal, double vertical) {
         if (capturingKey >= 0) return true;
-        if (vertical != 0 && y >= 62 && y < viewportBottom) {
+        if (vertical != 0 && x >= panelX && x < panelX + panelWidth && y >= PANEL_Y && y < panelBottom) {
             scroll += (int) Math.round(-vertical * 26);
             positionContent();
             return true;
@@ -540,48 +621,102 @@ public final class WheelEditorScreen extends Screen {
                 return;
             }
         }
+        // The look and the elytra switch were saved when they changed; the draft must not turn them back.
+        draft.keepImmediateSettings(WheelConfig.get());
         error = WheelBindings.save(draft, stagedKeys);
         if (!error.isEmpty()) return;
         minecraft.gui.setScreen(parent);
     }
 
     @Override
+    protected String titleNote() {
+        if (capturingKey >= 0) return "Press a key or mouse button; Escape clears it.";
+        if (!error.isEmpty()) return error;
+        if (!notice.isEmpty()) return notice;
+        return minecraft.level == null ? "Icon previews load in a world" : "Save applies all changes";
+    }
+
+    @Override
+    protected boolean titleNoteIsError() { return capturingKey < 0 && !error.isEmpty(); }
+
+    @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         positionContent();
-        graphics.centeredText(font, title, width / 2, 12, WheelUi.GOLD);
-        graphics.fill(left - 6, 57, left + panelWidth + 6, viewportBottom + 1, 0x66000000);
-        graphics.enableScissor(left - 2, 62, left + panelWidth + 2, viewportBottom);
+        Look look = Look.current();
+        graphics.enableScissor(panelX + 1, viewportTop, panelX + panelWidth - 1, viewportBottom);
         for (Section section : sections) {
-            int top = 62 + section.top() - scroll;
-            int bottom = 62 + section.bottom() - scroll;
-            graphics.fill(left - 2, top, left + panelWidth + 2, bottom, 0x55000000);
-            graphics.fill(left - 2, top, left + panelWidth + 2, top + 1, 0x66F1C56C);
+            int top = viewportTop + section.top() - scroll;
+            int bottom = viewportTop + section.bottom() - scroll;
+            look.group(graphics, left - 4, top, rowWidth + 8, bottom - top);
         }
         for (Caption caption : captions) {
-            graphics.textWithWordWrap(font, caption.text(), left, 62 + caption.offset() - scroll, panelWidth, caption.color());
+            int y = viewportTop + caption.offset() - scroll;
+            switch (caption.kind()) {
+                case SECTION -> caption(graphics, caption.text().getString(), left, y, rowWidth);
+                case LABEL -> graphics.text(font, caption.text(), left, y, look.dim(), look.panelShadow());
+                case NOTE -> {
+                    for (FormattedCharSequence line : font.split(caption.text(), rowWidth)) {
+                        graphics.text(font, line, left, y, look.dim(), look.panelShadow());
+                        y += 10;
+                    }
+                }
+            }
         }
         for (ContentWidget row : contentWidgets) row.widget().extractRenderState(graphics, mouseX, mouseY, delta);
         graphics.disableScissor();
         if (maxScroll() > 0) {
-            int track = viewportBottom - 62;
+            int track = viewportBottom - viewportTop;
             int thumb = Math.max(12, track * track / contentHeight);
-            int thumbY = 62 + (track - thumb) * scroll / maxScroll();
-            graphics.fill(left + panelWidth + 8, 62, left + panelWidth + 11, viewportBottom, 0x33444444);
-            graphics.fill(left + panelWidth + 8, thumbY, left + panelWidth + 11, thumbY + thumb, WheelUi.GOLD);
+            int thumbY = viewportTop + (track - thumb) * scroll / maxScroll();
+            int barX = panelX + panelWidth - (look.house() ? 6 : 8);
+            graphics.fill(barX, viewportTop, barX + 3, viewportBottom, look.house() ? look.colors().well() : 0x33000000);
+            graphics.fill(barX, thumbY, barX + 3, thumbY + thumb, look.house() ? look.colors().accent() : 0xFF8B8B8B);
         }
-        for (AbstractWidget widget : fixedWidgets) widget.extractRenderState(graphics, mouseX, mouseY, delta);
-        String status = capturingKey >= 0 ? "Press a key or mouse button; Escape clears it."
-                : !error.isEmpty() ? error
-                : !notice.isEmpty() ? notice
-                : minecraft.level == null ? "Icon previews load in a world · Scroll to edit settings"
-                : "Scroll / Page Up / Page Down · Save applies all changes";
-        graphics.text(font, font.plainSubstrByWidth(status, panelWidth), left, height - 44,
-                error.isEmpty() ? WheelUi.DIM : WheelUi.ERROR);
+        super.extractRenderState(graphics, mouseX, mouseY, delta);
+        if (describeInNav) extractDescription(graphics, look, mouseX, mouseY);
+        extractAccentPopup(graphics, mouseX, mouseY);
+    }
+
+    /** The description box under the tabs: what the pointed (or keyboard-focused) control does. */
+    private void extractDescription(GuiGraphicsExtractor graphics, Look look, int mouseX, int mouseY) {
+        int boxHeight = panelBottom - describeTop;
+        look.panel(graphics, contentX, describeTop, navWidth, boxHeight);
+        int x = contentX + 6;
+        int width = navWidth - 12;
+        caption(graphics, "Description", x, describeTop + 6, width);
+        String text = describedText(mouseX, mouseY);
+        boolean prompt = text == null;
+        if (prompt) text = "Point at a setting to see what it does.";
+        int y = describeTop + 20;
+        int lastLine = describeTop + boxHeight - 14;
+        for (FormattedCharSequence line : font.split(Component.literal(text), width)) {
+            if (y > lastLine) break;
+            graphics.text(font, line, x, y, prompt ? look.dim() : look.text(), look.panelShadow());
+            y += 10;
+        }
+    }
+
+    private String describedText(int mouseX, int mouseY) {
+        for (var described : descriptions.entrySet()) {
+            AbstractWidget widget = described.getKey();
+            boolean clipped = isContent(widget) && (mouseY < viewportTop || mouseY >= viewportBottom);
+            if (widget.visible && !clipped && widget.isMouseOver(mouseX, mouseY)) return described.getValue();
+        }
+        if (getFocused() instanceof AbstractWidget focused && focused.visible && descriptions.containsKey(focused)
+                && minecraft.getLastInputType().isKeyboard()) {
+            return descriptions.get(focused);
+        }
+        return null;
+    }
+
+    private boolean isContent(AbstractWidget widget) {
+        for (ContentWidget row : contentWidgets) {
+            if (row.widget() == widget) return true;
+        }
+        return false;
     }
 
     @Override
     public void onClose() { minecraft.gui.setScreen(parent); }
 
-    @Override
-    public boolean isPauseScreen() { return false; }
 }

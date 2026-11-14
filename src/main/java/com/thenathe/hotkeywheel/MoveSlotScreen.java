@@ -1,16 +1,17 @@
 package com.thenathe.hotkeywheel;
 
+import com.thenathe.hotkeywheel.look.Look;
+import com.thenathe.hotkeywheel.look.LookScreen;
+import com.thenathe.hotkeywheel.look.PlateButton;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
 /** Picks where a slot or folder goes: the wheel's top level or any folder in it, shown as a tree. */
-public final class MoveSlotScreen extends Screen {
+public final class MoveSlotScreen extends LookScreen {
     private final Screen parent;
     private final WheelConfig.Wheel wheel;
     private final List<WheelConfig.Entry> currentLevel;
@@ -19,6 +20,7 @@ public final class MoveSlotScreen extends Screen {
     private final List<Destination> destinations = new ArrayList<>();
     private int page;
     private int rows;
+    private int subtitleTop;
     private List<FormattedCharSequence> subtitle = List.of();
 
     @FunctionalInterface
@@ -78,12 +80,14 @@ public final class MoveSlotScreen extends Screen {
 
     @Override
     protected void init() {
-        int panelWidth = Math.min(560, width - 40);
-        int left = (width - panelWidth) / 2;
-        // A long folder name or a large GUI scale wraps the subtitle; the list moves down only when it needs a third line.
-        subtitle = font.split(Component.literal(subtitleText()), panelWidth);
-        int top = Math.max(52, 32 + subtitle.size() * 10);
-        rows = Math.max(1, (height - 74 - top) / 24);
+        layoutFrame(false);
+        int left = listX();
+        int rowWidth = listWidth();
+        // A long folder name or a large GUI scale wraps the subtitle, and the list moves down to make room.
+        subtitle = font.split(Component.literal(subtitleText()), rowWidth);
+        subtitleTop = listTop() + 2;
+        int top = subtitleTop + subtitle.size() * 10 + 6;
+        rows = Math.max(1, (listBottom() - 24 - top) / 24);
         int lastPage = Math.max(0, (destinations.size() - 1) / rows);
         page = Math.clamp(page, 0, lastPage);
         int first = page * rows;
@@ -93,20 +97,17 @@ public final class MoveSlotScreen extends Screen {
             String text = indent + (destination.level() == 0 ? destination.name() + " · top level" : "› " + destination.name())
                     + " · " + destination.entries().size() + "/" + WheelConfig.MAX_SLOTS;
             String help = destination.refusal() != null ? destination.refusal() : "Move " + slotName() + " here, after its last slot.";
-            Button button = Button.builder(Component.literal(font.plainSubstrByWidth(text, panelWidth - 12)), pressed -> choose(destination))
-                    .bounds(left, top + (index - first) * 24, panelWidth, 20)
-                    .tooltip(Tooltip.create(Component.literal(help))).build();
+            PlateButton button = PlateButton.of(text, left, top + (index - first) * 24, rowWidth, pressed -> choose(destination)).help(help);
             button.active = destination.refusal() == null;
             addRenderableWidget(button);
         }
-        Button previous = addRenderableWidget(Button.builder(Component.literal("Previous"), button -> changePage(-1))
-                .bounds(left, height - 49, 84, 20).build());
+        int pageY = listBottom() - 20;
+        PlateButton previous = addRenderableWidget(PlateButton.of("Previous", left, pageY, 84, button -> changePage(-1)));
         previous.active = page > 0;
-        Button next = addRenderableWidget(Button.builder(Component.literal("Next"), button -> changePage(1))
-                .bounds(left + panelWidth - 84, height - 49, 84, 20).build());
+        PlateButton next = addRenderableWidget(PlateButton.of("Next", left + rowWidth - 84, pageY, 84, button -> changePage(1)));
         next.active = page < lastPage;
-        addRenderableWidget(Button.builder(Component.literal("Cancel"), button -> onClose())
-                .bounds(left, height - 25, panelWidth, 20).build());
+        addLookControls();
+        addRenderableWidget(PlateButton.of("Cancel", contentX + contentWidth - 70, footerY, 70, button -> onClose()));
     }
 
     private String subtitleText() {
@@ -138,17 +139,16 @@ public final class MoveSlotScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         super.extractRenderState(graphics, mouseX, mouseY, delta);
-        graphics.centeredText(font, title, width / 2, 12, WheelUi.GOLD);
-        int y = subtitle.size() == 1 ? 30 : 24;
+        Look look = Look.current();
+        int y = subtitleTop;
         for (FormattedCharSequence line : subtitle) {
-            graphics.centeredText(font, line, width / 2, y, WheelUi.DIM);
+            graphics.text(font, line, listX(), y, look.dim(), look.panelShadow());
             y += 10;
         }
+        extractAccentPopup(graphics, mouseX, mouseY);
     }
 
     @Override
     public void onClose() { minecraft.gui.setScreen(parent); }
 
-    @Override
-    public boolean isPauseScreen() { return false; }
 }

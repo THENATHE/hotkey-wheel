@@ -19,10 +19,13 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
+import org.slf4j.LoggerFactory;
 
 public final class ToolPouchIntegration {
     public static final String CONTROL_NAME = "key.toolpouch.open_widget";
     private static InputConstants.Key nativeOpener;
+    // Set when a Tool Pouch method this integration calls is missing or fails; the integration then stays off.
+    private static boolean broken;
 
     private ToolPouchIntegration() {}
 
@@ -43,12 +46,24 @@ public final class ToolPouchIntegration {
     }
 
     public static boolean available() {
-        return FabricLoader.getInstance().isModLoaded("toolpouch");
+        return !broken && FabricLoader.getInstance().isModLoaded("toolpouch");
+    }
+
+    /** Switches the integration off for the session after a Tool Pouch version this release cannot call. */
+    private static void stop(Throwable failure) {
+        if (!broken) LoggerFactory.getLogger("hotkey-wheel").warn("Tool Pouch integration stopped; Tool Pouch keeps working on its own", failure);
+        broken = true;
+        nativeOpener = null;
     }
 
     public static boolean open(Minecraft client) {
         if (!WheelConfig.get().toolPouchWheel || !available()) return false;
-        return openRadial(client);
+        try {
+            return openRadial(client);
+        } catch (RuntimeException | LinkageError failure) {
+            stop(failure);
+            return false;
+        }
     }
 
     private static boolean openRadial(Minecraft client) {
@@ -69,6 +84,15 @@ public final class ToolPouchIntegration {
     }
 
     public static boolean handleNativeKey(InputConstants.Key key, int action) {
+        try {
+            return handleNativeKeyUnguarded(key, action);
+        } catch (RuntimeException | LinkageError failure) {
+            stop(failure);
+            return false;
+        }
+    }
+
+    private static boolean handleNativeKeyUnguarded(InputConstants.Key key, int action) {
         if (nativeOpener != null && nativeOpener.equals(key)) {
             if (action == InputConstants.RELEASE) {
                 nativeOpener = null;
@@ -91,7 +115,7 @@ public final class ToolPouchIntegration {
     }
 
     public static void tick(Minecraft client) {
-        if (suppressNativeWidget()) NativeAccess.dismissWidget();
+        if (suppressNativeWidget()) dismissWidget();
         if (client.gui.screen() instanceof ToolPouchRadialScreen radial
                 && (client.player == null || client.level == null || !client.isWindowActive())) radial.onClose();
     }
@@ -99,11 +123,28 @@ public final class ToolPouchIntegration {
     public static void clear() {
         boolean dismiss = suppressNativeWidget();
         nativeOpener = null;
-        if (dismiss) NativeAccess.dismissWidget();
+        if (dismiss) dismissWidget();
+    }
+
+    private static void dismissWidget() {
+        try {
+            NativeAccess.dismissWidget();
+        } catch (RuntimeException | LinkageError failure) {
+            stop(failure);
+        }
     }
 
     public static boolean activate(Minecraft client, Snapshot original, int index) {
         if (!available() || client.player == null || client.level == null || index < 0 || index >= original.choices().size()) return false;
+        try {
+            return activateUnguarded(client, original, index);
+        } catch (RuntimeException | LinkageError failure) {
+            stop(failure);
+            return false;
+        }
+    }
+
+    private static boolean activateUnguarded(Minecraft client, Snapshot original, int index) {
         Snapshot current = NativeAccess.snapshot(client);
         if (!original.matches(current)) {
             client.player.sendSystemMessage(Component.literal("Hotkey Wheel: the pouch contents or held weapon changed. Open the item wheel again."));

@@ -2,6 +2,7 @@ package com.thenathe.hotkeywheel;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.thenathe.hotkeywheel.look.Accent;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.LoggerFactory;
 
@@ -27,6 +29,13 @@ public final class WheelConfig {
     // The control picker's mod folders: null for one folder per mod, true for a single Mod controls folder.
     // The default is left out of the file, so settings from earlier releases save back unchanged.
     public Boolean modControlsInOneFolder;
+    // The look of the editor, pickers and dialogs: "minecraft" for the Minecraft look, otherwise House, with
+    // light panels and an accent colour. Like the setting above, defaults stay out of the file.
+    public String look;
+    public Boolean lightMode;
+    public String accent;
+    // True while starting a glide is switched off; only written while it is.
+    public Boolean elytraFlightOff;
     public Map<String, String> managedBindings = new LinkedHashMap<>();
     public List<Wheel> wheels = new ArrayList<>();
 
@@ -112,7 +121,41 @@ public final class WheelConfig {
 
     public boolean oneModControlsFolder() { return Boolean.TRUE.equals(modControlsInOneFolder); }
 
+    public boolean houseLook() { return !"minecraft".equals(look); }
+
+    public void setHouseLook(boolean house) { look = house ? null : "minecraft"; }
+
+    public boolean lightLook() { return Boolean.TRUE.equals(lightMode); }
+
+    public void setLightLook(boolean light) { lightMode = light ? true : null; }
+
+    public Accent accentChoice() { return Accent.fromSaved(accent); }
+
+    public void setAccentChoice(Accent choice) { accent = choice == Accent.BLUE ? null : choice.savedName(); }
+
+    public boolean elytraFlightOff() { return Boolean.TRUE.equals(elytraFlightOff); }
+
+    public void setElytraFlightOff(boolean off) { elytraFlightOff = off ? true : null; }
+
+    /**
+     * Copies the settings that are saved the moment they change, the look and the elytra switch, from the
+     * saved settings into an editor draft, so saving the draft never turns them back.
+     */
+    public void keepImmediateSettings(WheelConfig saved) {
+        look = saved.look;
+        lightMode = saved.lightMode;
+        accent = saved.accent;
+        elytraFlightOff = saved.elytraFlightOff;
+    }
+
     public static WheelConfig get() { return current; }
+
+    /** Saves one change to the saved settings straight away, as the look and elytra switches do. */
+    public static boolean update(Consumer<WheelConfig> edit) {
+        WheelConfig updated = current.copy();
+        edit.accept(updated);
+        return save(updated);
+    }
 
     public WheelConfig copy() { return GSON.fromJson(GSON.toJson(this), WheelConfig.class); }
 
@@ -163,6 +206,10 @@ public final class WheelConfig {
     public void normalize() {
         wheelCount = Math.clamp(wheelCount, 1, 3);
         if (!oneModControlsFolder()) modControlsInOneFolder = null;
+        setHouseLook(houseLook());
+        setLightLook(lightLook());
+        setAccentChoice(accentChoice());
+        setElytraFlightOff(elytraFlightOff());
         if (managedBindings == null) managedBindings = new LinkedHashMap<>();
         if (wheels == null) wheels = new ArrayList<>();
         while (wheels.size() < 3) wheels.add(new Wheel());

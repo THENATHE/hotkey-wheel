@@ -6,6 +6,7 @@
   "key.hotkey_wheel.cycle": "Hotkey Wheel: Cycle wheel while open",
   "key.hotkey_wheel.configure": "Configure Hotkey Wheel",
   "key.hotkey_wheel.settings": "Hotkey Wheel: Open settings while a wheel is open",
+  "key.hotkey_wheel.elytra_flight": "Hotkey Wheel: Toggle elytra flight",
   "hotkey_wheel.controls.used_by": "Used by Hotkey Wheel:",
   "hotkey_wheel.controls.slot": "Slot %s",
   "hotkey_wheel.controls.more": "…and %s more",

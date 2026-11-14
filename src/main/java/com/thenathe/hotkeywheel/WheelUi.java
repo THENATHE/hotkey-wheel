@@ -1,5 +1,8 @@
 package com.thenathe.hotkeywheel;
 
+import com.thenathe.hotkeywheel.look.Bevels;
+import com.thenathe.hotkeywheel.look.Ink;
+import com.thenathe.hotkeywheel.look.Look;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import net.minecraft.client.Minecraft;
@@ -35,6 +38,17 @@ final class WheelUi {
         return lines;
     }
 
+    /** The thin line from a radial's centre to the pointer. */
+    static void pointerLine(GuiGraphicsExtractor graphics, int startX, int startY, int endX, int endY, int color) {
+        int length = Math.max(Math.abs(endX - startX), Math.abs(endY - startY));
+        for (int step = 0; step <= length; step++) {
+            double fraction = length == 0 ? 0 : (double) step / length;
+            int x = (int) Math.round(startX + (endX - startX) * fraction);
+            int y = (int) Math.round(startY + (endY - startY) * fraction);
+            graphics.fill(x, y, x + 1, y + 1, color);
+        }
+    }
+
     static Component itemName(Item item) {
         if (Minecraft.getInstance().level != null) return new ItemStack(item).getHoverName();
         return Component.translatable(item.getDescriptionId());
@@ -67,26 +81,27 @@ final class WheelUi {
 
         @Override
         protected void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-            int background = isHoveredOrFocused() ? 0xFF45545F : 0xDC263038;
-            graphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), background);
+            Look look = Look.current();
+            boolean hot = Ink.hot(this);
+            look.plate(graphics, getX(), getY(), getWidth(), getHeight(), true, hot, false);
             if (selected.getAsBoolean()) {
-                graphics.fill(getX(), getY(), getX() + getWidth(), getY() + 2, GOLD);
-                graphics.fill(getX(), getY() + getHeight() - 2, getX() + getWidth(), getY() + getHeight(), GOLD);
-                graphics.fill(getX(), getY(), getX() + 2, getY() + getHeight(), GOLD);
-                graphics.fill(getX() + getWidth() - 2, getY(), getX() + getWidth(), getY() + getHeight(), GOLD);
+                // Two rings, so the chosen tile still stands out while it is hovered and lit in the accent.
+                int ring = look.house() && !hot ? look.colors().accent() : 0xFFFFFFFF;
+                Bevels.ring(graphics, getX(), getY(), getWidth(), getHeight(), ring);
+                Bevels.ring(graphics, getX() + 1, getY() + 1, getWidth() - 2, getHeight() - 2, ring);
             }
+            var font = Minecraft.getInstance().font;
             if (!icon.needsWorld() || Minecraft.getInstance().level != null) {
                 icon.draw(graphics, getX() + (getWidth() - 16) / 2, getY() + (getHeight() - 16) / 2);
             } else {
                 // Item components are supplied when connecting; stacks cannot be created at first startup.
-                var font = Minecraft.getInstance().font;
                 String label = font.plainSubstrByWidth(icon.name().getString(), getWidth() - 6);
-                graphics.centeredText(font, label, getX() + getWidth() / 2,
-                        getY() + (getHeight() - 9) / 2, TEXT);
+                int colour = look.plateText(true, hot, false);
+                graphics.text(font, label, getX() + (getWidth() - font.width(label)) / 2, getY() + (getHeight() - 8) / 2, colour, look.plateShadow(colour));
             }
             if (folderMark) {
-                var font = Minecraft.getInstance().font;
-                graphics.text(font, "»", getX() + getWidth() - font.width("»") - 2, getY() + getHeight() - 10, GOLD);
+                int colour = look.house() ? 0xFFFFFFFF : GOLD;
+                graphics.text(font, "»", getX() + getWidth() - font.width("»") - 2, getY() + getHeight() - 10, colour, true);
             }
         }
     }

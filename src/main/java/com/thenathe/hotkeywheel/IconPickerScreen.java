@@ -1,6 +1,10 @@
 package com.thenathe.hotkeywheel;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.thenathe.hotkeywheel.look.Look;
+import com.thenathe.hotkeywheel.look.LookScreen;
+import com.thenathe.hotkeywheel.look.LookTextField;
+import com.thenathe.hotkeywheel.look.PlateButton;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -10,15 +14,13 @@ import java.util.function.Consumer;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Items;
 
-public final class IconPickerScreen extends Screen {
+public final class IconPickerScreen extends LookScreen {
     private final Screen parent;
     private final Consumer<String> accepted;
     private final String selectedIcon;
@@ -29,7 +31,8 @@ public final class IconPickerScreen extends Screen {
     private String chosenIcon;
     private int page;
     private int left;
-    private int panelWidth;
+    private int rowWidth;
+    private int tilesTop;
     private int columns;
     private int rows;
     private Button previous;
@@ -76,13 +79,15 @@ public final class IconPickerScreen extends Screen {
     @Override
     protected void init() {
         tiles.clear();
-        panelWidth = Math.min(560, width - 40);
-        left = (width - panelWidth) / 2;
+        layoutFrame(false);
+        left = listX();
+        rowWidth = listWidth();
+        tilesTop = listTop() + 36;
         showItemIcons = minecraft.level != null;
-        columns = Math.max(1, panelWidth / (showItemIcons ? 28 : 180));
-        rows = Math.max(1, (height - 128) / 28);
-        EditBox search = new EditBox(font, left, 32, panelWidth, 20, Component.literal("Search icons"));
-        search.setHint(Component.literal("Search icons, mods, blocks or items…"));
+        columns = Math.max(1, rowWidth / (showItemIcons ? 28 : 180));
+        rows = Math.max(1, (listBottom() - 24 - tilesTop) / 28);
+        LookTextField search = new LookTextField(left, listTop(), rowWidth, 20, Component.literal("Search icons"),
+                "Search icons, mods, blocks or items…", true);
         search.setMaxLength(128);
         search.setValue(query);
         search.setResponder(value -> {
@@ -91,12 +96,11 @@ public final class IconPickerScreen extends Screen {
             refreshTiles();
         });
         addRenderableWidget(search);
-        previous = addRenderableWidget(Button.builder(Component.literal("Previous"), button -> changePage(-1))
-                .bounds(left, height - 49, 84, 20).build());
-        next = addRenderableWidget(Button.builder(Component.literal("Next"), button -> changePage(1))
-                .bounds(left + panelWidth - 84, height - 49, 84, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Cancel"), button -> onClose())
-                .bounds(left, height - 25, panelWidth, 20).build());
+        int pageY = listBottom() - 20;
+        previous = addRenderableWidget(PlateButton.of("Previous", left, pageY, 84, button -> changePage(-1)));
+        next = addRenderableWidget(PlateButton.of("Next", left + rowWidth - 84, pageY, 84, button -> changePage(1)));
+        addLookControls();
+        addRenderableWidget(PlateButton.of("Cancel", contentX + contentWidth - 70, footerY, 70, button -> onClose()));
         refreshTiles();
         setInitialFocus(search);
     }
@@ -160,14 +164,14 @@ public final class IconPickerScreen extends Screen {
             Button tile;
             if (showItemIcons) {
                 tile = new WheelUi.IconButton(left + cell % columns * 28,
-                        74 + cell / columns * 28, 24, icon.shown(), icon.description(),
+                        tilesTop + cell / columns * 28, 24, icon.shown(), icon.description(),
                         () -> icon.id().equals(selectedIcon), choose);
             } else {
-                int cellWidth = panelWidth / columns;
-                String label = font.plainSubstrByWidth(icon.shown().name().getString(), cellWidth - 14);
-                tile = Button.builder(Component.literal(label), choose)
-                        .bounds(left + cell % columns * cellWidth, 74 + cell / columns * 28, cellWidth - 4, 24)
-                        .tooltip(Tooltip.create(icon.description())).build();
+                int cellWidth = rowWidth / columns;
+                PlateButton named = new PlateButton(left + cell % columns * cellWidth, tilesTop + cell / columns * 28,
+                        cellWidth - 4, 24, icon.shown().name(), choose);
+                named.help(icon.description().getString());
+                tile = named;
             }
             tiles.add(addRenderableWidget(tile));
         }
@@ -184,7 +188,7 @@ public final class IconPickerScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double x, double y, double horizontal, double vertical) {
-        if (vertical != 0 && y >= 64 && y < height - 53) {
+        if (vertical != 0 && y >= tilesTop && y < listBottom()) {
             changePage(vertical > 0 ? -1 : 1);
             return true;
         }
@@ -194,12 +198,13 @@ public final class IconPickerScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         super.extractRenderState(graphics, mouseX, mouseY, delta);
-        graphics.centeredText(font, title, width / 2, 12, WheelUi.GOLD);
+        Look look = Look.current();
         int count = filtered.size();
-        graphics.text(font, count + (showItemIcons ? " icons · cosmetic only" : " icons · previews load in a world"), left, 58, WheelUi.DIM);
+        caption(graphics, count + (showItemIcons ? " icons · cosmetic only" : " icons · previews load in a world"), left, listTop() + 26, rowWidth);
         int pages = Math.max(1, (count + rows * columns - 1) / (rows * columns));
-        graphics.centeredText(font, "Page " + (page + 1) + "/" + pages, width / 2, height - 43, WheelUi.DIM);
-        if (count == 0) graphics.centeredText(font, "No matching icons", width / 2, 82, WheelUi.DIM);
+        graphics.centeredText(font, "Page " + (page + 1) + "/" + pages, left + rowWidth / 2, listBottom() - 14, look.dim());
+        if (count == 0) graphics.centeredText(font, "No matching icons", left + rowWidth / 2, tilesTop + 6, look.dim());
+        extractAccentPopup(graphics, mouseX, mouseY);
     }
 
     @Override
@@ -215,6 +220,4 @@ public final class IconPickerScreen extends Screen {
         ModIcons.releaseExcept(kept);
     }
 
-    @Override
-    public boolean isPauseScreen() { return false; }
 }

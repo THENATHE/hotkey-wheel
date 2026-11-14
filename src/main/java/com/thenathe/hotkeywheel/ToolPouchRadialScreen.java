@@ -9,7 +9,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
-public final class ToolPouchRadialScreen extends Screen {
+public final class ToolPouchRadialScreen extends Screen implements ItemRadial {
     private static final int PAGE_SIZE = 12;
     private static final String HINT = "Click to select · right click or Esc to cancel";
     private final ToolPouchIntegration.Snapshot snapshot;
@@ -29,7 +29,9 @@ public final class ToolPouchRadialScreen extends Screen {
     public ToolPouchIntegration.Snapshot snapshot() { return snapshot; }
     public int page() { return page; }
     public int pageCount() { return Math.max(1, (snapshot.choices().size() + PAGE_SIZE - 1) / PAGE_SIZE); }
+    @Override
     public int centerX() { return centerX; }
+    @Override
     public int centerY() { return centerY; }
     public int radius() { return radius; }
     public int hintLines() { return WheelUi.hintLines(font, HINT, width).size(); }
@@ -57,6 +59,7 @@ public final class ToolPouchRadialScreen extends Screen {
         RadialCursor.center(this);
     }
 
+    @Override
     public void cyclePage(int direction) {
         if (pageCount() <= 1) return;
         page = Math.floorMod(page + direction, pageCount());
@@ -68,6 +71,7 @@ public final class ToolPouchRadialScreen extends Screen {
         return RadialGeometry.selection(x - centerX, y - centerY, innerRadius, Double.POSITIVE_INFINITY, visibleCount());
     }
 
+    @Override
     public void confirm() {
         if (closing) return;
         int selected = selection(minecraft.mouseHandler.getScaledXPos(minecraft.getWindow()),
@@ -157,7 +161,7 @@ public final class ToolPouchRadialScreen extends Screen {
             graphics.itemDecorations(font, choice.stack(), -8, -8);
             graphics.pose().popMatrix();
         }
-        drawLine(graphics, centerX, centerY, mouseX, mouseY, selected < 0 ? 0x998a9199 : 0xfff1c56c);
+        WheelUi.pointerLine(graphics, centerX, centerY, mouseX, mouseY, selected < 0 ? 0x998a9199 : 0xfff1c56c);
         graphics.fill(centerX - 2, centerY - 2, centerX + 2, centerY + 2, 0xfff1c56c);
         graphics.centeredText(font, "Cancel", centerX, centerY + 7, selected < 0 ? 0xfff1c56c : 0xff8a9199);
         graphics.fill(0, centerY + radius + 13, width, height, 0x99000000);
@@ -172,16 +176,6 @@ public final class ToolPouchRadialScreen extends Screen {
         for (FormattedCharSequence line : WheelUi.hintLines(font, HINT, width)) {
             graphics.centeredText(font, line, centerX, hintY, 0xff8a9199);
             hintY += RadialGeometry.HINT_LINE_HEIGHT;
-        }
-    }
-
-    private static void drawLine(GuiGraphicsExtractor graphics, int startX, int startY, int endX, int endY, int color) {
-        int length = Math.max(Math.abs(endX - startX), Math.abs(endY - startY));
-        for (int step = 0; step <= length; step++) {
-            double fraction = length == 0 ? 0 : (double) step / length;
-            int x = (int) Math.round(startX + (endX - startX) * fraction);
-            int y = (int) Math.round(startY + (endY - startY) * fraction);
-            graphics.fill(x, y, x + 1, y + 1, color);
         }
     }
 }

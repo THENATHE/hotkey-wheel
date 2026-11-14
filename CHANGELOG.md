@@ -1,5 +1,15 @@
 # Changes
 
+## 1.2.0+26.3
+
+- **House look:** the editor, the control chooser, the icon picker, **Move to…** and the remove-folder question are rebuilt in a new look, **House**: flat bevelled panels in dark or light with an accent colour of your choice. The footer's **Look: House** button switches to a **Minecraft** look drawn from the game's own buttons and panels. The look is saved in Hotkey Wheel's settings as soon as it changes. The editor's tabs move to a column on the left, with a **Description** box under them for the setting under the pointer. The radial menus keep their own design.
+- **Elytra flight switch:** a wheel action, a key (**Hotkey Wheel: Toggle elytra flight**, unbound) and `/hotkeywheel elytra [on|off]` stop you from starting a glide. It works on any server, since it only stops the client from asking to glide, and covers anything with the `glider` component: elytras, Vanilla+ Features' armored chestplates, Armored Elytra's items and gliders other mods provide. The state shows above the hotbar and is saved. It is not offered with Vanilla++, which has its own pouch elytra toggle.
+- **Open ender chest** and **Open shulker box…** wheel actions for servers running Vanilla+ Features (protocol version 1). The second opens an item radial of every shulker box and ender chest within reach, including those the server finds inside the ender chest, bundles and shulker boxes. Without Vanilla+ Features on the server the actions show as unavailable with the reason, and their slots are kept. Hotkey Wheel sends nothing before the server's hello, one request at a time, at most four a second, and closes the radial when the inventory or ender chest changes.
+- **Missing mods:** every optional integration was audited. A Tool Pouch whose methods have changed now switches the Tool Pouch integration off with one log line instead of failing, and the Tool Pouch widget mixin no longer requires its target. Buildprint's camera question is recognised by its dialog's class name and title key ending.
+- The control chooser has a **Hotkey Wheel actions** folder.
+- Settings from 1.0.x and 1.1.x load and save unchanged. The new settings (look, light mode, accent, elytra flight off) are left out of the file at their defaults.
+- 1.2.0 was compiled and its integrations with Buildprint 0.1.39, Blocktone 0.1.39.1, Sorted 0.1.42 and 0.1.44, Vanilla++ 1.5.3 and the Vanilla+ Features protocol were reviewed by reading their code and APIs. At the user's request no game client or server was run for this release. See [QA.md](QA.md).
+
 ## 1.1.3+26.3
 
 - The hint under the wheel, its folders and the Tool Pouch item radial ("Release to select · …") now sits with the hovered name and the key line, just under the radial, instead of over the hotbar at the bottom of the screen. All three lines stay above the hearts and hotbar at every GUI scale and window size; on short screens the radial moves up, and if needed shrinks, to make room, and on narrow screens the hint wraps.

@@ -1,6 +1,11 @@
 package com.thenathe.hotkeywheel;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.thenathe.hotkeywheel.look.Ink;
+import com.thenathe.hotkeywheel.look.Look;
+import com.thenathe.hotkeywheel.look.LookScreen;
+import com.thenathe.hotkeywheel.look.LookTextField;
+import com.thenathe.hotkeywheel.look.PlateButton;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -13,8 +18,6 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
@@ -22,13 +25,14 @@ import net.minecraft.network.chat.Component;
 /**
  * Chooses a slot's control from folders: Minecraft's controls, mods' settings screens, then one folder per mod
  * that registers controls (or a single Mod controls folder), and Other controls for any control no mod can be
- * credited with. A search looks through every folder at once.
+ * credited with, and Hotkey Wheel's own actions. A search looks through every folder at once.
  */
-public final class ControlPickerScreen extends Screen {
+public final class ControlPickerScreen extends LookScreen {
     public static final String MINECRAFT_FOLDER = "Minecraft controls";
     public static final String MOD_SETTINGS_FOLDER = "Mod settings";
     public static final String MOD_CONTROLS_FOLDER = "Mod controls";
     public static final String OTHER_FOLDER = "Other controls";
+    public static final String ACTIONS_FOLDER = "Hotkey Wheel actions";
     private final Screen parent;
     private final Consumer<String> accepted;
     private final boolean oneModFolder;
@@ -41,7 +45,8 @@ public final class ControlPickerScreen extends Screen {
     private String query = "";
     private int page;
     private int left;
-    private int panelWidth;
+    private int rowWidth;
+    private int rowsTop;
     private int rows;
     private Button previous;
     private Button next;
@@ -75,16 +80,18 @@ public final class ControlPickerScreen extends Screen {
     @Override
     protected void init() {
         resultWidgets.clear();
-        panelWidth = Math.min(560, width - 40);
-        left = (width - panelWidth) / 2;
-        rows = Math.max(2, (height - 126) / 24);
+        layoutFrame(false);
+        left = listX();
+        rowWidth = listWidth();
+        rowsTop = listTop() + 36;
+        rows = Math.max(2, (listBottom() - 24 - rowsTop) / 24);
         folders = buildFolders();
         if (openFolder != null) {
             String name = openFolder.name();
             openFolder = folders.stream().filter(folder -> folder.name().equals(name)).findFirst().orElse(null);
         }
-        EditBox search = new EditBox(font, left, 32, panelWidth, 20, Component.literal("Search controls"));
-        search.setHint(Component.literal("Search all folders: control, category, mod, or key…"));
+        LookTextField search = new LookTextField(left, listTop(), rowWidth, 20, Component.literal("Search controls"),
+                "Search all folders: control, category, mod, or key…", true);
         search.setMaxLength(128);
         search.setValue(query);
         search.setResponder(value -> {
@@ -93,12 +100,11 @@ public final class ControlPickerScreen extends Screen {
             refreshResults();
         });
         addRenderableWidget(search);
-        previous = addRenderableWidget(Button.builder(Component.literal("Previous"), button -> changePage(-1))
-                .bounds(left, height - 49, 84, 20).build());
-        next = addRenderableWidget(Button.builder(Component.literal("Next"), button -> changePage(1))
-                .bounds(left + panelWidth - 84, height - 49, 84, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Cancel"), button -> onClose())
-                .bounds(left, height - 25, panelWidth, 20).build());
+        int pageY = listBottom() - 20;
+        previous = addRenderableWidget(PlateButton.of("Previous", left, pageY, 84, button -> changePage(-1)));
+        next = addRenderableWidget(PlateButton.of("Next", left + rowWidth - 84, pageY, 84, button -> changePage(1)));
+        addLookControls();
+        addRenderableWidget(PlateButton.of("Cancel", contentX + contentWidth - 70, footerY, 70, button -> onClose()));
         refreshResults();
         setInitialFocus(search);
     }
@@ -128,6 +134,8 @@ public final class ControlPickerScreen extends Screen {
             byMod.computeIfAbsent("toolpouch", id -> new ArrayList<>())
                     .add(new Option(choice.control(), choice.name(), "Slot toggles", choice.key(), null, modName("toolpouch")));
         }
+        List<Option> actions = WheelActions.choices().stream()
+                .map(choice -> new Option(choice.control(), choice.name(), ACTIONS_FOLDER, choice.note(), null, ACTIONS_FOLDER)).toList();
         List<Option> settings = ModSettingsActions.choices().stream()
                 .map(choice -> new Option(choice.control(), choice.name() + " settings", MOD_SETTINGS_FOLDER,
                         "no key needed", choice.modId(), MOD_SETTINGS_FOLDER)).toList();
@@ -136,6 +144,7 @@ public final class ControlPickerScreen extends Screen {
         WheelIcons.Icon folderIcon = WheelIcons.resolve(WheelIcons.GLYPH_PREFIX + "folder");
         if (!vanilla.isEmpty()) result.add(new Folder(MINECRAFT_FOLDER, folderIcon, vanilla));
         if (!settings.isEmpty()) result.add(new Folder(MOD_SETTINGS_FOLDER, WheelIcons.resolve(WheelIcons.GLYPH_PREFIX + "cog"), settings));
+        if (!actions.isEmpty()) result.add(new Folder(ACTIONS_FOLDER, WheelIcons.resolve(WheelIcons.GLYPH_PREFIX + "lightning"), actions));
         List<String> mods = new ArrayList<>(byMod.keySet());
         mods.sort(Comparator.comparing((String modId) -> modName(modId).toLowerCase(Locale.ROOT)).thenComparing(modId -> modId));
         if (oneModFolder && !mods.isEmpty()) {
@@ -208,12 +217,11 @@ public final class ControlPickerScreen extends Screen {
         headers.clear();
         filtered = rowsToShow();
         // Inside a folder the first row leads back to the folder list.
-        int top = 72;
+        int top = rowsTop;
         int pageRows = rows;
         if (inFolder()) {
-            Button back = Button.builder(Component.literal("‹ All folders · " + openFolder.name()), button -> showFolder(null))
-                    .bounds(left, top, panelWidth, 20)
-                    .tooltip(Tooltip.create(Component.literal("Back to the list of folders. Escape also goes back."))).build();
+            PlateButton back = PlateButton.of("‹ All folders · " + openFolder.name(), left, top, rowWidth, button -> showFolder(null))
+                    .help("Back to the list of folders. Escape also goes back.");
             resultWidgets.add(addRenderableWidget(back));
             top += 24;
             pageRows--;
@@ -235,9 +243,8 @@ public final class ControlPickerScreen extends Screen {
                 int count = folder.options().size();
                 String text = folder.name() + " · " + count + (count == 1 ? " control" : " controls") + "  ›";
                 shownIcons.add(new ShownIcon(folder.icon(), left + 2, y + 2));
-                resultWidgets.add(addRenderableWidget(Button.builder(Component.literal(font.plainSubstrByWidth(text, panelWidth - 48)),
-                        button -> showFolder(folder)).bounds(left, y, panelWidth, 20)
-                        .tooltip(Tooltip.create(Component.literal("Open " + folder.name()))).build()));
+                resultWidgets.add(addRenderableWidget(new IconRow(left, y, rowWidth, text, button -> showFolder(folder))
+                        .help("Open " + folder.name())));
                 continue;
             }
             Option option = row.option();
@@ -245,14 +252,28 @@ public final class ControlPickerScreen extends Screen {
             String text = option.name() + " · " + option.key() + (searching ? " · " + option.folder() : "");
             String help = option.name() + "\n" + option.folder() + (option.section().equals(option.folder()) ? "" : " › " + option.section())
                     + "\n" + option.control();
-            // Labels are centred; leaving room on both sides keeps a long one clear of the icon.
-            int textWidth = option.iconMod() == null ? panelWidth - 12 : panelWidth - 48;
             if (option.iconMod() != null) shownIcons.add(new ShownIcon(WheelIcons.resolve(WheelIcons.modIcon(option.iconMod())), left + 2, y + 2));
-            Button button = Button.builder(Component.literal(font.plainSubstrByWidth(text, textWidth)), selected -> {
-                accepted.accept(option.control());
-                onClose();
-            }).bounds(left, y, panelWidth, 20).tooltip(Tooltip.create(Component.literal(help))).build();
+            PlateButton button = (option.iconMod() == null ? PlateButton.of(text, left, y, rowWidth, selected -> choose(option))
+                    : new IconRow(left, y, rowWidth, text, selected -> choose(option))).help(help);
             resultWidgets.add(addRenderableWidget(button));
+        }
+    }
+
+    private void choose(Option option) {
+        accepted.accept(option.control());
+        onClose();
+    }
+
+    /** A row with an icon at its left; the label is centred in the room beside the icon so a long one stays clear of it. */
+    private final class IconRow extends PlateButton {
+        IconRow(int x, int y, int width, String label, OnPress onPress) {
+            super(x, y, width, 20, Component.literal(label), onPress);
+        }
+
+        @Override
+        protected void drawLabel(GuiGraphicsExtractor graphics, Look look, int colour) {
+            String text = Ink.trim(font, getMessage().getString(), width - 48);
+            graphics.text(font, text, getX() + 22 + (width - 44 - font.width(text)) / 2, getY() + 6, colour, look.plateShadow(colour));
         }
     }
 
@@ -271,7 +292,7 @@ public final class ControlPickerScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double x, double y, double horizontal, double vertical) {
-        if (vertical != 0 && y >= 64 && y < height - 53) {
+        if (vertical != 0 && y >= rowsTop && y < listBottom()) {
             changePage(vertical > 0 ? -1 : 1);
             return true;
         }
@@ -281,18 +302,19 @@ public final class ControlPickerScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         super.extractRenderState(graphics, mouseX, mouseY, delta);
-        graphics.centeredText(font, inFolder() ? title.getString() + " › " + openFolder.name() : title.getString(), width / 2, 12, WheelUi.GOLD);
+        Look look = Look.current();
         int count = (int) filtered.stream().filter(row -> row.option() != null).count();
         String summary = !query.isBlank() ? count + " matching controls in all folders"
-                : inFolder() ? count + (count == 1 ? " control" : " controls") + " in " + openFolder.name()
+                : inFolder() ? openFolder.name() + " · " + count + (count == 1 ? " control" : " controls")
                 : folders.size() + " folders · includes installed mods";
-        graphics.text(font, summary, left, 58, WheelUi.DIM);
+        caption(graphics, summary, left, listTop() + 26, rowWidth);
         int pageRows = inFolder() ? rows - 1 : rows;
         graphics.centeredText(font, "Page " + (page + 1) + "/" + Math.max(1, (filtered.size() + pageRows - 1) / pageRows),
-                width / 2, height - 43, WheelUi.DIM);
-        if (filtered.isEmpty()) graphics.centeredText(font, "No matching controls", width / 2, inFolder() ? 104 : 80, WheelUi.DIM);
-        for (Caption header : headers) graphics.text(font, header.text(), left + 4, header.y(), WheelUi.GOLD);
+                left + rowWidth / 2, listBottom() - 14, look.dim());
+        if (filtered.isEmpty()) graphics.centeredText(font, "No matching controls", left + rowWidth / 2, inFolder() ? rowsTop + 30 : rowsTop + 6, look.dim());
+        for (Caption header : headers) caption(graphics, header.text(), left + 4, header.y(), rowWidth - 4);
         for (ShownIcon shown : shownIcons) shown.icon().draw(graphics, shown.x(), shown.y());
+        extractAccentPopup(graphics, mouseX, mouseY);
     }
 
     @Override
@@ -303,6 +325,4 @@ public final class ControlPickerScreen extends Screen {
         ModIcons.releaseExcept(WheelIcons.modsUsedBy(WheelConfig.get().allEntries()));
     }
 
-    @Override
-    public boolean isPauseScreen() { return false; }
 }

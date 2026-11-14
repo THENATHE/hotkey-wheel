@@ -13,8 +13,10 @@ import org.slf4j.LoggerFactory;
 final class BuildprintEditorReturn {
     private static final String CONTROL = "key.buildprint.editor";
     private static final int OPEN_TIMEOUT_TICKS = 4;
-    private static final String CAMERA_CHOICE_DIALOG = "com.voxelsprout.common.ui.settings.KitChoiceDialog";
-    private static final String CAMERA_CHOICE_TITLE = "voxelsprout_controls.camera.title";
+    // Buildprint asks its camera question in a choice dialog from its bundled UI library; the dialog's class
+    // name and the end of its title key identify it.
+    private static final String CAMERA_CHOICE_DIALOG = "KitChoiceDialog";
+    private static final String CAMERA_CHOICE_TITLE = ".camera.title";
     private static PendingEditor pending;
     private static Object session;
     private static InputConstants.Key opener;
@@ -114,9 +116,9 @@ final class BuildprintEditorReturn {
 
     /** Buildprint 0.1.38 asks once per server whether the editor uses freecam or the player's camera. */
     private static boolean isCameraChoice(Screen screen) {
-        return screen != null && screen.getClass().getName().equals(CAMERA_CHOICE_DIALOG)
+        return screen != null && screen.getClass().getSimpleName().equals(CAMERA_CHOICE_DIALOG)
                 && screen.getTitle().getContents() instanceof TranslatableContents title
-                && title.getKey().equals(CAMERA_CHOICE_TITLE);
+                && title.getKey().endsWith(CAMERA_CHOICE_TITLE);
     }
 
     private static Object editorSession() {

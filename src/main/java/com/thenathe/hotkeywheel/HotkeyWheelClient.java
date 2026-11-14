@@ -7,6 +7,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -25,6 +27,8 @@ public final class HotkeyWheelClient implements ClientModInitializer {
     public static KeyMapping CONFIGURE_KEY;
     // Only read while a wheel is open, so its default cannot take a key from normal play.
     public static KeyMapping SETTINGS_KEY;
+    // Registered only without Vanilla++, which has its own elytra toggle; null otherwise.
+    public static KeyMapping ELYTRA_KEY;
     // Controls whose mod replaced them with another mod's control. A slot keeps the saved name and uses
     // the replacement only once the original is no longer registered.
     private static final Map<String, String> REPLACED_CONTROLS = Map.of(
@@ -50,9 +54,27 @@ public final class HotkeyWheelClient implements ClientModInitializer {
         CYCLE_KEY = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.hotkey_wheel.cycle", InputConstants.KEY_TAB, category));
         CONFIGURE_KEY = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.hotkey_wheel.configure", InputConstants.UNKNOWN.getValue(), category));
         SETTINGS_KEY = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.hotkey_wheel.settings", InputConstants.KEY_U, category));
+        if (ElytraFlight.offered()) {
+            ELYTRA_KEY = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.hotkey_wheel.elytra_flight", InputConstants.UNKNOWN.getValue(), category));
+            ClientCommandRegistrationCallback.EVENT.register((dispatcher, context) -> dispatcher.register(ClientCommands.literal("hotkeywheel")
+                    .then(ClientCommands.literal("elytra")
+                            .executes(command -> {
+                                ElytraFlight.toggle(Minecraft.getInstance());
+                                return 1;
+                            })
+                            .then(ClientCommands.literal("on").executes(command -> {
+                                ElytraFlight.set(Minecraft.getInstance(), false);
+                                return 1;
+                            }))
+                            .then(ClientCommands.literal("off").executes(command -> {
+                                ElytraFlight.set(Minecraft.getInstance(), true);
+                                return 1;
+                            })))));
+        }
         ClientTickEvents.START_CLIENT_TICK.register(HotkeyWheelClient::tick);
         BuildprintApiIntegration.initialize();
         WheelMenuReturn.initialize();
+        ContainerRequests.initialize();
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             clearInput();
             WheelMenuReturn.clear();
@@ -97,15 +119,15 @@ public final class HotkeyWheelClient implements ClientModInitializer {
 
         if (release && active != null && active.hold() && active.opener().equals(key)) releaseActive();
 
-        if (client.gui.screen() instanceof ToolPouchRadialScreen pouch) {
+        if (client.gui.screen() instanceof ItemRadial radial) {
             if (press && CYCLE_KEY.matches(key)) {
-                pouch.cyclePage(1);
+                radial.cyclePage(1);
                 consumedKeys.add(key);
                 return true;
             }
             if (press && key.getType() == InputConstants.Type.MOUSE) {
-                if (key.getValue() == InputConstants.MOUSE_BUTTON_LEFT) pouch.confirm();
-                else if (key.getValue() == InputConstants.MOUSE_BUTTON_RIGHT) pouch.onClose();
+                if (key.getValue() == InputConstants.MOUSE_BUTTON_LEFT) radial.confirm();
+                else if (key.getValue() == InputConstants.MOUSE_BUTTON_RIGHT) radial.onClose();
                 consumedKeys.add(key);
                 return true;
             }
@@ -184,6 +206,7 @@ public final class HotkeyWheelClient implements ClientModInitializer {
             ToolPouchIntegration.clear();
             return;
         }
+        while (ELYTRA_KEY != null && ELYTRA_KEY.consumeClick()) ElytraFlight.toggle(client);
         if (client.gui.screen() != null) {
             clearActions();
             return;
@@ -203,6 +226,12 @@ public final class HotkeyWheelClient implements ClientModInitializer {
             // Opening a screen is a single action, so Hold actions also open it once.
             releaseActive();
             ModSettingsActions.open(client, action.entry().control, action.opener());
+            return;
+        }
+        if (WheelActions.handles(action.entry().control)) {
+            // Hotkey Wheel's own actions run once, so Hold actions also run once.
+            releaseActive();
+            WheelActions.activate(client, action.entry().control);
             return;
         }
         if (ToolPouchToggles.handles(action.entry().control)) {
@@ -246,14 +275,16 @@ public final class HotkeyWheelClient implements ClientModInitializer {
     /** The name a slot's control shows in the editor and the radial. */
     public static String controlLabel(String control) {
         if (ModSettingsActions.handles(control)) return ModSettingsActions.label(control);
+        if (WheelActions.handles(control)) return WheelActions.label(control);
         KeyMapping mapping = findControl(control);
         if (mapping != null && !ToolPouchToggles.handles(control)) return Component.translatable(mapping.getName()).getString();
         return ToolPouchToggles.label(control);
     }
 
-    /** Whether a slot's control can be used now: a key mapping, a pouch toggle or a mod's settings. */
+    /** Whether a slot's control can be used now: a key mapping, a pouch toggle, a mod's settings or a wheel action. */
     public static boolean controlAvailable(String control) {
-        return findControl(control) != null || ToolPouchToggles.handles(control) || ModSettingsActions.available(control);
+        return findControl(control) != null || ToolPouchToggles.handles(control) || ModSettingsActions.available(control)
+                || WheelActions.available(control);
     }
 
     private static void releaseActive() {

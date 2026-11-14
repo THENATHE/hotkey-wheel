@@ -13,9 +13,9 @@ public final class RadialCursor {
         if (screen instanceof WheelScreen wheel) {
             centerX = wheel.centerX();
             centerY = wheel.centerY();
-        } else if (screen instanceof ToolPouchRadialScreen pouch) {
-            centerX = pouch.centerX();
-            centerY = pouch.centerY();
+        } else if (screen instanceof ItemRadial radial) {
+            centerX = radial.centerX();
+            centerY = radial.centerY();
         } else {
             return;
         }

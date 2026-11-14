@@ -186,7 +186,7 @@ final class BuildprintApiIntegration {
         private static void initialize() {
             BuildprintHud.hideWhile("hotkey_wheel:radial", () -> {
                 Screen screen = Minecraft.getInstance().gui.screen();
-                return screen instanceof WheelScreen || screen instanceof ToolPouchRadialScreen;
+                return screen instanceof WheelScreen || screen instanceof ItemRadial;
             });
         }
     }

@@ -31,7 +31,8 @@ public final class WheelScreen extends Screen {
     // Looked up once per wheel instead of every frame; null marks a control that is not registered.
     private List<WheelIcons.Icon> icons = List.of();
     private List<KeyMapping> controls = List.of();
-    private List<Boolean> pouchToggles = List.of();
+    // Slots that are not key mappings but can be used: pouch toggles, mod settings and wheel actions.
+    private List<Boolean> otherActions = List.of();
 
     public WheelScreen(int index, InputConstants.Key opener, boolean toggleOpen) {
         super(Component.literal("Hotkey Wheel"));
@@ -95,11 +96,12 @@ public final class WheelScreen extends Screen {
         ring = RadialGeometry.ring(innerRadius, radius, entries.size());
         icons = new ArrayList<>(entries.size());
         controls = new ArrayList<>(entries.size());
-        pouchToggles = new ArrayList<>(entries.size());
+        otherActions = new ArrayList<>(entries.size());
         for (WheelConfig.Entry entry : entries) {
             icons.add(WheelIcons.resolve(entry.icon));
             controls.add(HotkeyWheelClient.findControl(entry.control));
-            pouchToggles.add(ToolPouchToggles.handles(entry.control) || ModSettingsActions.available(entry.control));
+            otherActions.add(ToolPouchToggles.handles(entry.control) || ModSettingsActions.available(entry.control)
+                    || WheelActions.available(entry.control));
         }
     }
 
@@ -232,9 +234,9 @@ public final class WheelScreen extends Screen {
             icons.get(slot).draw(graphics, -8, -8);
             graphics.pose().popMatrix();
             if (entries.get(slot).isFolder()) graphics.text(font, "»", x + 5, y + 2, 0xfff1c56c);
-            else if (controls.get(slot) == null && !pouchToggles.get(slot)) graphics.text(font, "!", x + 5, y - 11, 0xffff9999);
+            else if (controls.get(slot) == null && !otherActions.get(slot)) graphics.text(font, "!", x + 5, y - 11, 0xffff9999);
         }
-        drawLine(graphics, centerX, centerY, mouseX, mouseY, selected < 0 ? 0x998a9199 : 0xfff1c56c);
+        WheelUi.pointerLine(graphics, centerX, centerY, mouseX, mouseY, selected < 0 ? 0x998a9199 : 0xfff1c56c);
         graphics.fill(centerX - 2, centerY - 2, centerX + 2, centerY + 2, 0xfff1c56c);
         boolean inFolder = !openFolders.isEmpty();
         graphics.centeredText(font, inFolder ? "Back" : "Cancel", centerX, centerY + 7, selected < 0 ? 0xfff1c56c : 0xff8a9199);
@@ -264,15 +266,5 @@ public final class WheelScreen extends Screen {
     private String currentHint() {
         boolean inFolder = !openFolders.isEmpty();
         return toggleOpen() ? (inFolder ? TOGGLE_FOLDER_HINT : TOGGLE_HINT) : (inFolder ? HOLD_FOLDER_HINT : HOLD_HINT);
-    }
-
-    private static void drawLine(GuiGraphicsExtractor graphics, int startX, int startY, int endX, int endY, int color) {
-        int length = Math.max(Math.abs(endX - startX), Math.abs(endY - startY));
-        for (int step = 0; step <= length; step++) {
-            double fraction = length == 0 ? 0 : (double) step / length;
-            int x = (int) Math.round(startX + (endX - startX) * fraction);
-            int y = (int) Math.round(startY + (endY - startY) * fraction);
-            graphics.fill(x, y, x + 1, y + 1, color);
-        }
     }
 }
